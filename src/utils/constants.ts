@@ -5,10 +5,6 @@
 
 import type { Language } from '@/types';
 
-const defineLanguageOrder = <T extends readonly Language[]>(
-  languages: T & ([Language] extends [T[number]] ? unknown : never)
-) => languages;
-
 // 缓存过期时间（毫秒）
 export const CACHE_EXPIRY_MS = 30 * 1000; // 与基线保持一致，减少管理端压力
 
@@ -34,7 +30,12 @@ export const STORAGE_KEY_THEME = 'cli-proxy-theme';
 export const STORAGE_KEY_LANGUAGE = 'cli-proxy-language';
 
 // 语言配置
-export const LANGUAGE_ORDER = defineLanguageOrder(['zh-CN', 'zh-TW', 'en', 'ru'] as const);
+/**
+ * 可选语言：Stallion-X 只提供简体中文与英文。
+ * 繁体中文与俄文的语言包仍保留（上游合并与测试依赖），但不在界面中提供切换，
+ * 已保存或浏览器检测到的其他语言会回落到这两种之一（见 utils/language.ts）。
+ */
+export const LANGUAGE_ORDER = ['zh-CN', 'en'] as const satisfies readonly Language[];
 export const LANGUAGE_LABEL_KEYS: Record<Language, string> = {
   'zh-CN': 'language.chinese',
   'zh-TW': 'language.chinese_tw',

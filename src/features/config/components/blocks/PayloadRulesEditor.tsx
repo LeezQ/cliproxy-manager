@@ -14,11 +14,14 @@ import {
   getPayloadParamValidationError,
   VISUAL_CONFIG_PAYLOAD_VALUE_TYPE_OPTIONS,
 } from '@/hooks/useVisualConfig';
-import { FieldShell } from '../fields/FieldPrimitives';
-import { ExpandableInput } from './ExpandableInput';
-import { StringListEditor } from './StringListEditor';
-import { buildProtocolOptions, getValidationMessage } from './shared';
-import styles from './Blocks.module.scss';
+import { FieldShell } from '@/features/config/components/fields/FieldPrimitives';
+import { ExpandableInput } from '@/features/config/components/blocks/ExpandableInput';
+import { StringListEditor } from '@/features/config/components/blocks/StringListEditor';
+import {
+  buildProtocolOptions,
+  getValidationMessage,
+} from '@/features/config/components/blocks/shared';
+import styles from '@/features/config/components/blocks/Blocks.module.scss';
 
 function hasPayloadModelAdvancedSettings(model: PayloadModelEntry) {
   return Boolean(

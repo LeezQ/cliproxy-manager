@@ -1,18 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { animate } from 'motion/mini';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Button } from '@/components/ui/Button';
 import { IconCheck } from '@/components/ui/icons';
-import { prefersReducedMotion } from '@/hooks/motion';
 import { useActionBarHeightVar } from '@/hooks/useActionBarHeightVar';
-import type { ConfigStatusTone } from '../uiState';
-import styles from './FloatingSaveBar.module.scss';
-
-const easeOutQuart = (progress: number) => 1 - (1 - progress) ** 4;
-const easeInCubic = (progress: number) => progress ** 3;
-const BASE_TRANSFORM = 'translateX(-50%)';
-const HIDDEN_TRANSFORM = 'translateX(-50%) translateY(56px)';
+import type { ConfigStatusTone } from '@/features/config/uiState';
+import styles from '@/features/config/components/FloatingSaveBar.module.scss';
 
 export type FloatingSaveBarProps = {
   /** 有未保存修改时可见（与未保存离开守卫的 block 条件一致）。 */
@@ -27,9 +20,9 @@ export type FloatingSaveBarProps = {
 };
 
 /**
- * 悬浮保存栏：portal 到 body 的玻璃工具栏，仅在 dirty 时出现。
- * - 上浮入场 0.28s 强减速，退场 0.22s 加速后卸载；
- * - reduced-motion 只做透明度淡入淡出（保留 translateX(-50%)，防止错位半宽）；
+ * 悬浮保存栏：portal 到 body 的底部居中操作条，仅在 dirty 时出现。
+ * - 规范浮层：白底（--floating-surface）+ 1px 边框 + --floating-shadow，无毛玻璃；
+ * - 显隐瞬时切换，不做上浮/位移动画（全站动效策略）；
  * - 实时高度写入 --config-action-bar-height 供页面底部留白。
  */
 export function FloatingSaveBar(props: FloatingSaveBarProps) {
@@ -44,92 +37,14 @@ export function FloatingSaveBar(props: FloatingSaveBarProps) {
     onDiscard,
   } = props;
   const { t } = useTranslation();
-
-  const [mounted, setMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const animationRef = useRef<ReturnType<typeof animate> | null>(null);
-  const visibleRef = useRef(visible);
-  const previousVisibleRef = useRef(false);
 
-  useActionBarHeightVar(containerRef, '--config-action-bar-height', mounted);
+  // 只在可见时同步高度变量；隐藏（卸载）时由 hook 清除
+  useActionBarHeightVar(containerRef, '--config-action-bar-height', visible);
 
-  useEffect(() => {
-    visibleRef.current = visible;
-    if (visible) setMounted(true);
-  }, [visible]);
+  if (!visible || typeof document === 'undefined') return null;
 
-  useLayoutEffect(() => {
-    if (!mounted) return;
-    const el = containerRef.current;
-    if (!el) return;
-    const wasVisible = previousVisibleRef.current;
-
-    animationRef.current?.stop();
-    animationRef.current = null;
-
-    const reduced = prefersReducedMotion();
-
-    if (visible && !wasVisible) {
-      if (reduced) {
-        el.style.transform = BASE_TRANSFORM;
-        animationRef.current = animate(
-          el,
-          { opacity: [0, 1] },
-          {
-            duration: 0.15,
-            ease: 'linear',
-            onComplete: () => {
-              el.style.opacity = '1';
-            },
-          }
-        );
-      } else {
-        animationRef.current = animate(
-          el,
-          { transform: [HIDDEN_TRANSFORM, BASE_TRANSFORM], opacity: [0, 1] },
-          {
-            duration: 0.28,
-            ease: easeOutQuart,
-            onComplete: () => {
-              el.style.transform = BASE_TRANSFORM;
-              el.style.opacity = '1';
-            },
-          }
-        );
-      }
-    } else if (!visible && wasVisible) {
-      const finishExit = () => {
-        if (!visibleRef.current) setMounted(false);
-      };
-      if (reduced) {
-        el.style.transform = BASE_TRANSFORM;
-        animationRef.current = animate(
-          el,
-          { opacity: [1, 0] },
-          { duration: 0.12, ease: 'linear', onComplete: finishExit }
-        );
-      } else {
-        animationRef.current = animate(
-          el,
-          { transform: [BASE_TRANSFORM, HIDDEN_TRANSFORM], opacity: [1, 0] },
-          { duration: 0.22, ease: easeInCubic, onComplete: finishExit }
-        );
-      }
-    }
-
-    previousVisibleRef.current = visible;
-  }, [mounted, visible]);
-
-  useEffect(
-    () => () => {
-      animationRef.current?.stop();
-      animationRef.current = null;
-    },
-    []
-  );
-
-  if (!mounted || typeof document === 'undefined') return null;
-
+  // 状态文案语义色：待保存琥珀、错误红、已同步绿，其余次级文字色
   const toneClass: Record<ConfigStatusTone, string> = {
     error: styles.statusError,
     warning: styles.statusWarning,
@@ -142,26 +57,18 @@ export function FloatingSaveBar(props: FloatingSaveBarProps) {
     <div className={styles.container} ref={containerRef}>
       <div className={styles.bar} role="group" aria-label={t('config_management.status_dirty')}>
         <span className={`${styles.status} ${toneClass[statusTone]}`} aria-live="polite">
+          <span className={styles.statusDot} aria-hidden="true" />
           {statusText}
         </span>
         <div className={styles.actionsGroup}>
-          <button
-            type="button"
-            className={styles.ghostAction}
-            onClick={onDiscard}
-            disabled={discardDisabled}
-          >
+          <Button variant="secondary" onClick={onDiscard} disabled={discardDisabled}>
             {t('config_management.actions.discard')}
-          </button>
-          <button
-            type="button"
-            className={styles.savePill}
-            onClick={onSave}
-            disabled={saveDisabled}
-          >
-            {saving ? <LoadingSpinner size={14} /> : <IconCheck size={15} />}
+          </Button>
+          {/* 保存中由 Button 的 loading 态显示旋转指示并禁用按钮 */}
+          <Button onClick={onSave} disabled={saveDisabled} loading={saving}>
+            {saving ? null : <IconCheck size={15} />}
             {t('config_management.actions.save')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>,

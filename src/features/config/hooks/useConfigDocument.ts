@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { parse as parseYaml, parseDocument } from 'yaml';
 import { useConfigStore, useNotificationStore } from '@/stores';
 import { configFileApi } from '@/services/api/configFile';
-import type { ConfigEditorMode } from '../constants';
+import type { ConfigEditorMode } from '@/features/config/constants';
 
 function readCommercialModeFromYaml(yamlContent: string): boolean {
   try {

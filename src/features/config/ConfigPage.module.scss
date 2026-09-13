@@ -1,11 +1,12 @@
 @use '../../styles/mixins' as *;
 
-/* 配置面板页壳：纯布局，视觉细节都在各组件的 colocated 模块里。 */
+/* 配置面板页壳：纯布局（PageHeader → 分区 tabs + 分区卡片 / 源码编辑器），
+   视觉细节都在各组件的 colocated 模块里。区块间距 24px 与全站页面结构一致。 */
 
 .page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   width: 100%;
   min-width: 0;
   /* 悬浮保存栏出现时由 --config-action-bar-height 撑出底部留白 */
@@ -14,16 +15,15 @@
   );
 }
 
-/* 工具栏行：模式相关搜索（字段搜索 / 源码搜索）+ 右端的模式切换 */
-.toolbar {
+/* 可视化编辑区：tabs 行紧贴下方分区卡片（16px），视作同一区块 */
+.visualEditor {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 16px;
   min-width: 0;
 }
 
+/* tabs 行底部 1px 分割线，激活 tab 的 2px 主色下划线压在其上 */
 .tabsRow {
   display: flex;
   min-width: 0;

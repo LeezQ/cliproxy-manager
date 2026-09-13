@@ -1,14 +1,12 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { prefersReducedMotion } from '@/hooks/motion';
 import {
-  CONFIG_TAB_ICONS,
   CONFIG_TAB_IDS,
   configPanelDomId,
   configTabDomId,
   type ConfigTabId,
-} from '../constants';
-import styles from './ConfigTabs.module.scss';
+} from '@/features/config/constants';
+import styles from '@/features/config/components/ConfigTabs.module.scss';
 
 export type ConfigTabsProps = {
   active: ConfigTabId;
@@ -21,7 +19,7 @@ export type ConfigTabsProps = {
 };
 
 /**
- * 分区 tabs：安静的下划线式（与提供商 tabs 同语汇），图标 + 标签 + 错误徽章 + 脏点。
+ * 分区 tabs：规范下划线式（2px 主色下划线），标签 + 错误徽章 + 脏点；不加图标，减少视觉噪音并节省横向空间。
  * 「常用」是首 tab；tab 切换是高频操作，零动画。
  */
 export function ConfigTabs({
@@ -35,14 +33,14 @@ export function ConfigTabs({
   const listRef = useRef<HTMLDivElement | null>(null);
   const buttonRefs = useRef<Partial<Record<ConfigTabId, HTMLButtonElement | null>>>({});
 
-  // 移动端横滚时把激活 tab 带回视野中央；无溢出时不动，避免无谓的页面滚动。
+  // 移动端横滚时把激活 tab 带回视野中央（瞬时滚动，不做平滑动画）；无溢出时不动，避免无谓的页面滚动。
   useEffect(() => {
     const scroller = listRef.current;
     const button = buttonRefs.current[active];
     if (!scroller || !button) return;
     if (scroller.scrollWidth <= scroller.clientWidth) return;
     button.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      behavior: 'auto',
       block: 'nearest',
       inline: 'center',
     });
@@ -71,7 +69,6 @@ export function ConfigTabs({
       ref={listRef}
     >
       {CONFIG_TAB_IDS.map((id) => {
-        const Icon = CONFIG_TAB_ICONS[id];
         const isActive = active === id;
         const errorCount = errorCounts[id] ?? 0;
         const isDirty = dirtyTabs.has(id);
@@ -102,7 +99,6 @@ export function ConfigTabs({
             onClick={() => onChange(id)}
             onKeyDown={handleKeyDown}
           >
-            <Icon size={15} className={styles.tabGlyph} />
             <span className={styles.tabLabel}>{tabLabel}</span>
             {errorCount > 0 ? (
               <span className={styles.tabBadge} aria-hidden="true">

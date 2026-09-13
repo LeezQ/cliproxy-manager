@@ -1,14 +1,14 @@
 @use '../../../styles/mixins' as *;
 
-/* 源码模式：工具栏搜索条 + CodeMirror 编辑面板 */
+/* 源码模式：页头操作区的搜索条 + CodeMirror 编辑面板（规范 Surface 外框）。 */
 
 .searchBar {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1 1 240px;
+  flex: 0 1 400px;
+  width: 400px;
   min-width: 0;
-  max-width: 560px;
 }
 
 .searchInputWrapper {
@@ -25,90 +25,91 @@
 }
 
 .searchInput {
-  height: 38px !important;
-  border-radius: 10px !important;
-  font-size: 13px !important;
-  padding-right: 128px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  border-radius: $radius-md !important;
+  font-size: 14px !important;
+  padding-right: 120px !important;
 }
 
 .searchRight {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
+/* 匹配计数：中性徽标 */
 .searchCount {
   display: inline-flex;
   align-items: center;
-  min-height: 26px;
-  padding: 0 8px;
-  border-radius: $radius-full;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: $radius-sm;
   color: var(--text-secondary);
   font-family: $font-mono;
-  font-size: 11.5px;
-  font-weight: 650;
+  font-size: 12px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  background: var(--bg-tertiary);
   pointer-events: none;
   white-space: nowrap;
 }
 
+/* 输入框内的搜索触发：ghost 图标按钮 */
 .searchButton {
   @include button-reset;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: $radius-full;
-  border: 1px solid var(--text-primary);
-  background: var(--text-primary);
-  color: var(--bg-secondary);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--text-secondary);
   transition:
-    transform var(--dur-press, 160ms) var(--ease-out-strong, ease-out),
-    background-color $transition-fast,
-    border-color $transition-fast,
-    opacity $transition-fast;
+    color $transition-fast,
+    background-color $transition-fast;
 
-  &:active:not(:disabled) {
-    transform: scale(0.94);
+  &:hover:not(:disabled) {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
   }
 
   &:disabled {
     opacity: 0.45;
     cursor: not-allowed;
   }
-}
 
-@media (hover: hover) and (pointer: fine) {
-  .searchButton:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--text-primary) 86%, var(--bg-secondary));
-    border-color: transparent;
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
   }
 }
 
+/* 上一个 / 下一个：36px 方形次按钮 */
 .searchActions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
 
   button {
-    min-width: 38px;
-    width: 38px;
-    height: 38px;
+    min-width: 36px;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
     padding: 0 !important;
-    border-radius: 10px;
+    border-radius: $radius-md;
   }
 }
 
-/* ---------- 编辑器面板 ---------- */
+/* ---------- 编辑器面板：白底 + 1px 边框 + 8px 圆角，无阴影 ---------- */
 
 .editorWrapper {
   width: 100%;
   flex: 0 0 auto;
   height: clamp(500px, 70vh, 1040px);
+  box-sizing: border-box;
   border: 1px solid var(--border-color);
-  border-radius: 14px;
+  border-radius: $radius-lg;
   overflow: hidden;
   background: var(--bg-primary);
 
@@ -126,38 +127,42 @@
 
     .cm-scroller {
       overflow: auto;
+      font-family: $font-mono;
       -webkit-overflow-scrolling: touch;
       touch-action: pan-x pan-y;
       overscroll-behavior: contain;
     }
 
+    /* 行号栏：表头同色的浅底 */
     .cm-gutters {
       border-right: 1px solid var(--border-color);
-      background: color-mix(in srgb, var(--bg-secondary) 86%, transparent);
+      background: var(--table-head-bg);
+      color: var(--text-tertiary);
     }
 
     .cm-lineNumbers .cm-gutterElement {
       padding: 0 8px 0 12px;
       min-width: 40px;
-      color: var(--text-muted);
+      color: var(--text-tertiary);
+      font-variant-numeric: tabular-nums;
     }
 
     .cm-activeLine,
     .cm-activeLineGutter {
-      background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+      background: color-mix(in srgb, var(--bg-tertiary) 55%, transparent);
     }
 
     .cm-selectionMatch {
-      background: rgba(224, 170, 20, 0.24);
+      background: color-mix(in srgb, var(--amber-color) 22%, transparent);
     }
 
     .cm-searchMatch {
-      background: rgba(224, 170, 20, 0.32);
-      outline: 1px solid rgba(224, 170, 20, 0.48);
+      background: color-mix(in srgb, var(--amber-color) 30%, transparent);
+      outline: 1px solid color-mix(in srgb, var(--amber-color) 50%, transparent);
     }
 
     .cm-searchMatch-selected {
-      background: rgba(198, 87, 70, 0.32);
+      background: color-mix(in srgb, var(--primary-color) 28%, transparent);
     }
   }
 }
@@ -166,8 +171,8 @@
 
 @include mobile {
   .searchBar {
-    flex-basis: 100%;
-    max-width: none;
+    width: auto;
+    flex: 1 1 100%;
     flex-wrap: wrap;
   }
 
@@ -185,17 +190,5 @@
 @media (max-width: 480px) {
   .searchInput {
     padding-right: 108px !important;
-  }
-}
-
-/* ---------- 无障碍 ---------- */
-
-@media (prefers-reduced-motion: reduce) {
-  .searchButton {
-    transition: none;
-  }
-
-  .searchButton:active:not(:disabled) {
-    transform: none;
   }
 }

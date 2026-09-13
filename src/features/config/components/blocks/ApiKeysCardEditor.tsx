@@ -8,8 +8,8 @@ import { makeClientId } from '@/types/visualConfig';
 import { generateSecureApiKey } from '@/utils/apiKey';
 import { maskApiKey } from '@/utils/format';
 import { isValidApiKeyCharset } from '@/utils/validation';
-import { ApiKeyStrengthMeter } from './ApiKeyStrengthMeter';
-import styles from './Blocks.module.scss';
+import { ApiKeyStrengthMeter } from '@/features/config/components/blocks/ApiKeyStrengthMeter';
+import styles from '@/features/config/components/blocks/Blocks.module.scss';
 
 export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   value,
@@ -120,9 +120,13 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   };
 
   return (
-    <div className="form-group" style={{ marginBottom: 0 }}>
+    <div className={styles.keyEditor}>
+      {/* 头部：左侧名称与说明，右侧新增按钮 */}
       <div className={styles.blockHeaderRow}>
-        <label style={{ margin: 0 }}>{t('config_management.visual.api_keys.label')}</label>
+        <div className={styles.keyHeading}>
+          <span className={styles.keyLabel}>{t('config_management.visual.api_keys.label')}</span>
+          <span className={styles.keyHint}>{t('config_management.visual.api_keys.hint')}</span>
+        </div>
         <Button size="sm" onClick={openAddModal} disabled={disabled}>
           {t('config_management.visual.api_keys.add')}
         </Button>
@@ -131,19 +135,14 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       {apiKeys.length === 0 ? (
         <div className={styles.emptyState}>{t('config_management.visual.api_keys.empty')}</div>
       ) : (
-        <div className="item-list" style={{ marginTop: 4 }}>
+        /* 密钥列表：单个边框容器 + 行分割线；行内直接展示脱敏后的密钥，不再加序号与重复的「API 密钥」标题 */
+        <ul className={styles.keyList}>
           {apiKeys.map((key, index) => (
-            <div key={renderApiKeyIds[index] ?? `${key}-${index}`} className="item-row">
-              <div className="item-meta">
-                <div className="pill">#{index + 1}</div>
-                <div className="item-title">
-                  {t('config_management.visual.api_keys.input_label')}
-                </div>
-                <div className="item-subtitle">{maskApiKey(String(key || ''))}</div>
-              </div>
-              <div className="item-actions">
+            <li key={renderApiKeyIds[index] ?? `${key}-${index}`} className={styles.keyRow}>
+              <code className={styles.keyValue}>{maskApiKey(String(key || ''))}</code>
+              <div className={styles.keyActions}>
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
                   onClick={() => handleCopy(key)}
                   disabled={disabled}
@@ -151,7 +150,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                   {t('common.copy')}
                 </Button>
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
                   onClick={() => openEditModal(renderApiKeyIds[index] ?? '')}
                   disabled={disabled}
@@ -159,20 +158,19 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                   {t('config_management.visual.common.edit')}
                 </Button>
                 <Button
-                  variant="danger"
+                  variant="ghost"
                   size="sm"
+                  className={styles.keyDelete}
                   onClick={() => handleDelete(renderApiKeyIds[index] ?? '')}
                   disabled={disabled}
                 >
                   {t('config_management.visual.common.delete')}
                 </Button>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
-
-      <div className="hint">{t('config_management.visual.api_keys.hint')}</div>
 
       <Modal
         open={modalOpen}

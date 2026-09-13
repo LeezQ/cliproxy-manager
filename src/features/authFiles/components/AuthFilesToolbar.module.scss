@@ -1,20 +1,25 @@
 @use '../../../styles/mixins' as *;
 
-/* 工作区工具栏：高频操作区，无入场动画，反馈即时 */
+/* ============================================================
+ * 筛选卡片内的工具栏：padding 16px，控件横向排列 gap 12px 可换行。
+ * 输入框 / 下拉 / 分段控件统一 36px 高、8px 圆角、14px 字；
+ * 高频操作区，无入场动画，交互只做颜色过渡。
+ * ============================================================ */
 
 .toolbar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px 10px;
+  gap: 12px;
+  padding: 16px;
 }
 
 /* ---------- 搜索 ---------- */
 
 .search {
-  flex: 1 1 220px;
-  min-width: 180px;
-  max-width: 340px;
+  flex: 1 1 240px;
+  min-width: 200px;
+  max-width: 360px;
 
   /* Input 组件外层是 .form-group，去掉其默认下边距 */
   :global(.form-group) {
@@ -23,47 +28,45 @@
 
   :global(.input) {
     height: 36px;
-    border-radius: 10px;
-    font-size: 13px;
+    font-size: 14px;
+    /* 右侧搜索图标占位，避免长占位符压到图标 */
+    padding-right: 36px;
   }
 }
 
 .searchIcon {
-  color: var(--text-quaternary);
+  color: var(--text-tertiary);
 }
 
-/* ---------- 状态分段控件 ---------- */
+/* ---------- 状态分段控件：muted 底 + 选中白底描边 ---------- */
 
 .segmented {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 2px;
-  border-radius: $radius-full;
-  border: 1px solid var(--border-color);
+  height: 36px;
+  padding: 3px;
+  box-sizing: border-box;
+  border-radius: $radius-md;
   background: var(--bg-tertiary);
 }
 
 .segment {
-  border: 0;
+  height: 100%;
+  border: 1px solid transparent;
   background: none;
   cursor: pointer;
-  padding: 5px 12px;
-  border-radius: $radius-full;
-  font-size: 12px;
-  font-weight: 550;
-  line-height: 1.3;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
   color: var(--text-secondary);
   white-space: nowrap;
   transition:
-    color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-    background-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-    box-shadow var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-    transform var(--dur-press, 160ms) var(--ease-out-strong, ease-out);
-
-  &:active {
-    transform: scale(0.96);
-  }
+    color $transition-fast,
+    background-color $transition-fast,
+    border-color $transition-fast;
 
   &:focus-visible {
     outline: 2px solid var(--primary-color);
@@ -79,29 +82,26 @@
 
 .segmentActive {
   color: var(--text-primary);
-  font-weight: 650;
-  background: var(--floating-surface, var(--bg-primary));
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.12),
-    0 1px 2px rgba(0, 0, 0, 0.08);
+  background: var(--bg-primary);
+  border-color: var(--border-color);
 }
 
+/* 「问题」分段选中时用故障色文字提示当前是异常视图 */
 .segmentProblem.segmentActive {
-  color: var(--danger-color);
-  background: color-mix(
-    in srgb,
-    var(--danger-color) 12%,
-    var(--floating-surface, var(--bg-primary))
-  );
-  box-shadow:
-    0 1px 3px color-mix(in srgb, var(--danger-color) 20%, transparent),
-    0 1px 2px rgba(0, 0, 0, 0.06);
+  color: var(--error-color);
 }
 
-/* ---------- 排序 ---------- */
+/* ---------- 排序（Select 触发器对齐 36px 高） ---------- */
 
 .sort {
-  min-width: 120px;
+  min-width: 132px;
+
+  button {
+    height: 36px;
+    font-size: 14px;
+    box-shadow: none;
+    border-color: var(--border-primary);
+  }
 }
 
 /* ---------- 显示设置 ---------- */
@@ -110,48 +110,13 @@
   position: relative;
 }
 
-.displayButton {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: $radius-full;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 550;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  transition:
-    color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-    border-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-    transform var(--dur-press, 160ms) var(--ease-out-strong, ease-out);
-
-  &:active {
-    transform: scale(0.96);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 1px;
-  }
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .displayButton:hover {
-    color: var(--text-primary);
-    border-color: var(--border-hover);
-  }
-}
-
-.displayButtonActive {
-  color: var(--text-primary);
+/* 弹层打开时按钮保持悬停态，提示与弹层的归属关系 */
+.displayButtonActive:global(.btn) {
+  background-color: var(--bg-tertiary);
   border-color: var(--border-hover);
-  background: var(--bg-primary);
 }
 
+/* 显示设置弹层：浮层允许使用 floating-shadow，无缩放入场 */
 .popover {
   position: absolute;
   top: calc(100% + 6px);
@@ -159,22 +124,13 @@
   z-index: $z-dropdown;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  min-width: 216px;
+  gap: 12px;
+  min-width: 228px;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: $radius-md;
   border: 1px solid var(--border-color);
   background: var(--floating-surface);
   box-shadow: var(--floating-shadow);
-  transform-origin: top right;
-  animation: toolbar-popover-in var(--dur-hover, 200ms) var(--ease-out-strong, ease-out) both;
-}
-
-@keyframes toolbar-popover-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
 }
 
 .popoverRow {
@@ -182,71 +138,35 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
 .pageSizeInput {
-  width: 64px;
-  height: 30px;
+  width: 72px;
+  height: 32px;
   padding: 0 8px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
+  box-sizing: border-box;
+  border-radius: $radius-md;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-primary);
   color: var(--text-primary);
   font-family: $font-mono;
-  font-size: 12.5px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   text-align: right;
+  transition:
+    border-color $transition-fast,
+    box-shadow $transition-fast;
+
+  &:hover {
+    border-color: var(--border-hover);
+  }
 
   &:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--primary-10);
-  }
-}
-
-/* ---------- 删除筛选结果（工具栏右端的 ghost danger） ---------- */
-
-.deleteAction {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: $radius-full;
-  border: 1px solid transparent;
-  background: none;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 550;
-  color: var(--danger-color);
-  white-space: nowrap;
-  transition:
-    background-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-    border-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-    transform var(--dur-press, 160ms) var(--ease-out-strong, ease-out);
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-
-  &:active:not(:disabled) {
-    transform: scale(0.96);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--danger-color);
-    outline-offset: 1px;
-  }
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .deleteAction:hover:not(:disabled) {
-    background: var(--destructive-10);
-    border-color: var(--destructive-30);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 18%, transparent);
   }
 }
 
@@ -257,13 +177,13 @@
     flex-basis: 100%;
     max-width: none;
   }
-
-  .deleteAction {
-    margin-left: 0;
-  }
 }
 
 @include mobile {
+  .toolbar {
+    padding: 12px;
+  }
+
   .segmented {
     overflow-x: auto;
     max-width: 100%;
@@ -272,23 +192,5 @@
     &::-webkit-scrollbar {
       display: none;
     }
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .segment,
-  .displayButton,
-  .deleteAction {
-    transition: none;
-  }
-
-  .segment:active,
-  .displayButton:active,
-  .deleteAction:active:not(:disabled) {
-    transform: none;
-  }
-
-  .popover {
-    animation: none;
   }
 }

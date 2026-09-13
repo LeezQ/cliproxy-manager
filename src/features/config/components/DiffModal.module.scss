@@ -7,10 +7,10 @@ $diff-line-height: 20px;
 $diff-gutter-width: 50px;
 $diff-prefix-width: 20px;
 
-// GitHub-inspired diff colors (theme-adaptive via color-mix)
-$diff-add-color: #3fb950;
-$diff-del-color: #f85149;
-$diff-hunk-color: #388bfd;
+// 差异配色：改用设计令牌（健康绿 / 故障红 / 主色蓝），亮暗主题自动适配
+$diff-add-color: var(--success-color);
+$diff-del-color: var(--error-color);
+$diff-hunk-color: var(--primary-color);
 
 .diffModal {
   :global(.modal-body) {
@@ -31,7 +31,7 @@ $diff-hunk-color: #388bfd;
   flex: 1;
   border: 1px dashed var(--border-color);
   border-radius: $radius-md;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   color: var(--text-secondary);
   font-size: 14px;
   display: grid;
@@ -55,8 +55,10 @@ $diff-hunk-color: #388bfd;
   display: flex;
   align-items: center;
   gap: $spacing-sm;
-  padding: 10px $spacing-md;
-  background: var(--bg-secondary);
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  background: var(--table-head-bg);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
@@ -79,8 +81,9 @@ $diff-hunk-color: #388bfd;
   align-items: center;
   gap: $spacing-sm;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   font-family: $diff-mono;
+  font-variant-numeric: tabular-nums;
 }
 
 .statAdditions {
@@ -100,7 +103,7 @@ $diff-hunk-color: #388bfd;
 .statBlock {
   width: 8px;
   height: 8px;
-  border-radius: 2px;
+  border-radius: 2px; /* 统计小方块 */
 }
 
 .statBlockAdd {
@@ -190,7 +193,7 @@ $diff-hunk-color: #388bfd;
   flex-shrink: 0;
   text-align: center;
   user-select: none;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 // ── Code text ───────────────────────────────────────────

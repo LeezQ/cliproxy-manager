@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useInterval } from '@/hooks/useInterval';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
-import { useRevealOnScroll } from '@/hooks/motion';
 import { usePageTransitionLayer } from '@/components/common/PageTransitionLayer';
+import { PageHeader, PageHeaderStat } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/Button';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { IconRefreshCw, IconTrash2, IconUpload } from '@/components/ui/icons';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { copyToClipboard } from '@/utils/clipboard';
@@ -27,8 +29,6 @@ import { BatchActionBar } from '@/features/authFiles/components/BatchActionBar';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
 import { ProviderTabs } from '@/features/authFiles/components/ProviderTabs';
-import { VaultHeader } from '@/features/authFiles/components/VaultHeader';
-import { VaultPulse } from '@/features/authFiles/components/VaultPulse';
 import { invalidateAuthFileDerivedCaches } from '@/features/authFiles/cacheInvalidation';
 import {
   buildWildcardSearch,
@@ -51,13 +51,11 @@ import {
   type AuthFilesSortMode,
 } from '@/features/authFiles/uiState';
 import { useAuthStore, useNotificationStore, useThemeStore } from '@/stores';
-import styles from './AuthFilesPage.module.scss';
+import styles from '@/features/authFiles/AuthFilesPage.module.scss';
 
 const DEFAULT_REGULAR_PAGE_SIZE = 9;
 const DEFAULT_COMPACT_PAGE_SIZE = 12;
 const SKELETON_CARD_COUNT = 6;
-/** 首屏卡片级联入场总预算，与 useRevealGroup 同一 360ms 语汇。 */
-const CARD_ENTRANCE_BUDGET_MS = 360;
 
 const resolveStatusFilterMode = (
   problemOnly: boolean,
@@ -463,28 +461,10 @@ export function AuthFilesPage() {
     batchStatusUpdating ||
     selectedHasStatusUpdating;
 
-  /* ---------- 头部遥测计数 ---------- */
+  /* ---------- 标题区统计：凭证总数 / 启用数 / 问题数 ---------- */
 
   const activeCount = useMemo(() => files.filter((file) => file.disabled !== true).length, [files]);
   const problemCount = useMemo(() => files.filter(isProblemAuthFile).length, [files]);
-
-  /* ---------- 首屏卡片一次性级联入场 ----------
-   * 首批数据渲染后立即翻转 cardsAnimated；已挂载的卡片在挂载时捕获过
-   * 自己的延迟（AuthFileCard 内 useState 初始化），不受后续 null 影响，
-   * 而过滤/翻页/轮询新挂载的卡片拿到 null——不重播。 */
-
-  const [cardsAnimated, setCardsAnimated] = useState(false);
-  const enableCardEntrance = !cardsAnimated && isCurrentLayer && !loading && pageItems.length > 0;
-  useEffect(() => {
-    if (enableCardEntrance) {
-      setCardsAnimated(true);
-    }
-  }, [enableCardEntrance]);
-  const cardEntranceDelay = (index: number): number | null => {
-    if (!enableCardEntrance) return null;
-    if (pageItems.length <= 1) return 0;
-    return Math.round((index / (pageItems.length - 1)) * CARD_ENTRANCE_BUDGET_MS);
-  };
 
   /* ---------- 杂项 ---------- */
 
@@ -554,8 +534,6 @@ export function AuthFilesPage() {
       : `${t('common.delete')} ${getTypeLabel(t, normalizedFilter)}`;
   })();
 
-  const oauthSectionRef = useRevealOnScroll<HTMLDivElement>();
-
   const isFirstRunEmpty = !loading && files.length === 0 && !error;
   const isNoResults = !loading && files.length > 0 && pageItems.length === 0;
 
@@ -569,16 +547,45 @@ export function AuthFilesPage() {
 
   return (
     <div className={styles.page}>
-      <VaultHeader
-        totalCount={files.length}
-        activeCount={activeCount}
-        problemCount={problemCount}
-        loading={loading}
-        refreshing={refreshing}
-        uploading={uploading}
-        disableControls={disableControls}
-        onUpload={handleUploadClick}
-        onRefresh={() => void handleHeaderRefresh()}
+      {/* 标题区：统一使用 PageHeader，统计卡片展示凭证规模与健康概况 */}
+      <PageHeader
+        title={t('auth_files.title')}
+        description={t('dashboard.cta_auth_files_desc')}
+        stats={
+          <>
+            <PageHeaderStat
+              label={t('dashboard.stat_credentials')}
+              value={files.length}
+              tone="neutral"
+            />
+            <PageHeaderStat
+              label={t('auth_files.problem_filter_enabled')}
+              value={activeCount}
+              tone="success"
+            />
+            <PageHeaderStat
+              label={t('auth_files.problem_filter_problem')}
+              value={problemCount}
+              tone={problemCount > 0 ? 'danger' : 'neutral'}
+            />
+          </>
+        }
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => void handleHeaderRefresh()}
+              disabled={loading || refreshing}
+            >
+              {refreshing ? <LoadingSpinner size={14} /> : <IconRefreshCw size={16} />}
+              {t('common.refresh')}
+            </Button>
+            <Button onClick={handleUploadClick} disabled={disableControls || uploading}>
+              {uploading ? <LoadingSpinner size={14} /> : <IconUpload size={16} />}
+              {t('auth_files.upload_button')}
+            </Button>
+          </>
+        }
       />
       <input
         ref={fileInputRef}
@@ -589,53 +596,67 @@ export function AuthFilesPage() {
         onChange={handleFileChange}
       />
 
-      <VaultPulse files={files} statusBarCache={statusBarCache} />
-
       <section className={styles.workbench} aria-label={t('auth_files.title_section')}>
-        <ProviderTabs
-          types={existingTypes}
-          counts={typeCounts}
-          active={normalizedFilter}
-          resolvedTheme={resolvedTheme}
-          onChange={(type) => {
-            setFilter(type);
-            setPage(1);
-          }}
-        />
+        {/* 筛选卡片：provider 下划线 tabs + 搜索 / 状态 / 排序 / 显示选项 / 批量删除 */}
+        <div className={styles.filterCard}>
+          {/* 卡片头部：左侧提供商 tabs，右侧「删除筛选结果」——删除范围由 tabs 与下方筛选决定 */}
+          <div className={styles.filterHead}>
+            <ProviderTabs
+              className={styles.filterTabs}
+              types={existingTypes}
+              counts={typeCounts}
+              active={normalizedFilter}
+              resolvedTheme={resolvedTheme}
+              onChange={(type) => {
+                setFilter(type);
+                setPage(1);
+              }}
+            />
+            <div className={styles.filterHeadAction}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={styles.deleteAction}
+                onClick={() =>
+                  handleDeleteAll({
+                    filter,
+                    problemOnly,
+                    disabledOnly,
+                    enabledOnly,
+                    onResetFilterToAll: () => setFilter('all'),
+                    onResetProblemOnly: () => setStatusFilterMode('all'),
+                    onResetDisabledOnly: () => setStatusFilterMode('all'),
+                    onResetEnabledOnly: () => setStatusFilterMode('all'),
+                  })
+                }
+                disabled={disableControls || loading || deletingAll || files.length === 0}
+              >
+                {deletingAll ? <LoadingSpinner size={14} /> : <IconTrash2 size={15} />}
+                {deleteAllButtonLabel}
+              </Button>
+            </div>
+          </div>
 
-        <AuthFilesToolbar
-          search={search}
-          onSearchChange={(value) => {
-            setSearch(value);
-            setPage(1);
-          }}
-          statusFilterMode={statusFilterMode}
-          statusFilterOptions={statusFilterOptions}
-          onStatusFilterChange={handleStatusFilterModeChange}
-          sortMode={sortMode}
-          sortOptions={sortOptions}
-          onSortModeChange={handleSortModeChange}
-          pageSizeInput={pageSizeInput}
-          onPageSizeInputChange={handlePageSizeChange}
-          onPageSizeCommit={commitPageSizeInput}
-          compactMode={compactMode}
-          onCompactModeChange={setCompactMode}
-          deleteLabel={deleteAllButtonLabel}
-          deleteDisabled={disableControls || loading || deletingAll || files.length === 0}
-          deleteLoading={deletingAll}
-          onDelete={() =>
-            handleDeleteAll({
-              filter,
-              problemOnly,
-              disabledOnly,
-              enabledOnly,
-              onResetFilterToAll: () => setFilter('all'),
-              onResetProblemOnly: () => setStatusFilterMode('all'),
-              onResetDisabledOnly: () => setStatusFilterMode('all'),
-              onResetEnabledOnly: () => setStatusFilterMode('all'),
-            })
-          }
-        />
+          <AuthFilesToolbar
+            search={search}
+            onSearchChange={(value) => {
+              setSearch(value);
+              setPage(1);
+            }}
+            statusFilterMode={statusFilterMode}
+            statusFilterOptions={statusFilterOptions}
+            onStatusFilterChange={handleStatusFilterModeChange}
+            sortMode={sortMode}
+            sortOptions={sortOptions}
+            onSortModeChange={handleSortModeChange}
+            pageSizeInput={pageSizeInput}
+            onPageSizeInputChange={handlePageSizeChange}
+            onPageSizeCommit={commitPageSizeInput}
+            compactMode={compactMode}
+            onCompactModeChange={setCompactMode}
+          />
+        </div>
 
         {error && (
           <div className={styles.errorBanner} role="alert">
@@ -646,7 +667,7 @@ export function AuthFilesPage() {
         {loading ? (
           <div className={gridClasses} aria-hidden="true">
             {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
-              <Skeleton key={index} height={206} rounded={14} />
+              <Skeleton key={index} height={206} rounded={8} />
             ))}
           </div>
         ) : isFirstRunEmpty ? (
@@ -680,7 +701,7 @@ export function AuthFilesPage() {
           />
         ) : (
           <div className={gridClasses}>
-            {pageItems.map((file, index) => (
+            {pageItems.map((file) => (
               <AuthFileCard
                 key={file.name}
                 file={file}
@@ -693,7 +714,6 @@ export function AuthFilesPage() {
                 manualRefreshing={manualRefreshing}
                 quotaFilterType={quotaFilterType}
                 statusBarCache={statusBarCache}
-                entranceDelayMs={cardEntranceDelay(index)}
                 onShowModels={showModels}
                 onDownload={handleDownload}
                 onManualRefresh={handleManualRefresh}
@@ -735,7 +755,7 @@ export function AuthFilesPage() {
         )}
       </section>
 
-      <div className={styles.configGrid} ref={oauthSectionRef}>
+      <div className={styles.configGrid}>
         <OAuthExcludedCard
           disableControls={disableControls}
           excludedError={excludedError}

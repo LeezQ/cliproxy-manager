@@ -16,8 +16,8 @@ import {
   supportsAuthFileWebsockets,
 } from '@/features/authFiles/constants';
 import { MAX_CREDENTIAL_WEIGHT } from '@/utils/credentialWeight';
-import { AuthFileExcludedModelsField } from './AuthFileExcludedModelsField';
-import styles from './AuthFileDetailsSheet.module.scss';
+import { AuthFileExcludedModelsField } from '@/features/authFiles/components/AuthFileExcludedModelsField';
+import styles from '@/features/authFiles/components/AuthFileDetailsSheet.module.scss';
 
 /** API 边界归一化补写的派生字段——INFO 视图里只展示后端原始形状，避免重复噪音。 */
 const DERIVED_INFO_KEYS = [

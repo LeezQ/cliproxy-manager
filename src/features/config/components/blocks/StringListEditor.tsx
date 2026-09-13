@@ -2,8 +2,8 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { makeClientId } from '@/types/visualConfig';
-import { ExpandableInput } from './ExpandableInput';
-import styles from './Blocks.module.scss';
+import { ExpandableInput } from '@/features/config/components/blocks/ExpandableInput';
+import styles from '@/features/config/components/blocks/Blocks.module.scss';
 
 export const StringListEditor = memo(function StringListEditor({
   value,

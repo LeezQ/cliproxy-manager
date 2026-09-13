@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { AuthFileModelItem } from '@/features/authFiles/constants';
 import { isModelExcluded } from '@/features/authFiles/constants';
-import styles from './AuthFileModelsModal.module.scss';
+import styles from '@/features/authFiles/components/AuthFileModelsModal.module.scss';
 
 export type AuthFileModelsModalProps = {
   open: boolean;

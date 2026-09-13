@@ -7,7 +7,8 @@
  * no per-card percentage shows that.
  *
  * All projection maths lives in quotaTimelineModel.ts — this file is layout
- * only. (The model is named ...Model rather than matching this component,
+ * only. Visually the whole timeline is one bordered white card (header →
+ * flush chart → legend) following the Stallion-X surface rules. (The model is named ...Model rather than matching this component,
  * because a case-insensitive filesystem cannot hold both QuotaTimeline.tsx and
  * quotaTimeline.ts.)
  */
@@ -25,11 +26,11 @@ import {
   projectResetCredits,
   timelineSpan,
   DAY_MS,
-} from '../quotaTimelineModel';
-import type { TimelineLane, TimelineMode } from '../quotaTimelineModel';
-import type { QuotaFileEntry } from '../logic';
-import type { QuotaCardState } from '../providers';
-import styles from './QuotaTimeline.module.scss';
+} from '@/features/quota/quotaTimelineModel';
+import type { TimelineLane, TimelineMode } from '@/features/quota/quotaTimelineModel';
+import type { QuotaFileEntry } from '@/features/quota/logic';
+import type { QuotaCardState } from '@/features/quota/providers';
+import styles from '@/features/quota/components/QuotaTimeline.module.scss';
 
 const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 

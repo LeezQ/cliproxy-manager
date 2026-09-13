@@ -1,4 +1,3 @@
-import { useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -24,7 +23,6 @@ import {
   getAuthFileStatusMessage,
   getThemeSurfaceIconBackground,
   hasAuthFileStatusWarning,
-  getTypeColor,
   getTypeLabel,
   isRuntimeOnlyAuthFile,
   isThemeSurfaceIconProvider,
@@ -36,7 +34,7 @@ import {
 import { deriveAuthFileIdentity } from '@/features/authFiles/identity';
 import type { AuthFileStatusBarData } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
 import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
-import styles from './AuthFileCard.module.scss';
+import styles from '@/features/authFiles/components/AuthFileCard.module.scss';
 
 export type AuthFileCardProps = {
   file: AuthFileItem;
@@ -49,8 +47,6 @@ export type AuthFileCardProps = {
   manualRefreshing: Record<string, boolean>;
   quotaFilterType: QuotaProviderType | null;
   statusBarCache: Map<string, AuthFileStatusBarData>;
-  /** 首屏一次性级联入场的延迟；null/undefined 表示不做入场动画。 */
-  entranceDelayMs?: number | null;
   onShowModels: (file: AuthFileItem) => void;
   onDownload: (name: string) => void;
   onManualRefresh: (file: AuthFileItem) => void;
@@ -66,6 +62,11 @@ const resolveQuotaType = (file: AuthFileItem): QuotaProviderType | null => {
   return provider as QuotaProviderType;
 };
 
+/**
+ * 单个认证文件卡片：白底 + 1px 边框 + 8px 圆角，无阴影、无入场动画。
+ * 头部为勾选 + 品牌图标 + 类型/状态徽标 + 账号；中部为健康状态方块条与元数据；
+ * 底部为 32px 的 secondary 图标按钮组与启用开关。
+ */
 export function AuthFileCard(props: AuthFileCardProps) {
   const { t } = useTranslation();
   const {
@@ -79,7 +80,6 @@ export function AuthFileCard(props: AuthFileCardProps) {
     manualRefreshing,
     quotaFilterType,
     statusBarCache,
-    entranceDelayMs,
     onShowModels,
     onDownload,
     onManualRefresh,
@@ -95,7 +95,6 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const showModelsButton = !isRuntimeOnly || isAistudio;
   const showManualRefreshButton = !isRuntimeOnly && supportsAuthFileManualRefresh(providerKey);
   const isManualRefreshing = manualRefreshing[file.name] === true;
-  const typeColor = getTypeColor(providerKey, resolvedTheme);
   const typeLabel = getTypeLabel(t, providerKey);
   const providerIcon = getAuthFileIcon(providerKey, resolvedTheme);
   // 与 AI 提供商界面一致：Kimi 图标底座随主题切换颜色
@@ -138,24 +137,17 @@ export function AuthFileCard(props: AuthFileCardProps) {
         ? styles.stateWarning
         : styles.stateActive;
 
-  // 挂载时捕获一次入场延迟：父级随后传 null 也不会中断已开始的动画
-  const [mountEntranceDelayMs] = useState<number | null>(entranceDelayMs ?? null);
   const cardClasses = [
     styles.card,
     compact ? styles.cardCompact : '',
     selected ? styles.cardSelected : '',
     file.disabled ? styles.cardDisabled : '',
-    mountEntranceDelayMs != null ? styles.cardEnter : '',
   ]
     .filter(Boolean)
     .join(' ');
-  const cardStyle =
-    mountEntranceDelayMs != null
-      ? ({ '--card-delay': `${mountEntranceDelayMs}ms` } as CSSProperties)
-      : undefined;
 
   return (
-    <article className={cardClasses} style={cardStyle}>
+    <article className={cardClasses}>
       <header className={styles.head}>
         {!isRuntimeOnly && (
           <SelectionCheckbox
@@ -168,19 +160,13 @@ export function AuthFileCard(props: AuthFileCardProps) {
             title={selected ? t('auth_files.batch_deselect') : t('auth_files.batch_select_all')}
           />
         )}
+        {/* 品牌图标：中性底座，只保留图标本身的品牌色；Kimi 底座随主题切换 */}
         <div
           className={styles.avatar}
           style={
             useThemeSurfaceIcon
-              ? {
-                  backgroundColor: getThemeSurfaceIconBackground(resolvedTheme),
-                  color: typeColor.text,
-                }
-              : {
-                  backgroundColor: typeColor.bg,
-                  color: typeColor.text,
-                  ...(typeColor.border ? { border: typeColor.border } : {}),
-                }
+              ? { backgroundColor: getThemeSurfaceIconBackground(resolvedTheme) }
+              : undefined
           }
         >
           {providerIcon ? (
@@ -191,16 +177,8 @@ export function AuthFileCard(props: AuthFileCardProps) {
         </div>
         <div className={styles.identity}>
           <div className={styles.badgeRow}>
-            <span
-              className={styles.typeBadge}
-              style={{
-                backgroundColor: typeColor.bg,
-                color: typeColor.text,
-                ...(typeColor.border ? { border: typeColor.border } : {}),
-              }}
-            >
-              {typeLabel}
-            </span>
+            {/* 类型徽标：中性小标签，不再使用品牌色块 */}
+            <span className={styles.typeBadge}>{typeLabel}</span>
             <span className={`${styles.stateBadge} ${stateBadgeClass}`}>
               <span className={styles.stateDot} aria-hidden="true" />
               {stateLabel}
@@ -312,6 +290,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   onClick={() => onManualRefresh(file)}
                   className={styles.iconButton}
                   title={t('auth_files.manual_refresh_button')}
+                  aria-label={t('auth_files.manual_refresh_button')}
                   disabled={
                     disableControls ||
                     file.disabled ||
@@ -319,7 +298,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
                     isManualRefreshing
                   }
                 >
-                  {isManualRefreshing ? <LoadingSpinner size={14} /> : <IconRefreshCw size={15} />}
+                  {isManualRefreshing ? <LoadingSpinner size={14} /> : <IconRefreshCw size={16} />}
                 </Button>
               )}
               <Button
@@ -328,9 +307,10 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 onClick={() => onDownload(file.name)}
                 className={styles.iconButton}
                 title={t('auth_files.download_button')}
+                aria-label={t('auth_files.download_button')}
                 disabled={disableControls}
               >
-                <IconDownload size={15} />
+                <IconDownload size={16} />
               </Button>
               <Button
                 variant="secondary"
@@ -338,19 +318,21 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 onClick={() => onOpenPrefixProxyEditor(file)}
                 className={styles.iconButton}
                 title={t('auth_files.prefix_proxy_button')}
+                aria-label={t('auth_files.prefix_proxy_button')}
                 disabled={disableControls || isManualRefreshing}
               >
-                <IconSettings size={15} />
+                <IconSettings size={16} />
               </Button>
               <Button
-                variant="danger"
+                variant="secondary"
                 size="sm"
                 onClick={() => onDelete(file.name)}
-                className={styles.iconButton}
+                className={`${styles.iconButton} ${styles.iconButtonDanger}`}
                 title={t('auth_files.delete_button')}
+                aria-label={t('auth_files.delete_button')}
                 disabled={disableControls || deleting === file.name || isManualRefreshing}
               >
-                {deleting === file.name ? <LoadingSpinner size={14} /> : <IconTrash2 size={15} />}
+                {deleting === file.name ? <LoadingSpinner size={14} /> : <IconTrash2 size={16} />}
               </Button>
             </div>
           )}

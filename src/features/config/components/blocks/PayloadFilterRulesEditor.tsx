@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import type { PayloadFilterRule, PayloadModelEntry } from '@/types/visualConfig';
 import { makeClientId } from '@/types/visualConfig';
-import { ExpandableInput } from './ExpandableInput';
-import { StringListEditor } from './StringListEditor';
-import { buildProtocolOptions } from './shared';
-import styles from './Blocks.module.scss';
+import { ExpandableInput } from '@/features/config/components/blocks/ExpandableInput';
+import { StringListEditor } from '@/features/config/components/blocks/StringListEditor';
+import { buildProtocolOptions } from '@/features/config/components/blocks/shared';
+import styles from '@/features/config/components/blocks/Blocks.module.scss';
 
 export const PayloadFilterRulesEditor = memo(function PayloadFilterRulesEditor({
   value,

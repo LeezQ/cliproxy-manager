@@ -2,8 +2,8 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/Input';
 import { IconSearch } from '@/components/ui/icons';
-import { searchConfigFields, type ConfigFieldSearchEntry } from '../searchIndex';
-import styles from './ConfigSearch.module.scss';
+import { searchConfigFields, type ConfigFieldSearchEntry } from '@/features/config/searchIndex';
+import styles from '@/features/config/components/ConfigSearch.module.scss';
 
 export type ConfigSearchProps = {
   disabled?: boolean;

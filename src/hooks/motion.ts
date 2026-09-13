@@ -14,10 +14,21 @@ const GROUP_MAX_TOTAL = 0.36;
 
 const easeOutQuart = (progress: number) => 1 - (1 - progress) ** 4;
 
+/**
+ * Stallion-X 动效策略：管理端是高频操作的运维工作台，入场、滚动揭示、数字滚动等
+ * 装饰性动效一律关闭，状态变化直接呈现最终结果。
+ *
+ * 所有 JS 动效（useRevealOnScroll / useRevealGroup / useCountUp、悬浮操作条、
+ * 平滑滚动）都通过本函数判断是否降级，因此把它固定为 true 即可全局减弱动效，
+ * 不必逐个改动调用方。若将来需要恢复系统偏好判断，把常量改为 false 即可。
+ */
+const APP_MOTION_REDUCED = true;
+
 export const prefersReducedMotion = (): boolean =>
-  typeof window !== 'undefined' &&
-  typeof window.matchMedia === 'function' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  APP_MOTION_REDUCED ||
+  (typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 /**
  * 元素滚动进入视口时上浮淡入。

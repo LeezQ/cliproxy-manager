@@ -6,10 +6,10 @@ import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
 import { Input } from '@/components/ui/Input';
 import type { VisualConfigValues } from '@/types/visualConfig';
-import { SPONSORS } from '../../sponsors';
-import { ApiKeysCardEditor } from '../blocks/ApiKeysCardEditor';
-import { FieldAnchor, FieldGroup, ToggleRow } from './FieldPrimitives';
-import fieldStyles from './Field.module.scss';
+import { SPONSORS } from '@/features/config/sponsors';
+import { ApiKeysCardEditor } from '@/features/config/components/blocks/ApiKeysCardEditor';
+import { FieldAnchor, ToggleRow } from '@/features/config/components/fields/FieldPrimitives';
+import fieldStyles from '@/features/config/components/fields/Field.module.scss';
 
 export type SharedFieldProps = {
   values: VisualConfigValues;
@@ -110,14 +110,13 @@ export function SponsorHintSpacer() {
 
 export function ApiKeysField({ values, disabled, onChange }: SharedFieldProps) {
   return (
+    // 不再包 FieldGroup 边框：编辑器自身就是一个带边框的列表，避免「卡片套框再套卡片」的三层嵌套
     <FieldAnchor fieldId="apiKeys">
-      <FieldGroup>
-        <ApiKeysCardEditor
-          value={values.apiKeysText}
-          disabled={disabled}
-          onChange={(apiKeysText) => onChange({ apiKeysText })}
-        />
-      </FieldGroup>
+      <ApiKeysCardEditor
+        value={values.apiKeysText}
+        disabled={disabled}
+        onChange={(apiKeysText) => onChange({ apiKeysText })}
+      />
     </FieldAnchor>
   );
 }

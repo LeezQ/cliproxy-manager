@@ -7,7 +7,7 @@ import {
   isThemeSurfaceIconProvider,
   type ResolvedTheme,
 } from '@/features/authFiles/constants';
-import styles from './ProviderTabs.module.scss';
+import styles from '@/features/authFiles/components/ProviderTabs.module.scss';
 
 export type ProviderTabsProps = {
   types: string[];
@@ -15,17 +15,31 @@ export type ProviderTabsProps = {
   active: string;
   resolvedTheme: ResolvedTheme;
   onChange: (type: string) => void;
+  /** 外层容器附加类名：嵌入筛选卡片时用于对齐卡片内边距 */
+  className?: string;
 };
 
 /**
- * 提供商过滤 tabs：水平排布、移动端横向滚动。
- * 品牌色只出现在图标上，激活态是文字 + 2px 墨色下划线。
+ * 提供商过滤 tabs：水平排布、窄屏横向滚动。
+ * 规范中的下划线式 tab：品牌色只出现在图标上，激活态为主文字色 + 2px 主色下划线。
+ * 认证文件页与配额页共用。
  */
-export function ProviderTabs({ types, counts, active, resolvedTheme, onChange }: ProviderTabsProps) {
+export function ProviderTabs({
+  types,
+  counts,
+  active,
+  resolvedTheme,
+  onChange,
+  className,
+}: ProviderTabsProps) {
   const { t } = useTranslation();
 
   return (
-    <div className={styles.tabs} role="group" aria-label={t('auth_files.filter_all')}>
+    <div
+      className={[styles.tabs, className].filter(Boolean).join(' ')}
+      role="group"
+      aria-label={t('auth_files.filter_all')}
+    >
       {types.map((type) => {
         const isActive = active === type;
         const label = type === 'all' ? t('auth_files.filter_all') : getTypeLabel(t, type);
@@ -54,9 +68,7 @@ export function ProviderTabs({ types, counts, active, resolvedTheme, onChange }:
                 {iconSrc ? (
                   <img src={iconSrc} alt="" className={styles.tabIcon} />
                 ) : (
-                  <span className={styles.tabIconFallback}>
-                    {label.slice(0, 1).toUpperCase()}
-                  </span>
+                  <span className={styles.tabIconFallback}>{label.slice(0, 1).toUpperCase()}</span>
                 )}
               </span>
             )}

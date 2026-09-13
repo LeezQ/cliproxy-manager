@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePageTransitionLayer } from '@/components/common/PageTransitionLayer';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useRevealGroup } from '@/hooks/motion';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
 import { useAuthStore, useNotificationStore, useThemeStore } from '@/stores';
@@ -14,7 +13,7 @@ import {
   configTabDomId,
   type ConfigEditorMode,
   type ConfigTabId,
-} from './constants';
+} from '@/features/config/constants';
 import {
   CONFIG_FIELD_COUNT,
   buildHeaderMeta,
@@ -24,29 +23,29 @@ import {
   readSavedSection,
   resolveDirtyTabs,
   resolveStatus,
-} from './uiState';
-import { shouldReloadVisualDraft, useConfigDocument } from './hooks/useConfigDocument';
-import { useFieldJump } from './hooks/useFieldJump';
-import { useSourceSearch } from './hooks/useSourceSearch';
-import { ConfigHeader } from './components/ConfigHeader';
-import { ConfigSearch } from './components/ConfigSearch';
-import { ConfigTabs } from './components/ConfigTabs';
-import { DiffModal } from './components/DiffModal';
-import { FloatingSaveBar } from './components/FloatingSaveBar';
-import { ModeSwitch } from './components/ModeSwitch';
-import { SourcePanel, SourceSearchBar } from './components/SourcePanel';
-import { SectionAdvanced } from './components/sections/SectionAdvanced';
-import { SectionCommon } from './components/sections/SectionCommon';
-import { SectionConnectivity } from './components/sections/SectionConnectivity';
-import { SectionLogging } from './components/sections/SectionLogging';
-import { SectionNetwork } from './components/sections/SectionNetwork';
-import { SectionPayload } from './components/sections/SectionPayload';
-import { SectionQuota } from './components/sections/SectionQuota';
-import { SectionStreaming } from './components/sections/SectionStreaming';
-import styles from './ConfigPage.module.scss';
-
-/** 首载入场预算：卡片延迟 0.28s + 0.45s 动画，之后关闭 animateIn，切 tab 不再重播。 */
-const ENTRANCE_BUDGET_MS = 800;
+} from '@/features/config/uiState';
+import {
+  shouldReloadVisualDraft,
+  useConfigDocument,
+} from '@/features/config/hooks/useConfigDocument';
+import { useFieldJump } from '@/features/config/hooks/useFieldJump';
+import { useSourceSearch } from '@/features/config/hooks/useSourceSearch';
+import { ConfigHeader } from '@/features/config/components/ConfigHeader';
+import { ConfigSearch } from '@/features/config/components/ConfigSearch';
+import { ConfigTabs } from '@/features/config/components/ConfigTabs';
+import { DiffModal } from '@/features/config/components/DiffModal';
+import { FloatingSaveBar } from '@/features/config/components/FloatingSaveBar';
+import { ModeSwitch } from '@/features/config/components/ModeSwitch';
+import { SourcePanel, SourceSearchBar } from '@/features/config/components/SourcePanel';
+import { SectionAdvanced } from '@/features/config/components/sections/SectionAdvanced';
+import { SectionCommon } from '@/features/config/components/sections/SectionCommon';
+import { SectionConnectivity } from '@/features/config/components/sections/SectionConnectivity';
+import { SectionLogging } from '@/features/config/components/sections/SectionLogging';
+import { SectionNetwork } from '@/features/config/components/sections/SectionNetwork';
+import { SectionPayload } from '@/features/config/components/sections/SectionPayload';
+import { SectionQuota } from '@/features/config/components/sections/SectionQuota';
+import { SectionStreaming } from '@/features/config/components/sections/SectionStreaming';
+import styles from '@/features/config/ConfigPage.module.scss';
 
 export function ConfigPage() {
   const { t } = useTranslation();
@@ -56,7 +55,6 @@ export function ConfigPage() {
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const revealRef = useRevealGroup<HTMLDivElement>();
 
   const {
     visualValues,
@@ -76,13 +74,6 @@ export function ConfigPage() {
   const [activeSection, setActiveSection] = useState<ConfigTabId>(() =>
     readSavedSection(localStorage.getItem(CONFIG_SECTION_STORAGE_KEY))
   );
-  // 首载入场：挂载后一个预算周期内为 true；此后切 tab 新挂载的卡片不再播入场。
-  const [animateCards, setAnimateCards] = useState(true);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setAnimateCards(false), ENTRANCE_BUDGET_MS);
-    return () => window.clearTimeout(timer);
-  }, []);
-
   // 旧「简单/完整」双模式已退役，清掉遗留的持久化键。
   useEffect(() => {
     localStorage.removeItem(LEGACY_EDITOR_MODE_STORAGE_KEY);
@@ -221,7 +212,6 @@ export function ConfigPage() {
     values: visualValues,
     validationErrors: visualValidationErrors,
     disabled: disableControls || doc.loading,
-    animateIn: animateCards,
     onChange: setVisualValues,
   };
 
@@ -252,12 +242,27 @@ export function ConfigPage() {
   };
 
   return (
-    <div className={styles.page} ref={revealRef}>
+    <div className={styles.page}>
+      {/* 页头：标题/说明/计数 + 右侧「搜索 · 模式切换 · 重新加载」；搜索随模式切换为字段搜索或源码搜索 */}
       <ConfigHeader
         meta={headerMeta}
         reloadDisabled={doc.loading || doc.saving}
         reloading={doc.loading}
         onReload={doc.handleReload}
+        extraActions={
+          <>
+            {mode === 'visual' ? (
+              <ConfigSearch disabled={disableControls || doc.loading} onJump={jumpToField} />
+            ) : (
+              <SourceSearchBar search={sourceSearch} disabled={disableControls || doc.loading} />
+            )}
+            <ModeSwitch
+              mode={mode}
+              disabled={doc.saving || doc.loading}
+              onChange={handleModeChange}
+            />
+          </>
+        }
       />
 
       {doc.error && (
@@ -271,18 +276,10 @@ export function ConfigPage() {
         </div>
       )}
 
-      <div className={styles.toolbar} data-reveal>
-        {mode === 'visual' ? (
-          <ConfigSearch disabled={disableControls || doc.loading} onJump={jumpToField} />
-        ) : (
-          <SourceSearchBar search={sourceSearch} disabled={disableControls || doc.loading} />
-        )}
-        <ModeSwitch mode={mode} disabled={doc.saving || doc.loading} onChange={handleModeChange} />
-      </div>
-
       {mode === 'visual' ? (
-        <>
-          <div className={styles.tabsRow} data-reveal>
+        <div className={styles.visualEditor}>
+          {/* 分区导航：下划线式 tabs，与下方分区卡片组成一个编辑区块 */}
+          <div className={styles.tabsRow}>
             <ConfigTabs
               active={activeSection}
               errorCounts={errorCounts}
@@ -299,7 +296,7 @@ export function ConfigPage() {
           >
             {renderActiveSection()}
           </div>
-        </>
+        </div>
       ) : (
         <SourcePanel
           search={sourceSearch}

@@ -7,7 +7,7 @@
  */
 
 import type { ResetDisplay } from '@/utils/quota';
-import type { QuotaClassMap } from '../types';
+import type { QuotaClassMap } from '@/features/quota/types';
 
 export interface QuotaResetLabelProps {
   display: ResetDisplay;

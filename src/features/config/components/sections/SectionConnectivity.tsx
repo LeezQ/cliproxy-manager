@@ -1,21 +1,27 @@
 import { useTranslation } from 'react-i18next';
 import { Collapsible } from '@/components/ui/Collapsible';
 import { Input } from '@/components/ui/Input';
-import { CONFIG_TAB_ICONS, SECTION_INDEX_LABELS } from '../../constants';
-import type { ConfigSectionProps } from '../../types';
-import { SectionCard } from '../SectionCard';
-import { Divider, FieldAnchor, FieldGrid, FieldStack, ToggleRow } from '../fields/FieldPrimitives';
-import { ApiKeysField, HostField, PortField } from '../fields/sharedFields';
-import { getValidationMessage } from '../blocks/shared';
-
-const Icon = CONFIG_TAB_ICONS.connectivity;
+import type { ConfigSectionProps } from '@/features/config/types';
+import { SectionCard } from '@/features/config/components/SectionCard';
+import {
+  Divider,
+  FieldAnchor,
+  FieldGrid,
+  FieldStack,
+  ToggleRow,
+} from '@/features/config/components/fields/FieldPrimitives';
+import {
+  ApiKeysField,
+  HostField,
+  PortField,
+} from '@/features/config/components/fields/sharedFields';
+import { getValidationMessage } from '@/features/config/components/blocks/shared';
 
 /** 01 接入与认证：服务地址、端口、认证目录、API 密钥 + TLS / 远程管理折叠组。 */
 export function SectionConnectivity({
   values,
   validationErrors,
   disabled,
-  animateIn,
   onChange,
 }: ConfigSectionProps) {
   const { t } = useTranslation();
@@ -23,11 +29,8 @@ export function SectionConnectivity({
 
   return (
     <SectionCard
-      indexLabel={SECTION_INDEX_LABELS.connectivity}
-      icon={<Icon size={16} />}
       title={t('config_management.visual.sections.connectivity.title')}
       description={t('config_management.visual.sections.connectivity.description')}
-      animateIn={animateIn}
     >
       <FieldStack>
         <FieldGrid>

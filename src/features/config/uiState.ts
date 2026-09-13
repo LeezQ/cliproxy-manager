@@ -10,8 +10,8 @@ import {
   SECTION_VALIDATION_FIELDS,
   type ConfigEditorMode,
   type ConfigTabId,
-} from './constants';
-import { CONFIG_FIELD_SEARCH_INDEX, type VisualSectionId } from './searchIndex';
+} from '@/features/config/constants';
+import { CONFIG_FIELD_SEARCH_INDEX, type VisualSectionId } from '@/features/config/searchIndex';
 
 /** 可视化编辑器暴露的配置项总数（头部 meta 行的「N 项配置」）。 */
 export const CONFIG_FIELD_COUNT = CONFIG_FIELD_SEARCH_INDEX.length;

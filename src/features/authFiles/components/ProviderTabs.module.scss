@@ -1,11 +1,16 @@
 @use '../../../styles/mixins' as *;
 
-/* 提供商过滤 tabs：安静的下划线式，品牌色只在图标 */
+/* ============================================================
+ * 提供商过滤 tabs：规范中的下划线式 tab。
+ * - 高 40px，14px / 500 次级文字；激活态主文字色 + 2px 主色下划线；
+ * - 计数徽标 20px 高 / 4px 圆角，中性底色，激活时使用选中浅底；
+ * - 只做颜色过渡，无位移 / 缩放反馈。
+ * ============================================================ */
 
 .tabs {
   display: flex;
   align-items: stretch;
-  gap: 2px;
+  gap: 4px;
   overflow-x: auto;
   border-bottom: 1px solid var(--border-color);
   scrollbar-width: none;
@@ -19,59 +24,53 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   flex-shrink: 0;
+  height: 44px;
   border: 0;
   background: none;
   cursor: pointer;
-  padding: 8px 12px 11px;
-  border-radius: 8px 8px 0 0;
-  font-size: 13px;
-  font-weight: 550;
+  padding: 0 10px;
+  font-size: 14px;
+  font-weight: 500;
   color: var(--text-secondary);
   white-space: nowrap;
-  transition:
-    color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-    background-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
+  transition: color $transition-fast;
 
+  /* 底部 2px 下划线，压在容器 1px 分割线之上 */
   &::after {
     content: '';
     position: absolute;
-    left: 10px;
-    right: 10px;
+    left: 0;
+    right: 0;
     bottom: -1px;
     height: 2px;
-    border-radius: $radius-full;
     background: transparent;
-    transition: background-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
-  }
-
-  &:active {
-    transform: translateY(0.5px);
+    transition: background-color $transition-fast;
   }
 
   &:focus-visible {
     outline: 2px solid var(--primary-color);
     outline-offset: -2px;
+    border-radius: $radius-sm;
   }
 }
 
 @media (hover: hover) and (pointer: fine) {
   .tab:hover {
     color: var(--text-primary);
-    background: color-mix(in srgb, var(--bg-tertiary) 55%, transparent);
   }
 }
 
 .tabActive {
   color: var(--text-primary);
-  font-weight: 650;
 
   &::after {
-    background: var(--text-primary);
+    background: var(--primary-color);
   }
 }
 
+/* 「全部」tab 的图形标记 */
 .tabGlyph {
   flex-shrink: 0;
   color: var(--text-tertiary);
@@ -81,6 +80,7 @@
   }
 }
 
+/* provider 品牌图标底座（Kimi 等需要随主题换底色时由内联样式覆盖） */
 .tabIconWrap {
   flex-shrink: 0;
   display: flex;
@@ -88,19 +88,19 @@
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 5px;
+  border-radius: $radius-sm;
 }
 
 .tabIcon {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   object-fit: contain;
   display: block;
 }
 
 .tabIconFallback {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
@@ -108,30 +108,25 @@
   line-height: 1.4;
 }
 
+/* 计数徽标：中性小标签，数字等宽 */
 .tabCount {
-  font-family: $font-mono;
-  font-size: 10.5px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.6;
-  color: var(--text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
   padding: 0 6px;
-  border-radius: $radius-full;
-  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  border-radius: $radius-sm;
+  font-family: $font-mono;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
 
   .tabActive & {
-    color: var(--text-primary);
-    background: color-mix(in srgb, var(--text-primary) 10%, transparent);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tab,
-  .tab::after {
-    transition: none;
-  }
-
-  .tab:active {
-    transform: none;
+    color: var(--accent-fg);
+    background: var(--accent-bg);
   }
 }

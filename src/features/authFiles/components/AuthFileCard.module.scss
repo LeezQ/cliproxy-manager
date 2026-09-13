@@ -1,8 +1,11 @@
 @use '../../../styles/mixins' as *;
 
 /* ============================================================
- * 凭证卡片 — statTile 配方（14px 圆角 / 1px 边框 / 82% 透感纸面）
- * 遥测内容一律 mono + tabular-nums；品牌色只出现在头像与类型徽章。
+ * 凭证卡片（Stallion-X 卡片规范）
+ * - 白底 + 1px 边框 + 8px 圆角，无阴影；悬停只把边框换成 --border-hover；
+ * - 无入场动画、无位移 / 缩放；过渡仅限颜色类属性；
+ * - 遥测内容（计数、大小、时间、优先级）一律 mono + tabular-nums；
+ * - 品牌色只保留在 provider 图标本身，徽标统一为 20px / 4px 圆角小标签。
  * ============================================================ */
 
 .card {
@@ -11,36 +14,34 @@
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  border-radius: 14px;
+  border-radius: $radius-lg;
   border: 1px solid var(--border-color);
-  background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
-  transition:
-    transform var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-    border-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-    box-shadow var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
+  background: var(--bg-primary);
+  box-shadow: none;
+  transition: border-color $transition-fast;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .card:hover {
-    transform: translateY(-1px);
     border-color: var(--border-hover);
-    box-shadow: 0 12px 26px -14px rgb(0 0 0 / 0.16);
   }
 }
 
 .cardCompact {
   gap: 10px;
-  padding: 13px 14px;
+  padding: 14px;
 }
 
-.cardSelected {
-  border-color: color-mix(in srgb, var(--primary-color) 55%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 40%, transparent);
+/* 选中态：主色边框 + 同色 1px 内描边（outline 不占布局、不是阴影） */
+.cardSelected,
+.cardSelected:hover {
+  border-color: var(--primary-color);
+  outline: 1px solid var(--primary-color);
+  outline-offset: -2px;
 }
 
+/* 停用态：卡片外框保持不变，只淡化内容区 */
 .cardDisabled {
-  background: color-mix(in srgb, var(--bg-primary) 55%, transparent);
-
   .head,
   .fileName, /* 满宽文件名副行已移出 .head，必须单列 */
   .note,
@@ -50,20 +51,7 @@
   }
 }
 
-/* 首次数据到达时的一次性级联入场；过滤/翻页/轮询不重播 */
-.cardEnter {
-  animation: card-in 0.45s var(--ease-out-strong, ease-out) both;
-  animation-delay: var(--card-delay, 0s);
-}
-
-@keyframes card-in {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 16px, 0);
-  }
-}
-
-/* ---------- 头部：勾选 + 品牌头像 + 身份 ---------- */
+/* ---------- 头部：勾选 + 品牌图标 + 身份 ---------- */
 
 .head {
   display: flex;
@@ -75,14 +63,18 @@
   margin-top: 8px;
 }
 
+/* 品牌图标底座：中性 muted 底 + 边框，Kimi 由内联样式覆盖底色 */
 .avatar {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-md;
+  border: 1px solid var(--border-color);
+  background: var(--bg-quinary, var(--bg-tertiary));
+  color: var(--text-secondary);
 }
 
 .avatarImage {
@@ -93,7 +85,7 @@
 
 .avatarFallback {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .identity {
@@ -101,7 +93,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .badgeRow {
@@ -110,55 +102,55 @@
   gap: 6px;
 }
 
-.typeBadge {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  line-height: 1.5;
-  padding: 2px 7px;
-  border-radius: 6px;
+/* 徽标公共形态：20px 高 / 4px 圆角 / 12px·500 */
+.typeBadge,
+.stateBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: $radius-sm;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
   white-space: nowrap;
 }
 
+/* 类型徽标：中性色 */
+.typeBadge {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+/* 状态徽标：靠右，前置状态圆点 */
 .stateBadge {
   margin-left: auto;
-  display: inline-flex;
-  align-items: center;
   gap: 5px;
-  font-family: $font-mono;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  line-height: 1.6;
-  padding: 2px 8px;
-  border-radius: $radius-full;
-  border: 1px solid transparent;
-  white-space: nowrap;
 }
 
 .stateDot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--text-quaternary);
+  background: var(--text-tertiary);
 }
 
 .stateActive {
   color: var(--success-badge-text);
-  border-color: color-mix(in srgb, var(--viz-success) 35%, transparent);
-  background: color-mix(in srgb, var(--viz-success) 8%, transparent);
+  border-color: var(--success-badge-border);
+  background: var(--success-badge-bg);
 
   .stateDot {
-    background: var(--viz-success);
+    background: var(--success-color);
   }
 }
 
 .stateWarning {
   color: var(--amber-text);
-  border-color: var(--amber-30);
-  background: var(--amber-10);
+  border-color: color-mix(in srgb, var(--amber-color) 30%, transparent);
+  background: color-mix(in srgb, var(--amber-color) 10%, transparent);
 
   .stateDot {
     background: var(--amber-color);
@@ -166,7 +158,7 @@
 }
 
 .stateDisabled {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   border-color: var(--border-color);
   background: var(--bg-tertiary);
 }
@@ -179,19 +171,18 @@
 
 /* 主行：账号（email / 项目 ID）领衔 */
 .account {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.35;
-  letter-spacing: -0.005em;
   color: var(--text-primary);
   @include text-ellipsis;
 }
 
 /* 无账号线索时主行回落到文件名，沿用 mono 语汇。
-   必须声明在 .account 之后——两者同为单类选择器，letter-spacing 靠源序决胜。 */
+   必须声明在 .account 之后——两者同为单类选择器，靠源序决胜。 */
 .accountMono {
   font-family: $font-mono;
-  letter-spacing: -0.01em;
+  font-size: 13px;
 }
 
 /* 副行：满卡宽的文件名。email 在 codex 名字的中段，必须能换行才不丢信息，
@@ -199,7 +190,7 @@
 .fileName {
   margin: -4px 0 0;
   font-family: $font-mono;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.45;
   color: var(--text-tertiary);
   overflow-wrap: anywhere;
@@ -208,7 +199,7 @@
 
 .note {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--text-secondary);
   @include text-ellipsis;
@@ -225,8 +216,8 @@
   color: var(--warning-text);
   background: var(--warning-bg);
   border: 1px solid var(--warning-border);
-  border-radius: 8px;
-  padding: 7px 9px;
+  border-radius: $radius-md;
+  padding: 8px 10px;
 
   span {
     min-width: 0;
@@ -240,12 +231,12 @@
   margin-top: 2px;
 }
 
-/* ---------- 健康区：eyebrow + 计数 + 状态条 ---------- */
+/* ---------- 健康区：分组小标签 + 计数 + 状态方块条 ---------- */
 
 .health {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 
 .healthHead {
@@ -255,43 +246,42 @@
   gap: 8px;
 }
 
+/* 分组小标签：11px / 600 / 0.06em */
 .healthLabel {
-  font-family: $font-mono;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   color: var(--text-tertiary);
 }
 
 .healthCounts {
   display: inline-flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 10px;
   font-family: $font-mono;
-  font-size: 11.5px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
 .countOk {
-  color: var(--text-quaternary);
+  color: var(--text-tertiary);
 }
 
 .countFail {
-  color: var(--text-quaternary);
+  color: var(--text-tertiary);
 }
 
 /* 绿色只给活的流量：有计数才点亮 */
 .countLive.countOk {
-  color: var(--viz-success);
+  color: var(--success-color);
 }
 
 .countLive.countFail {
-  color: var(--viz-failure);
+  color: var(--error-color);
 }
 
-/* ---------- ProviderStatusBar 注入样式（18 个契约类名） ---------- */
+/* ---------- ProviderStatusBar 注入样式（18 个契约类名，保持静态无动画） ---------- */
 
 .statusBar {
   display: flex;
@@ -318,7 +308,7 @@
 }
 
 .statusBlockIdle {
-  background: color-mix(in srgb, var(--text-quaternary) 26%, transparent);
+  background: var(--bg-tertiary);
 }
 
 .statusBlockActive .statusBlock {
@@ -328,16 +318,16 @@
 
 .statusRate {
   font-family: $font-mono;
-  font-size: 11.5px;
-  font-weight: 650;
+  font-size: 12px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: var(--text-quaternary);
+  color: var(--text-tertiary);
   min-width: 40px;
   text-align: right;
 }
 
 .statusRateHigh {
-  color: var(--viz-success);
+  color: var(--success-color);
 }
 
 .statusRateMedium {
@@ -345,9 +335,10 @@
 }
 
 .statusRateLow {
-  color: var(--viz-failure);
+  color: var(--error-color);
 }
 
+/* 方块悬停提示：浮层，允许使用 floating-shadow */
 .statusTooltip {
   position: absolute;
   bottom: calc(100% + 8px);
@@ -359,13 +350,13 @@
   gap: 2px;
   min-width: 150px;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: $radius-md;
   background: var(--floating-surface);
   border: 1px solid var(--border-color);
   box-shadow: var(--floating-shadow);
   pointer-events: none;
   font-family: $font-mono;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -382,7 +373,6 @@
 
 .tooltipTime {
   color: var(--text-tertiary);
-  letter-spacing: 0.03em;
 }
 
 .tooltipStats {
@@ -393,11 +383,11 @@
 }
 
 .tooltipSuccess {
-  color: var(--viz-success);
+  color: var(--success-color);
 }
 
 .tooltipFailure {
-  color: var(--viz-failure);
+  color: var(--error-color);
 }
 
 .tooltipRate {
@@ -410,9 +400,9 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px 7px;
+  gap: 4px 8px;
   font-family: $font-mono;
-  font-size: 11.5px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--text-tertiary);
 }
@@ -422,36 +412,37 @@
   user-select: none;
 }
 
+/* 优先级 / 权重：20px 高的小标签 */
 .metaPriority,
 .metaWeight {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 4px;
-  padding: 2px 6px;
-  border: 1px solid transparent;
-  border-radius: $radius-full;
-  font-weight: 650;
-  line-height: 1.35;
+  height: 20px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: $radius-sm;
+  font-weight: 500;
+  line-height: 1;
   white-space: nowrap;
 }
 
 .metaPriority {
   color: var(--text-secondary);
-  background: color-mix(in srgb, var(--text-quaternary) 10%, transparent);
-  border-color: color-mix(in srgb, var(--text-quaternary) 24%, transparent);
+  background: var(--bg-tertiary);
 }
 
 .metaWeight {
-  color: var(--primary-active);
-  background: var(--primary-10);
-  border-color: var(--primary-30);
+  color: var(--accent-fg);
+  background: var(--accent-bg);
 }
 
 .metaMetricLabel {
-  font-size: 10px;
-  font-weight: 600;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
   color: currentColor;
-  opacity: 0.78;
+  opacity: 0.8;
 }
 
 /* ---------- 页脚动作区 ---------- */
@@ -463,7 +454,7 @@
   justify-content: space-between;
   gap: 10px;
   padding-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+  border-top: 1px solid var(--border-color);
 }
 
 .actionsMain {
@@ -477,66 +468,41 @@
 .utilityActions {
   display: flex;
   align-items: center;
-  gap: 4px;
-}
-
-/* Button 会用 span 包裹 children；将包裹层也设为 flex，避免 SVG 按文本基线偏移。 */
-.actions :global(.btn > span) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   gap: 6px;
-  line-height: 1;
 }
 
+/* Button 内部 span 包裹 children，SVG 取块级避免基线偏移 */
 .actions :global(.btn svg) {
   display: block;
-  flex-shrink: 0;
 }
 
-/* 图标按钮：方形紧凑的安静描边风——危险动作静默存在，hover 才显色块 */
+/* 图标按钮：32px 方形 secondary（白底描边），无按压缩放 */
 .card .actions .iconButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
   padding: 0;
-  background: transparent;
-  border: 1px solid var(--border-color);
   color: var(--text-secondary);
-}
-
-.card .actions .iconButton:global(.btn-danger) {
-  color: var(--danger-color);
-  border-color: color-mix(in srgb, var(--danger-color) 28%, transparent);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .card .actions .iconButton:hover:not(:disabled) {
     color: var(--text-primary);
-    border-color: var(--border-hover);
-    background: var(--bg-tertiary);
-  }
-
-  .card .actions .iconButton:global(.btn-danger):hover:not(:disabled) {
-    color: var(--danger-color);
-    border-color: color-mix(in srgb, var(--danger-color) 45%, transparent);
-    background: var(--destructive-10);
   }
 }
 
-/* 按压反馈：所有可点元素 scale 0.96（reduced-motion 下豁免） */
-.actions :global(.btn) {
-  transition:
-    transform var(--dur-press, 160ms) var(--ease-out-strong, ease-out),
-    background-color $transition-fast,
-    border-color $transition-fast,
-    color $transition-fast;
+/* 删除图标按钮：静默时只有图标是危险色，悬停出现浅红底 */
+.card .actions .iconButtonDanger {
+  color: var(--error-color);
 }
 
-.actions :global(.btn:active:not(:disabled)) {
-  transform: scale(0.96);
+@media (hover: hover) and (pointer: fine) {
+  .card .actions .iconButtonDanger:hover:not(:disabled) {
+    color: var(--error-color);
+    border-color: color-mix(in srgb, var(--error-color) 40%, var(--border-primary));
+    background-color: color-mix(in srgb, var(--error-color) 8%, var(--bg-primary));
+  }
 }
 
 .toggleWrap {
@@ -547,8 +513,8 @@
 }
 
 .toggleLabel {
-  font-size: 11px;
-  color: var(--text-tertiary);
+  font-size: 12px;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -569,25 +535,5 @@
   .toggleWrap {
     width: 100%;
     justify-content: space-between;
-  }
-}
-
-/* ---------- 降级 ---------- */
-
-@media (prefers-reduced-motion: reduce) {
-  .card {
-    transition: none;
-  }
-
-  .cardEnter {
-    animation: none;
-  }
-
-  .actions :global(.btn) {
-    transition: none;
-  }
-
-  .actions :global(.btn:active:not(:disabled)) {
-    transform: none;
   }
 }

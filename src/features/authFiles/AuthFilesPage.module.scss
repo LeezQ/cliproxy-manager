@@ -1,13 +1,15 @@
 @use '../../styles/mixins' as *;
 
 /* ============================================================
- * 认证文件页壳层：纯布局，视觉细节都在各组件的 colocated 模块里。
+ * 认证文件页壳层：纯布局。
+ * 结构：PageHeader → 筛选卡片（tabs + 工具栏）→ 卡片网格 → 分页 → OAuth 配置双卡。
+ * 区块间距统一 24px，视觉细节在各组件的 colocated 模块里。
  * ============================================================ */
 
 .page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   width: 100%;
   min-width: 0;
   /* 底部为悬浮批量条留出实时高度 */
@@ -16,23 +18,68 @@
   );
 }
 
-/* ---------- 工作区（tabs + 工具栏 + 网格 + 分页） ---------- */
+/* ---------- 工作区（筛选卡片 + 网格 + 分页） ---------- */
 
 .workbench {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   min-width: 0;
 }
 
+/* 筛选卡片：白底 + 1px 边框 + 8px 圆角，无阴影；tabs 贴顶，工具栏在下 */
+.filterCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: $radius-lg;
+}
+
+/*
+ * 卡片头部：tabs 占满剩余宽度并可横向滚动，右端固定放「删除筛选结果」。
+ * tabs 自带底部分割线（激活下划线压在其上），右端区域补一条同色分割线，两段首尾相接。
+ */
+.filterHead {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.filterTabs {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 16px;
+}
+
+.filterHeadAction {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* 删除筛选结果：ghost 形态 + 危险色文字，悬停出现浅红底 */
+.deleteAction:global(.btn) {
+  flex-shrink: 0;
+  color: var(--error-color);
+
+  &:hover:not(:disabled) {
+    color: var(--error-color);
+    background: color-mix(in srgb, var(--error-color) 10%, transparent);
+  }
+}
+
 .errorBanner {
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
-  color: var(--danger-color);
-  background: var(--bg-error-light);
-  border: 1px solid var(--warning-border);
-  border-radius: 10px;
-  padding: 9px 12px;
+  color: var(--failure-badge-text);
+  background: var(--failure-badge-bg);
+  border: 1px solid var(--failure-badge-border);
+  border-radius: $radius-md;
+  padding: 10px 12px;
   overflow-wrap: anywhere;
 }
 
@@ -70,16 +117,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .pageInfo {
   font-family: $font-mono;
-  font-size: 12px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -98,5 +144,9 @@
 @include mobile {
   .page {
     gap: 16px;
+  }
+
+  .filterTabs {
+    padding: 0 8px;
   }
 }

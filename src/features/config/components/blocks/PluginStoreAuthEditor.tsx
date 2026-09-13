@@ -8,8 +8,8 @@ import type {
   PluginStoreAuthType,
 } from '@/types/visualConfig';
 import { makeClientId } from '@/types/visualConfig';
-import { ExpandableInput } from './ExpandableInput';
-import styles from './Blocks.module.scss';
+import { ExpandableInput } from '@/features/config/components/blocks/ExpandableInput';
+import styles from '@/features/config/components/blocks/Blocks.module.scss';
 
 const PLUGIN_STORE_AUTH_TYPE_OPTIONS: Array<{ value: PluginStoreAuthType; labelKey: string }> = [
   { value: 'bearer', labelKey: 'config_management.visual.sections.system.store_auth_type_bearer' },

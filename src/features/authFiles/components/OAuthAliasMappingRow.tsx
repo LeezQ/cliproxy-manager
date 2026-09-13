@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { IconTrash2 } from '@/components/ui/icons';
 import type { OAuthModelAliasEntry } from '@/types';
-import styles from './OAuthEditor.module.scss';
+import styles from '@/features/authFiles/components/OAuthEditor.module.scss';
 
 interface OAuthAliasMappingRowProps {
   entry: OAuthModelAliasEntry;

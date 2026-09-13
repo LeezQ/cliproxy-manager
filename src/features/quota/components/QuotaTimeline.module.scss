@@ -1,65 +1,89 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
 
-// Fixed-width lane column so every row's bars start at the same x — the whole
-// point of the chart is comparing when lanes end relative to each other.
+/* ============================================================
+ * 配额窗口时间线 — 整块是一张白卡片：
+ *   标题区（区块标题 + 说明 | 分页导航 + 模式分段控件）
+ *   → 图表（凭证列 + 时间轴格子，贴边铺满卡片宽度）
+ *   → 图例（muted 小字）。
+ * 层级靠边框分隔，不加阴影；所有颜色取令牌，暗色自动适配。
+ * ============================================================ */
+
+// 固定宽度的凭证列：保证每条泳道的横条从同一 x 起步 —— 这张图的意义就是比较各泳道何时结束。
 $lane-width: 210px;
 
 .timeline {
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-lg;
+  background: var(--bg-primary);
+  overflow: hidden;
 }
+
+/* ---------- 标题区 ---------- */
 
 .head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: $spacing-md;
+  gap: 12px 16px;
   flex-wrap: wrap;
+  padding: 16px 20px;
 }
 
+/* 区块标题 16px/600 */
 .title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 650;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
   color: var(--text-primary);
 }
 
+/* 区块说明：时间范围，数字等宽 */
 .range {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--text-quaternary);
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
 .controls {
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
+/* 分段控件：muted 底 + 选中项白底描边，32px 高、8px 圆角 */
 .nav,
 .modes {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 3px;
+  height: 32px;
+  padding: 2px;
   background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
+  border-radius: $radius-md;
 
   button {
-    padding: 4px 12px;
+    height: 26px;
+    padding: 0 10px;
     font: inherit;
-    font-size: 12.5px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
     color: var(--text-secondary);
     background: transparent;
     border: 1px solid transparent;
-    border-radius: 999px;
+    border-radius: 6px;
     cursor: pointer;
-    transition: all $transition-fast;
+    font-variant-numeric: tabular-nums;
+    transition:
+      color $transition-fast,
+      background-color $transition-fast,
+      border-color $transition-fast;
 
     &:hover:not(:disabled) {
       color: var(--text-primary);
@@ -70,28 +94,41 @@ $lane-width: 210px;
       cursor: default;
     }
 
+    &:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 1px;
+    }
+
     &[aria-pressed='true'] {
-      background: var(--floating-surface, var(--bg-primary));
-      border-color: var(--border-hover);
+      background: var(--bg-primary);
+      border-color: var(--border-color);
       color: var(--text-primary);
     }
   }
 }
 
+/* 导航的「今天 / 当前期」按钮承担状态指示：禁用时仍保持可读 */
+.nav button:disabled {
+  opacity: 1;
+  color: var(--text-primary);
+}
+
+/* ---------- 图表：贴边铺满，顶部一条分割线 ---------- */
+
 .chart {
-  border: 1px solid var(--border-color);
-  border-radius: $radius-lg;
+  border-top: 1px solid var(--border-color);
   background: var(--bg-primary);
   overflow: hidden;
 }
 
+/* 当前模式下无可投影泳道时的空态：居中小字 */
 .empty {
-  min-height: 96px;
+  min-height: 112px;
   display: grid;
   place-items: center;
-  padding: $spacing-lg;
-  color: var(--text-quaternary);
-  font-size: 12px;
+  padding: 24px;
+  color: var(--text-secondary);
+  font-size: 14px;
   text-align: center;
 }
 
@@ -101,17 +138,18 @@ $lane-width: 210px;
   grid-template-columns: $lane-width 1fr;
 }
 
+/* 轴头：与表头同一底色 */
 .axis {
-  border-bottom: 1px solid var(--border-color);
+  background: var(--table-head-bg);
 }
 
 .axisLabel {
-  padding: 8px 12px;
-  font-size: 10.5px;
+  padding: 8px 16px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-quaternary);
+  color: var(--text-secondary);
   display: flex;
   align-items: flex-end;
 }
@@ -130,43 +168,47 @@ $lane-width: 210px;
   padding: 6px 2px;
   border-left: 1px solid var(--border-color);
 
-  &[data-weekend='1'] {
-    background: rgba(255, 255, 255, 0.014);
-  }
-
-  // The current day is the reference point for reading the whole chart.
+  // 今天是阅读整张图的参照点：主色选中浅底
   &[data-today='1'] {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--accent-bg);
+
+    .axisDate {
+      color: var(--accent-fg);
+    }
   }
 }
 
 .axisWeekday {
-  font-size: 10px;
-  color: var(--text-quaternary);
-  min-height: 12px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  min-height: 13px;
 }
 
 .axisDate {
-  font-size: 11.5px;
-  font-weight: 600;
+  font-family: $font-mono;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
+/* ---------- 泳道 ---------- */
+
 .lane {
+  // 每条泳道自带上边线；第一条的上边线同时充当轴头的下边线
   border-top: 1px solid var(--border-color);
 
   &:hover {
-    background: rgba(255, 255, 255, 0.012);
+    background: color-mix(in srgb, var(--bg-tertiary) 40%, transparent);
   }
 }
 
 .laneHead {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 9px 12px;
+  gap: 4px;
+  padding: 10px 16px;
   min-width: 0;
 }
 
@@ -177,16 +219,17 @@ $lane-width: 210px;
   min-width: 0;
 }
 
+/* 提供商色点：品牌识别色，只占 8px */
 .laneDot {
   flex: none;
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--provider-accent, var(--text-quaternary));
 }
 
 .laneName {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
   overflow: hidden;
@@ -194,14 +237,19 @@ $lane-width: 210px;
   white-space: nowrap;
 }
 
+/* 周期徽标：中性小标签 */
 .lanePeriod {
   flex: none;
-  padding: 0 6px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--count-badge-text, var(--text-secondary));
-  background: var(--count-badge-bg, var(--bg-tertiary));
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: $radius-sm;
+  font-family: $font-mono;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
 }
 
 .laneLimits {
@@ -211,13 +259,19 @@ $lane-width: 210px;
 }
 
 .laneLimit {
-  padding: 1px 6px;
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 5px;
   border-radius: $radius-sm;
-  font-size: 10.5px;
-  color: var(--text-quaternary);
+  font-size: 11px;
+  color: var(--text-tertiary);
   background: var(--bg-tertiary);
 
   b {
+    margin-left: 3px;
+    font-family: $font-mono;
+    font-weight: 600;
     color: var(--text-secondary);
     font-variant-numeric: tabular-nums;
   }
@@ -225,7 +279,7 @@ $lane-width: 210px;
 
 .track {
   position: relative;
-  min-height: 46px;
+  min-height: 48px;
   display: flex;
   align-items: center;
 }
@@ -239,66 +293,66 @@ $lane-width: 210px;
     flex: 1 1 0;
     border-left: 1px solid var(--border-color);
 
+    // 周末格子：极浅 muted 底，辅助区分工作日
     &[data-weekend='1'] {
-      background: rgba(255, 255, 255, 0.014);
+      background: color-mix(in srgb, var(--bg-tertiary) 35%, transparent);
     }
   }
 }
 
-// Vertical "now" marker, above the grid but below the bars so it never hides
-// a label.
+// 「现在」竖线：高于网格、低于横条，永远不遮挡标签。
 .nowLine {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--text-tertiary, var(--text-quaternary));
-  opacity: 0.8;
+  background: var(--primary-color);
+  opacity: 0.7;
   z-index: 1;
 }
 
 .window {
-  position: relative;
+  position: absolute;
   z-index: 2;
   height: 22px;
   display: flex;
   align-items: center;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: $radius-sm;
   overflow: hidden;
-  font-size: 10.5px;
+  font-family: $font-mono;
+  font-size: 11px;
   white-space: nowrap;
-  position: absolute;
 }
 
-// Current window: solid, in the provider's colour — the row's focal point.
+// 当前窗口：提供商色浅底 + 描边 —— 每条泳道的焦点。
 .windowLive {
-  background: color-mix(in srgb, var(--provider-accent) 26%, transparent);
+  background: color-mix(in srgb, var(--provider-accent) 18%, var(--bg-primary));
   border: 1px solid color-mix(in srgb, var(--provider-accent) 45%, transparent);
   color: var(--text-primary);
 }
 
-// Upcoming: dashed outline, nothing consumed yet.
+// 即将开始：虚线描边，尚未消耗。
 .windowNext {
   background: transparent;
-  border: 1px dashed color-mix(in srgb, var(--provider-accent) 32%, transparent);
-  color: var(--text-quaternary);
+  border: 1px dashed color-mix(in srgb, var(--provider-accent) 40%, var(--border-color));
+  color: var(--text-tertiary);
 }
 
-// Elapsed: recedes.
+// 已结束：退居背景。
 .windowPast {
   background: color-mix(in srgb, var(--provider-accent) 8%, transparent);
   border: 1px solid transparent;
-  color: var(--text-quaternary);
+  color: var(--text-tertiary);
 }
 
-// Consumed portion of the current window, drawn behind its label.
+// 当前窗口已消耗部分，画在标签之下。
 .windowFill {
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
-  background: color-mix(in srgb, var(--provider-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--provider-accent) 26%, transparent);
   pointer-events: none;
 }
 
@@ -309,40 +363,39 @@ $lane-width: 210px;
   font-variant-numeric: tabular-nums;
 }
 
-// A reset credit is use-it-or-lose-it, so its expiry sits above the window bar
-// as a narrow amber tick without competing with the bar's own label.
+// 重置积分过期即作废，所以它的过期点以窄琥珀刻度叠在横条之上，不与横条标签抢位。
 .resetCreditTick {
   position: absolute;
   z-index: 3;
   top: 6px;
   bottom: 6px;
-  width: 2px;
-  transform: translateX(-50%);
+  width: 3px;
+  margin-left: -1.5px;
   border-radius: 999px;
   background: var(--amber-color);
   box-shadow: 0 0 0 1px var(--bg-primary);
   cursor: help;
-
-  &:hover {
-    width: 4px;
-  }
 }
 
 .laneIdle {
   position: relative;
   z-index: 2;
-  padding-left: 10px;
-  font-size: 11px;
-  color: var(--text-quaternary);
+  padding-left: 12px;
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
+
+/* ---------- 图例 ---------- */
 
 .legend {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: $spacing-md;
-  font-size: 11px;
-  color: var(--text-quaternary);
+  gap: 8px 16px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-color);
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .legendItem {
@@ -352,26 +405,26 @@ $lane-width: 210px;
 }
 
 .swatch {
-  width: 22px;
+  width: 20px;
   height: 10px;
-  border-radius: 999px;
+  border-radius: 2px;
 }
 
 .swatchLive {
-  background: color-mix(in srgb, var(--text-tertiary, #888) 34%, transparent);
-  border: 1px solid color-mix(in srgb, var(--text-tertiary, #888) 50%, transparent);
+  background: color-mix(in srgb, var(--text-tertiary) 22%, var(--bg-primary));
+  border: 1px solid color-mix(in srgb, var(--text-tertiary) 50%, transparent);
 }
 
 .swatchNext {
-  border: 1px dashed color-mix(in srgb, var(--text-tertiary, #888) 45%, transparent);
+  border: 1px dashed var(--border-hover);
 }
 
 .swatchPast {
-  background: color-mix(in srgb, var(--text-tertiary, #888) 12%, transparent);
+  background: color-mix(in srgb, var(--text-tertiary) 12%, transparent);
 }
 
 .swatchCredit {
-  width: 2px;
+  width: 3px;
   height: 14px;
   border-radius: 999px;
   background: var(--amber-color);
@@ -380,11 +433,16 @@ $lane-width: 210px;
 .legendNote {
   flex: 1 1 320px;
   min-width: 0;
+  color: var(--text-tertiary);
 }
 
 @include mobile {
-  // The lane column can't shrink much before names become unreadable, so the
-  // chart scrolls horizontally rather than compressing to illegibility.
+  .head,
+  .legend {
+    padding-inline: 16px;
+  }
+
+  // 凭证列压缩到一定程度名字就不可读，所以图表改为横向滚动而不是继续挤压。
   .chart {
     overflow-x: auto;
   }

@@ -11,7 +11,7 @@ import {
   type IconProps,
 } from '@/components/ui/icons';
 import type { VisualConfigFieldPath } from '@/types/visualConfig';
-import type { VisualSectionId } from './searchIndex';
+import type { VisualSectionId } from '@/features/config/searchIndex';
 
 /** 编辑模式：可视化表单 or YAML 源码。 */
 export type ConfigEditorMode = 'visual' | 'source';

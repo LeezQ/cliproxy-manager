@@ -2,63 +2,76 @@
 
 /* ============================================================
  * 额度页壳层：纯布局，视觉细节都在各组件的 colocated 模块里。
+ * 结构：PageHeader → 筛选条（tabs + 排序）→ 卡片网格 → 分页 → 配额窗口时间线。
  * ============================================================ */
 
 .page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   width: 100%;
   min-width: 0;
 }
 
-/* ---------- 工作区（tabs + 网格 + 分页） ---------- */
+/* ---------- 工作区（tabs + 网格 + 分页 + 时间线） ---------- */
 
 .workbench {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   min-width: 0;
 }
 
-/* tabs 与排序同一行：tabs 会自己横向滚动，所以排序固定不压缩。 */
-
+/*
+ * 筛选卡片：白底 + 边框，与认证文件页的筛选卡片同构。
+ * tabs 占满剩余宽度并横向滚动（自带底部分割线），右端排序区补一条同色分割线，两段首尾相接。
+ */
 .tabsRow {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  align-items: stretch;
   min-width: 0;
+  overflow: hidden;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: $radius-lg;
+}
 
-  > :first-child {
-    min-width: 0;
-  }
+.tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 16px;
 }
 
 .sort {
+  display: flex;
   flex: 0 0 auto;
-  min-width: 148px;
+  align-items: center;
+  min-width: 184px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 @include mobile {
   .tabsRow {
     flex-direction: column;
-    align-items: stretch;
   }
 
   .sort {
     width: 100%;
+    padding: 8px 12px;
+    border-bottom: 0;
   }
 }
 
+/* 文件列表加载失败：故障徽标令牌的浅红条，8px 圆角，无阴影 */
 .errorBanner {
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
-  color: var(--danger-color);
-  background: var(--bg-error-light);
-  border: 1px solid var(--warning-border);
-  border-radius: 10px;
-  padding: 9px 12px;
+  color: var(--failure-badge-text);
+  background: var(--failure-badge-bg);
+  border: 1px solid var(--failure-badge-border);
+  border-radius: $radius-md;
+  padding: 10px 14px;
   overflow-wrap: anywhere;
 }
 
@@ -79,21 +92,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .pageInfo {
   font-family: $font-mono;
-  font-size: 12px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   white-space: nowrap;
-}
-
-@include mobile {
-  .page {
-    gap: 16px;
-  }
 }

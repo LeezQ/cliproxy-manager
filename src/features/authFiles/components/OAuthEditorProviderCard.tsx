@@ -4,8 +4,12 @@ import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
 import { Card } from '@/components/ui/Card';
 import { IconCheck, IconNetwork } from '@/components/ui/icons';
 import { useThemeStore } from '@/stores';
-import { getAuthFileIcon, getTypeLabel, normalizeProviderKey } from '../constants';
-import styles from './OAuthEditor.module.scss';
+import {
+  getAuthFileIcon,
+  getTypeLabel,
+  normalizeProviderKey,
+} from '@/features/authFiles/constants';
+import styles from '@/features/authFiles/components/OAuthEditor.module.scss';
 
 interface OAuthEditorProviderCardProps {
   provider: string;

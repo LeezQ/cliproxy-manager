@@ -5,8 +5,8 @@ import {
   evaluateApiKeyStrength,
   type ApiKeyStrengthTier,
 } from '@/utils/apiKeyStrength';
-import { segmentFillDelayMs } from './shared';
-import styles from './Blocks.module.scss';
+import { segmentFillDelayMs } from '@/features/config/components/blocks/shared';
+import styles from '@/features/config/components/blocks/Blocks.module.scss';
 
 // 三档语义色 + 段数承担第四档的区分：翡翠绿留给「活的流量」，此处用语义 success。
 const TIER_COLORS: Record<ApiKeyStrengthTier, string> = {

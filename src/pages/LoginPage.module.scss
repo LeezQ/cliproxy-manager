@@ -1,207 +1,170 @@
 @use '../styles/variables.scss' as *;
 
-// 主容器 - 左右分栏布局
+/**
+ * 登录页样式（Stallion-X / shadcn login 风格）
+ * - 冷灰页面底 --bg-secondary，登录卡片水平垂直居中；
+ * - 卡片 400px 宽、白底、1px 边框、8px 圆角、无阴影；
+ * - 顶部品牌行与侧边栏一致：40px 主色方块 + 名称 + 副标题；
+ * - 不包含任何入场 / 脉冲 / 加载条动画，启动状态只使用加载旋转。
+ */
+
+/* 页面容器：全屏冷灰底，居中卡片 */
 .container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   min-height: 100vh;
-  display: flex;
+  padding: 32px 16px;
   background: var(--bg-secondary);
-}
 
-// 左侧品牌展示区
-.brandPanel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background: var(--brand-panel-bg, #000000); // Stallion-X：由品牌层注入 Night Relay 深蓝
-  padding: $spacing-2xl;
-  position: relative;
-  overflow: hidden;
-
-  // 移动端隐藏
-  @media (max-width: $breakpoint-mobile) {
-    display: none;
+  @supports (min-height: 100dvh) {
+    min-height: 100dvh;
   }
 }
 
-// 品牌文字容器
-.brandContent {
-  position: relative;
-  z-index: 1;
+/* 登录卡片 */
+.card {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  box-sizing: border-box;
   width: 100%;
-  padding: 0;
-  gap: 0;
-}
-
-// 品牌大字淡入动画
-@keyframes brandFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: var(--target-opacity, 0.9);
-    transform: translateY(0);
-  }
-}
-
-// 品牌大字
-.brandWord {
-  font-size: 14vw;
-  font-weight: 900;
-  color: rgba(255, 255, 255, 0.9);
-  letter-spacing: -0.02em;
-  line-height: 0.85;
-  text-transform: uppercase;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  text-align: right;
-  padding-right: 0;
-  opacity: 0;
-  animation: brandFadeIn 0.8s ease-out forwards;
-
-  // 不同字有不同的透明度和延迟，从上到下依次显现
-  &:nth-child(1) {
-    --target-opacity: 0.95;
-    animation-delay: 0.1s;
-  }
-
-  &:nth-child(2) {
-    --target-opacity: 0.7;
-    animation-delay: 0.35s;
-  }
-
-  &:nth-child(3) {
-    --target-opacity: 0.45;
-    animation-delay: 0.6s;
-  }
-}
-
-// 右侧功能交互区
-.formPanel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: $spacing-2xl;
-  background: var(--bg-secondary);
-  position: relative;
-
-  @media (max-width: $breakpoint-mobile) {
-    padding: $spacing-lg;
-    min-height: 100vh;
-  }
-}
-
-// 右侧内容容器
-.formContent {
-  width: 100%;
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $spacing-xl;
-}
-
-// Logo
-.logo {
-  width: 80px;
-  height: 80px;
-  border-radius: $radius-lg;
-  object-fit: cover;
-  box-shadow: var(--shadow-lg);
-  border: 3px solid var(--border-color);
-}
-
-// 登录表单卡片
-.loginCard {
-  width: 100%;
-  background: var(--bg-primary);
+  max-width: 400px;
   border: 1px solid var(--border-color);
   border-radius: $radius-lg;
-  box-shadow: var(--shadow-lg);
-  padding: $spacing-xl;
+  background: var(--bg-primary);
+  box-shadow: none;
+}
+
+/* ---------- 品牌行 ---------- */
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* 主色方块 + 白色首字母，与 .sidebar-brand-mark 保持一致 */
+.brandMark {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-md;
+  background: var(--primary-color);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 30%, transparent);
+  color: var(--primary-contrast);
+  /* 品牌字母与侧边栏品牌方块一致，使用标题字体 */
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  user-select: none;
+}
+
+.brandText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.brandTitle {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brandSubtitle {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 语言切换：紧凑下拉，固定在品牌行右侧 */
+.languageSelect {
+  flex: 0 0 auto;
+  min-width: 112px;
+}
+
+/* ---------- 登录表单 ---------- */
+.formContent {
   display: flex;
   flex-direction: column;
-  gap: $spacing-lg;
+  gap: 16px;
+  padding: 24px 20px 20px;
 
-  @media (max-width: $breakpoint-mobile) {
-    padding: $spacing-lg;
-    box-shadow: none;
-    border: none;
-    background: transparent;
+  /* 表单项间距统一交给 gap 控制，去掉全局 .form-group 的底部外边距 */
+  :global(.form-group) {
+    margin-bottom: 0;
   }
 }
 
-// 登录头部
 .loginHeader {
   display: flex;
   flex-direction: column;
-  gap: $spacing-sm;
-  text-align: center;
+  gap: 4px;
 }
 
-// 标题行
-.titleRow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-sm;
-  flex-wrap: wrap;
-}
-
-// 标题
+/* 卡片标题：标题字体 20px / 600 */
 .title {
-  font-size: 22px;
-  font-weight: 800;
+  margin: 0;
   color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 
-// 副标题
 .subtitle {
+  margin: 0;
   color: var(--text-secondary);
   font-size: 14px;
+  line-height: 1.5;
 }
 
-// 语言下拉选择
-.languageSelect {
-  min-width: 108px;
-  flex: 0 0 auto;
-}
-
-// 连接信息框
+/* 当前连接地址：浅底描边信息块，地址使用等宽字体 */
 .connectionBox {
-  background: var(--bg-secondary);
-  border: 1px dashed var(--border-color);
-  border-radius: $radius-md;
-  padding: $spacing-md;
   display: flex;
   flex-direction: column;
-  gap: $spacing-xs;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-quinary);
 
   .label {
     color: var(--text-secondary);
-    font-size: 14px;
+    font-size: 12px;
+    font-weight: 500;
   }
 
   .value {
-    font-weight: 700;
     color: var(--text-primary);
+    font-family: $font-mono;
+    font-size: 13px;
     word-break: break-all;
   }
 
   .hint {
-    color: var(--text-secondary);
+    color: var(--text-tertiary);
     font-size: 12px;
   }
 }
 
-// 复选框行
+/* 复选框行 */
 .toggleAdvanced {
   display: flex;
   justify-content: flex-start;
@@ -209,116 +172,60 @@
 }
 
 .toggleLabel {
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-// 错误提示框
-.errorBox {
-  background: rgba($error-color, 0.1);
-  border: 1px solid rgba($error-color, 0.4);
-  border-radius: $radius-md;
-  padding: $spacing-sm $spacing-md;
-  color: $error-color;
-  font-size: 14px;
-}
-
-// ========== 启动动画（右侧） ==========
-
-// 启动动画进入效果
-@keyframes splashEnter {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-// Logo 脉冲效果
-@keyframes splashLogoPulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-}
-
-// 加载条动画
-@keyframes splashLoading {
-  0% {
-    transform: scaleX(0);
-    transform-origin: left;
-  }
-  50% {
-    transform: scaleX(1);
-    transform-origin: left;
-  }
-  50.01% {
-    transform-origin: right;
-  }
-  100% {
-    transform: scaleX(0);
-    transform-origin: right;
-  }
-}
-
-// 启动动画内容容器
-.splashContent {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $spacing-md;
-  animation: splashEnter 0.6s ease-out;
-}
-
-// 启动动画 Logo
-.splashLogo {
-  height: 80px;
-  width: auto;
-  border-radius: $radius-lg;
-  box-shadow: $shadow-lg;
-  animation: splashLogoPulse 1.5s ease-in-out infinite;
-}
-
-// 启动动画标题
-.splashTitle {
-  font-size: 28px;
-  font-weight: 800;
   color: var(--text-primary);
-  margin: 0;
-  letter-spacing: -0.5px;
+  font-size: 14px;
+  font-weight: 400;
 }
 
-// 启动动画副标题
-.splashSubtitle {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin: 0;
-  margin-top: -8px;
+/* 错误提示：故障徽标色 */
+.errorBox {
+  padding: 8px 12px;
+  border: 1px solid var(--failure-badge-border);
+  border-radius: $radius-md;
+  background: var(--failure-badge-bg);
+  color: var(--failure-badge-text);
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
 }
 
-// 启动动画加载条容器
-.splashLoader {
-  width: 120px;
-  height: 3px;
-  background: var(--border-color);
-  border-radius: $radius-full;
+/* ---------- 启动状态（自动登录检测 / 成功跳转前） ---------- */
+/* ---------- 启动状态：整屏居中的加载转圈，不显示卡片与文字 ---------- */
+.splash {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-secondary);
+
+  @supports (min-height: 100dvh) {
+    min-height: 100dvh;
+  }
+}
+
+.splashSpinner {
+  color: var(--primary-color);
+}
+
+/* 仅供读屏软件播报的状态文字 */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
   overflow: hidden;
-  margin-top: $spacing-md;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-// 启动动画加载条
-.splashLoaderBar {
-  width: 100%;
-  height: 100%;
-  background: var(--primary-color);
-  border-radius: $radius-full;
-  animation: splashLoading 1.2s ease-in-out infinite;
+@media (max-width: $breakpoint-mobile) {
+  .brandRow {
+    padding: 14px 16px;
+  }
+
+  .formContent {
+    padding: 20px 16px 16px;
+  }
 }

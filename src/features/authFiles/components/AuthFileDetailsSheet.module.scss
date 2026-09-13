@@ -1,9 +1,14 @@
-/* 凭证详情/编辑抽屉内容区 */
+/* ============================================================
+ * 凭证详情/编辑抽屉内容区
+ * - 字段标签 13px / 500 次级文字（与全局 .form-group label 对齐）；
+ * - 只读 JSON 预览为 muted 底 + 1px 边框 + 8px 圆角的等宽文本；
+ * - 错误提示使用 failure 徽标令牌，不写死颜色。
+ * ============================================================ */
 
 .editor {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 .loading {
@@ -12,18 +17,18 @@
   gap: 8px;
   padding: 24px 0;
   justify-content: center;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-secondary);
 }
 
 .error {
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
-  color: var(--danger-color);
-  background: var(--bg-error-light);
-  border: 1px solid var(--warning-border);
-  border-radius: 8px;
-  padding: 8px 10px;
+  color: var(--failure-badge-text);
+  background: var(--failure-badge-bg);
+  border: 1px solid var(--failure-badge-border);
+  border-radius: $radius-md;
+  padding: 8px 12px;
   overflow-wrap: anywhere;
 }
 
@@ -34,49 +39,52 @@
 }
 
 .label {
-  font-family: $font-mono;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
+/* 只读 JSON 文本框 */
 .textarea {
   width: 100%;
   box-sizing: border-box;
   resize: vertical;
   font-family: $font-mono;
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.6;
   color: var(--text-secondary);
-  background: var(--bg-secondary);
+  background: var(--bg-quinary, var(--bg-secondary));
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: $radius-md;
   padding: 10px 12px;
+  transition:
+    border-color $transition-fast,
+    box-shadow $transition-fast;
 
   &:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--primary-10);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 18%, transparent);
   }
 }
 
+/* 请求头 JSON 校验失败：边框切到故障色 */
 .textareaInvalid {
-  border-color: var(--danger-color) !important;
+  border-color: var(--error-color) !important;
 }
 
+/* 非 JSON 内容的原样预览：虚线边框区分于可解析内容 */
 .invalidPreview {
   margin: 0;
   max-height: 240px;
   overflow: auto;
   font-family: $font-mono;
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.6;
   color: var(--text-secondary);
-  background: var(--bg-secondary);
+  background: var(--bg-quinary, var(--bg-secondary));
   border: 1px dashed var(--border-hover);
-  border-radius: 10px;
+  border-radius: $radius-md;
   padding: 10px 12px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -85,5 +93,5 @@
 .fields {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }

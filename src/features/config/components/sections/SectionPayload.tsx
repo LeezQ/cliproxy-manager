@@ -2,14 +2,11 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Collapsible } from '@/components/ui/Collapsible';
 import type { PayloadFilterRule, PayloadRule } from '@/types/visualConfig';
-import { CONFIG_TAB_ICONS, SECTION_INDEX_LABELS } from '../../constants';
-import type { ConfigSectionProps } from '../../types';
-import { SectionCard } from '../SectionCard';
-import { FieldAnchor, FieldStack } from '../fields/FieldPrimitives';
-import { PayloadFilterRulesEditor } from '../blocks/PayloadFilterRulesEditor';
-import { PayloadRulesEditor } from '../blocks/PayloadRulesEditor';
-
-const Icon = CONFIG_TAB_ICONS.payload;
+import type { ConfigSectionProps } from '@/features/config/types';
+import { SectionCard } from '@/features/config/components/SectionCard';
+import { FieldAnchor, FieldStack } from '@/features/config/components/fields/FieldPrimitives';
+import { PayloadFilterRulesEditor } from '@/features/config/components/blocks/PayloadFilterRulesEditor';
+import { PayloadRulesEditor } from '@/features/config/components/blocks/PayloadRulesEditor';
 
 export type SectionPayloadProps = ConfigSectionProps & {
   /** 有载荷校验错误时折叠组带 key 重挂载并强制展开，把错误带到眼前。 */
@@ -20,7 +17,6 @@ export type SectionPayloadProps = ConfigSectionProps & {
 export function SectionPayload({
   values,
   disabled,
-  animateIn,
   hasPayloadValidationErrors,
   onChange,
 }: SectionPayloadProps) {
@@ -50,11 +46,8 @@ export function SectionPayload({
 
   return (
     <SectionCard
-      indexLabel={SECTION_INDEX_LABELS.payload}
-      icon={<Icon size={16} />}
       title={t('config_management.visual.sections.payload.title')}
       description={t('config_management.visual.sections.payload.description')}
-      animateIn={animateIn}
     >
       <FieldStack>
         <FieldAnchor fieldId="payloadDefaultRules">

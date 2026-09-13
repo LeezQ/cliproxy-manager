@@ -7,10 +7,10 @@ import { useTranslation } from 'react-i18next';
 import type { ClaudeQuotaState } from '@/types';
 import { buildResetDisplay } from '@/utils/quota';
 import { useNow } from '@/hooks/useNow';
-import { QuotaMeter } from '../../components/QuotaMeter';
-import { QuotaResetLabel } from '../../components/QuotaResetLabel';
-import { collectQuotaRowInstants, pickUrgentRowId } from '../../resetSchedule';
-import type { QuotaBodyProps } from '../../types';
+import { QuotaMeter } from '@/features/quota/components/QuotaMeter';
+import { QuotaResetLabel } from '@/features/quota/components/QuotaResetLabel';
+import { collectQuotaRowInstants, pickUrgentRowId } from '@/features/quota/resetSchedule';
+import type { QuotaBodyProps } from '@/features/quota/types';
 
 export function ClaudeQuotaBody({ quota, classes }: QuotaBodyProps<ClaudeQuotaState>) {
   const { t, i18n } = useTranslation();

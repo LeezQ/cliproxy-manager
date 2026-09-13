@@ -6,7 +6,7 @@ import { ModelMappingDiagram, type ModelMappingDiagramRef } from '@/components/m
 import { IconChevronUp } from '@/components/ui/icons';
 import type { OAuthModelAliasEntry } from '@/types';
 import type { AuthFileModelItem, OAuthConfigLoadError } from '@/features/authFiles/constants';
-import styles from './OAuthConfigPanels.module.scss';
+import styles from '@/features/authFiles/components/OAuthConfigPanels.module.scss';
 
 type ViewMode = 'diagram' | 'list';
 

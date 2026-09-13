@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { OAuthConfigLoadError } from '@/features/authFiles/constants';
-import styles from './OAuthConfigPanels.module.scss';
+import styles from '@/features/authFiles/components/OAuthConfigPanels.module.scss';
 
 export type OAuthExcludedCardProps = {
   disableControls: boolean;

@@ -1,336 +1,318 @@
+/**
+ * OAuth 登录页样式（Stallion-X 冷灰运维工作台风格）
+ *
+ * 页面结构：PageHeader → 提供商卡片网格 → 其他登录方式（Vertex）。
+ * - 卡片白底 + 1px 边框 + 8px 圆角，无阴影；
+ * - 宽屏两列网格减少大片空白，窄屏回落单列；
+ * - 授权流程区（链接、回调、状态）统一放在卡片分割线下方，只用令牌色。
+ */
 @use '../styles/mixins' as *;
 
+/* ---------- 页面骨架：区块之间 24px ---------- */
 .container {
-  width: 100%;
-}
-
-.cardTitle {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-}
-
-.cardTitleIcon {
-  width: 24px;
-  height: 24px;
-  flex: 0 0 auto;
-}
-
-.cardTitleIconFallback {
-  width: 24px;
-  height: 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-}
-
-.pageTitle {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 $spacing-xl 0;
-}
-
-.content {
   display: flex;
   flex-direction: column;
-  gap: $spacing-xl;
+  gap: 24px;
+  width: 100%;
 }
 
 .providerSection {
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
+  gap: 12px;
 }
 
-.providerList {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xl;
-}
-
+/* 分组小标签：11px / 600 / 字距 .06em */
 .sectionTitle {
   margin: 0;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
 }
 
-.featuredCard {
-  position: relative;
-  overflow: hidden;
-  border-color: #000;
-  background:
-    radial-gradient(circle at 92% -35%, rgba(23, 131, 255, 0.24), transparent 42%),
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, #1783ff 10%, var(--bg-primary)),
-      var(--bg-primary) 64%
-    );
-  box-shadow:
-    0 14px 32px -26px rgba(23, 131, 255, 0.95),
-    var(--shadow);
-
-  > * {
-    position: relative;
-    z-index: 1;
-  }
-
-  .cardTitle {
-    gap: $spacing-md;
-    font-size: 21px;
-  }
-
-  .cardTitleIcon {
-    box-sizing: content-box;
-    width: 24px;
-    height: 24px;
-    padding: 7px;
-    border-radius: 11px;
-    background: #000;
-  }
-
-  .featuredActions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-sm;
-  }
-
-  :global(.btn-primary) {
-    border-color: #1783ff;
-    background: #1783ff;
-    box-shadow: 0 8px 20px -12px rgba(23, 131, 255, 0.9);
-
-    &:hover {
-      border-color: #0875ed;
-      background: #0875ed;
-    }
-  }
+/* 提供商网格：宽屏自动两列，卡片高度按行各自增长 */
+.providerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  align-items: start;
+  gap: 16px;
 
   @include mobile {
-    :global(.card-header > .btn) {
-      width: 100%;
-    }
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
   }
 }
 
-:global([data-theme='dark']) .featuredCard .cardTitleIcon {
-  background: #fff;
-}
-
-.recommendedBadge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 3px 9px;
-  border: 1px solid rgba(23, 131, 255, 0.34);
-  border-radius: $radius-full;
-  background: rgba(23, 131, 255, 0.11);
-  color: color-mix(in srgb, #1783ff 82%, var(--text-primary));
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.featuredHint {
-  max-width: 720px;
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 15px;
-  line-height: 1.65;
-}
-
-.cardContent {
+/* ---------- 提供商卡片 ---------- */
+.providerCard {
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
+  gap: 16px;
+  min-width: 0;
+  padding: 20px;
+  box-shadow: none;
 
-  :global(.form-group) {
-    margin-bottom: 0;
+  @include mobile {
+    padding: 16px;
   }
+}
 
-  :global(.status-badge) {
-    margin-bottom: 0;
-    align-self: flex-start;
+/* 卡片头部：图标方块 | 名称 + 说明 | 主操作按钮 */
+.cardHead {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 12px;
+
+  @include mobile {
+    grid-template-columns: 32px minmax(0, 1fr);
+    row-gap: 12px;
   }
+}
+
+/* 32px 图标方块：muted 底 + 边框，品牌图标本身保留原色 */
+.iconBox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.cardTitleIcon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.cardTitleIconFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+}
+
+.cardTitleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 32px;
 }
 
 .cardHint {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  margin: -4px 0 0;
   color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.cardAction {
+  align-self: start;
+
+  @include mobile {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
 }
 
 .cardHintSecondary {
   margin: 0;
+  color: var(--text-tertiary);
   font-size: 12px;
   line-height: 1.5;
-  color: var(--text-tertiary);
 }
 
-.oauthSection {
+/* ---------- 授权流程区：分割线下方纵向排列 ---------- */
+.flow {
   display: flex;
   flex-direction: column;
-  gap: $spacing-lg;
-}
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
 
-.oauthGrid {
-  display: grid;
-  gap: $spacing-lg;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-
-  @include mobile {
-    grid-template-columns: 1fr;
+  :global(.form-group) {
+    margin-bottom: 0;
   }
 }
 
-.oauthCard {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
-}
-
-.oauthStatus {
-  padding: $spacing-md;
-  border-radius: $radius-md;
-  font-size: 14px;
-
-  &.success {
-    background-color: rgba(34, 197, 94, 0.1);
-    color: #16a34a;
-  }
-
-  &.error {
-    background-color: rgba($error-color, 0.12);
-    color: $error-color;
-  }
-
-  &.waiting {
-    background-color: rgba($primary-color, 0.12);
-    color: var(--primary-color);
-  }
-}
-
-.callbackSection {
-  margin-top: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-}
-
-.callbackActions {
-  display: flex;
-  gap: $spacing-md;
-}
-
-.authUrlBox {
-  background: var(--bg-secondary);
-  border: 1px dashed var(--border-color);
-  border-radius: $radius-md;
-  padding: $spacing-md;
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-}
-
-.authUrlLabel {
+/* 字段小标签（授权链接等） */
+.fieldLabel {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 授权链接块：浅底描边 + 等宽 URL */
+.authUrlBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-quinary);
 }
 
 .authUrlValue {
-  font-weight: 700;
+  max-width: 100%;
   color: var(--text-primary);
+  font-family: $font-mono;
+  font-size: 12.5px;
+  line-height: 1.55;
   word-break: break-all;
   overflow-wrap: anywhere;
-  line-height: 1.5;
+}
+
+.inlineActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.callbackSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 状态行：状态徽标 + 可选的后续操作 */
+.statusRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+/* 状态徽标：4px 圆角、12px / 500，长错误信息允许换行 */
+.statusLine {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  min-height: 24px;
   max-width: 100%;
+  padding: 2px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-sm;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
-.authUrlActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: $spacing-sm;
-  margin-top: $spacing-sm;
+/* 等待中：accent 浅底 */
+.statusWaiting {
+  border-color: color-mix(in srgb, var(--accent-fg) 24%, transparent);
+  background: var(--accent-bg);
+  color: var(--accent-fg);
 }
 
-.successActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: $spacing-sm;
+.statusSuccess {
+  border-color: var(--success-badge-border);
+  background: var(--success-badge-bg);
+  color: var(--success-badge-text);
 }
 
-.geminiProjectField {
-  :global(.form-group) {
-    margin-top: 0;
-    margin-bottom: 0;
-    gap: $spacing-sm;
-  }
+.statusError {
+  border-color: var(--failure-badge-border);
+  background: var(--failure-badge-bg);
+  color: var(--failure-badge-text);
+}
 
-  :global(.input:disabled) {
-    background-color: var(--bg-tertiary);
-    border-color: var(--border-color);
-    color: var(--text-tertiary);
-    cursor: not-allowed;
-  }
+/* 等待状态的静态圆点（不做呼吸动画） */
+.statusDot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: $radius-full;
+  background: currentColor;
+}
+
+/* ---------- Vertex 导入表单 ---------- */
+.vertexFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-items: start;
+  gap: 16px;
 }
 
 .formItem {
   display: flex;
   flex-direction: column;
-  gap: $spacing-xs;
+  gap: 6px;
+  min-width: 0;
 }
 
 .formItemLabel {
   margin: 0;
-  font-weight: 600;
   color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .filePicker {
   display: flex;
-  align-items: center;
-  gap: $spacing-sm;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
+/* 文件名展示框：与输入框同尺寸（36px / 8px 圆角） */
 .fileName {
+  display: flex;
   flex: 1;
-  min-width: 220px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-color);
+  align-items: center;
+  min-width: 180px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border-primary);
   border-radius: $radius-md;
   background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 14px;
+  overflow-wrap: anywhere;
 }
 
 .fileNamePlaceholder {
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
 }
 
+/* 导入结果：浅底键值列表 */
 .connectionBox {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: $radius-md;
-  padding: $spacing-md;
   display: flex;
   flex-direction: column;
-  gap: $spacing-sm;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-quinary);
 }
 
 .connectionLabel {
   margin: 0;
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary);
 }
 
 .keyValueList {
@@ -342,8 +324,8 @@
 .keyValueItem {
   display: grid;
   grid-template-columns: 140px 1fr;
-  gap: 10px;
   align-items: start;
+  gap: 10px;
 
   @include mobile {
     grid-template-columns: 1fr;
@@ -358,6 +340,8 @@
 
 .keyValueValue {
   color: var(--text-primary);
+  font-family: $font-mono;
+  font-size: 13px;
   word-break: break-all;
   overflow-wrap: anywhere;
 }

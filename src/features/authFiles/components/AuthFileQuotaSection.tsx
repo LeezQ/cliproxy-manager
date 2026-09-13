@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { IconRefreshCw } from '@/components/ui/icons';
 import { bindQuotaClasses } from '@/features/quota/types';
 import { QUOTA_ADAPTERS, type QuotaCardState } from '@/features/quota/providers';
-import styles from './AuthFileQuota.module.scss';
+import styles from '@/features/authFiles/components/AuthFileQuota.module.scss';
 
 /** 认证文件卡片外衣：紧凑额度样式绑定成类型化契约（缺键在模块初始化即抛）。 */
 const compactQuotaClasses = bindQuotaClasses(styles, 'AuthFileQuota.module.scss');

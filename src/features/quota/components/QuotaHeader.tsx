@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
+import { PageHeader, PageHeaderStat } from '@/components/common/PageHeader';
+import { Button } from '@/components/ui/Button';
 import { IconRefreshCw } from '@/components/ui/icons';
-import { useCountUp } from '@/hooks/motion';
-import styles from './QuotaHeader.module.scss';
+import styles from '@/features/quota/components/QuotaHeader.module.scss';
 
 export type QuotaHeaderProps = {
   totalCount: number;
@@ -13,58 +14,50 @@ export type QuotaHeaderProps = {
 };
 
 /**
- * 额度页头部：标题领衔 + ▍mono 遥测 meta 行 + 墨色药丸「刷新全部」。
- * 与凭证库头部同语汇（无 eyebrow —— ▍游标挂在 meta 行开头）。
+ * 额度页标题区：统一走 PageHeader（标题 + 一句话说明 | 统计卡片 …… 刷新全部）。
  *
- * 入场：三处 `data-reveal` 交给页面壳的 useRevealGroup 统一编排
- * （标题 0ms → meta 70ms → 动作 140ms → tabs 210ms）。
+ * - 三枚统计卡：凭证总数（中性）、已加载（健康色）、需关注（有异常时走故障色）；
+ * - 数字直接到位，不做滚动计数；
+ * - 「刷新全部」为页面主操作，刷新中图标保留旋转作为唯一的进行态反馈。
  */
 export function QuotaHeader(props: QuotaHeaderProps) {
   const { totalCount, loadedCount, attentionCount, refreshing, disableControls, onRefreshAll } =
     props;
   const { t } = useTranslation();
-  // 批量结果陆续落地时，「已加载」是页面上唯一滚动的数字
-  const displayLoadedCount = useCountUp(loadedCount);
 
   return (
-    <header className={styles.header}>
-      <div className={styles.copy}>
-        <h1 className={styles.title} data-reveal>
-          {t('quota_management.title')}
-        </h1>
-        <p className={styles.meta} data-reveal>
-          <span className={styles.metaTotal}>
-            {t('quota_management.meta_credentials', { count: totalCount })}
-          </span>
-          <span className={styles.metaDot} aria-hidden="true">
-            ·
-          </span>
-          <span className={loadedCount > 0 ? styles.metaLoaded : styles.metaMuted}>
-            {t('quota_management.meta_loaded', { count: displayLoadedCount })}
-          </span>
-          {attentionCount > 0 && (
-            <>
-              <span className={styles.metaDot} aria-hidden="true">
-                ·
-              </span>
-              <span className={styles.metaAttention}>
-                {t('quota_management.meta_attention', { count: attentionCount })}
-              </span>
-            </>
-          )}
-        </p>
-      </div>
-      <div className={styles.actions} data-reveal>
-        <button
-          type="button"
-          className={styles.primaryAction}
-          onClick={onRefreshAll}
-          disabled={disableControls || refreshing}
-        >
-          <IconRefreshCw size={14} className={refreshing ? styles.spinning : undefined} />
+    <PageHeader
+      title={t('quota_management.title')}
+      description={t('quota_management.description')}
+      stats={
+        <>
+          <PageHeaderStat
+            label={t('quota_management.stat_credentials', { defaultValue: 'Credentials' })}
+            value={totalCount}
+            tone="neutral"
+          />
+          <PageHeaderStat
+            label={t('quota_management.stat_loaded', { defaultValue: 'Loaded' })}
+            value={loadedCount}
+            tone={loadedCount > 0 ? 'success' : 'neutral'}
+          />
+          <PageHeaderStat
+            label={t('quota_management.stat_attention', { defaultValue: 'Needs attention' })}
+            value={attentionCount}
+            tone={attentionCount > 0 ? 'danger' : 'neutral'}
+          />
+        </>
+      }
+      actions={
+        <Button variant="primary" onClick={onRefreshAll} disabled={disableControls || refreshing}>
+          <IconRefreshCw
+            size={16}
+            aria-hidden="true"
+            className={refreshing ? styles.spinning : undefined}
+          />
           {t('quota_management.refresh_all_credentials')}
-        </button>
-      </div>
-    </header>
+        </Button>
+      }
+    />
   );
 }

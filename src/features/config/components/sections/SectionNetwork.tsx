@@ -3,27 +3,23 @@ import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import type { VisualConfigValues } from '@/types/visualConfig';
-import { CONFIG_TAB_ICONS, SECTION_INDEX_LABELS } from '../../constants';
-import type { ConfigSectionProps } from '../../types';
-import { SectionCard } from '../SectionCard';
+import type { ConfigSectionProps } from '@/features/config/types';
+import { SectionCard } from '@/features/config/components/SectionCard';
 import {
   FieldAnchor,
   FieldGrid,
   FieldShell,
   FieldStack,
   ToggleRow,
-} from '../fields/FieldPrimitives';
-import { ProxyUrlField, SponsorHintSpacer } from '../fields/sharedFields';
-import { getValidationMessage } from '../blocks/shared';
-
-const Icon = CONFIG_TAB_ICONS.network;
+} from '@/features/config/components/fields/FieldPrimitives';
+import { ProxyUrlField, SponsorHintSpacer } from '@/features/config/components/fields/sharedFields';
+import { getValidationMessage } from '@/features/config/components/blocks/shared';
 
 /** 02 网络配置：代理、重试、路由策略、图像生成开关与网络行为开关。 */
 export function SectionNetwork({
   values,
   validationErrors,
   disabled,
-  animateIn,
   onChange,
 }: ConfigSectionProps) {
   const { t } = useTranslation();
@@ -61,11 +57,8 @@ export function SectionNetwork({
 
   return (
     <SectionCard
-      indexLabel={SECTION_INDEX_LABELS.network}
-      icon={<Icon size={16} />}
       title={t('config_management.visual.sections.network.title')}
       description={t('config_management.visual.sections.network.description')}
-      animateIn={animateIn}
     >
       <FieldStack>
         <FieldGrid>

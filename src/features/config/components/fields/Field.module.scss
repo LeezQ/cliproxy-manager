@@ -1,53 +1,45 @@
 @use '../../../../styles/mixins' as *;
 
 /* 字段原语：表单控件的 scoped 覆盖 + 开关行 / 网格 / 字段组 / 搜索锚点。
-   交互反馈一律引用全局动效 tokens（--dur-* / --ease-out-strong）。 */
+   视觉对齐规范：输入类字段为「上标签 + 36px 控件 + 下说明」结构；
+   开关类字段为「左标题+说明 / 右开关」行，行间 1px 分割线。
+   过渡只允许颜色类属性（$transition-fast），不做位移/缩放。 */
 
 /* ---------- 表单控件宿主（原 .visualEditor 的 :global 覆盖收编于此） ---------- */
 
 .fieldsRoot {
   :global(.form-group) {
-    gap: 7px;
+    gap: 6px;
     margin-bottom: 0;
   }
 
+  /* 字段标签：13px / 500 / 主文字色 */
   :global(.form-group > label) {
-    color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
   }
 
+  /* 输入框沿用全局 .input（36px / 8px 圆角 / --border-primary / 白底），只收紧高度 */
   :global(.input) {
-    min-height: 42px;
-    border-radius: 10px;
-    background: var(--bg-secondary);
-    border-color: var(--border-color);
-    box-shadow: none;
-    transition:
-      border-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-      background-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-      box-shadow var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
-  }
-
-  :global(.input:focus) {
-    background: var(--bg-primary);
-    border-color: var(--text-primary);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--text-primary) 12%, transparent);
+    min-height: 36px;
+    border-radius: $radius-md;
   }
 
   :global(textarea.input) {
-    min-height: 112px;
+    min-height: 96px;
   }
 
   :global(.hint) {
     color: var(--text-secondary);
     font-size: 12px;
-    line-height: 1.55;
+    line-height: 1.5;
   }
 
   :global(.error-box) {
-    border-radius: 10px;
+    border-radius: $radius-md;
+    font-size: 13px;
   }
 
   :global(.item-list) {
@@ -55,10 +47,11 @@
     margin-top: 8px;
   }
 
+  /* 列表条目（API 密钥等）：白底 + 边框，无阴影 */
   :global(.item-row) {
-    border-radius: 10px;
-    padding: 12px;
-    background: transparent;
+    border-radius: $radius-md;
+    padding: 12px 16px;
+    background: var(--bg-primary);
     border-color: var(--border-color);
   }
 
@@ -66,72 +59,89 @@
     gap: 4px;
   }
 
+  :global(.item-row .item-title) {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
   :global(.item-row .item-actions) {
     flex-wrap: wrap;
   }
 
+  /* 序号徽标：规范中性徽标（20px 高 / 4px 圆角 / 12px / 500） */
   :global(.pill) {
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    height: 20px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: $radius-sm;
+    background: var(--bg-tertiary);
     color: var(--text-secondary);
+    font-family: $font-mono;
+    font-size: 12px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
   }
 }
 
-/* ---------- 开关行 ---------- */
+/* ---------- 开关行：左标题+说明 / 右开关，上下 1px 分割线 ---------- */
 
 .toggleRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
+  gap: 16px;
   align-items: center;
-  min-height: 74px;
-  padding: 14px;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
+  min-height: 56px;
+  box-sizing: border-box;
+  padding: 12px 0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
   background: transparent;
-  transition:
-    border-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-    background-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
-
-  @include mobile {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .toggleRow:hover {
-    border-color: var(--border-hover);
-    background: color-mix(in srgb, var(--bg-tertiary) 40%, transparent);
-  }
 }
 
 .toggleCopy {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 2px;
   min-width: 0;
 }
 
 .toggleTitle {
   color: var(--text-primary);
   font-size: 14px;
-  font-weight: 700;
-  line-height: 1.25;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .toggleDescription {
   color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* ---------- 布局原语 ---------- */
 
+/* 输入类字段网格：自适应多列，上标签结构 */
 .fieldGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 16px 20px;
+
+  @include mobile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 开关列表网格：宽屏两列、窄屏一列；行间无间隙，相邻行的上下分割线用 -1px 重叠成单线 */
+.fieldGrid:has(> .fieldAnchor > .toggleRow) {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  gap: 0 32px;
+
+  > .fieldAnchor {
+    margin-bottom: -1px;
+  }
 
   @include mobile {
     grid-template-columns: minmax(0, 1fr);
@@ -141,7 +151,7 @@
 .fieldStack {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
 }
 
 .divider {
@@ -149,7 +159,7 @@
   background: var(--border-color);
 }
 
-/* ---------- 搜索锚点与脉冲高亮 ---------- */
+/* ---------- 搜索锚点与跳转高亮 ---------- */
 
 .fieldAnchor {
   display: block;
@@ -166,7 +176,7 @@
   }
 }
 
-/* 字段标签下方的赞助跳转小字行（代理 URL 字段）。 */
+/* 字段标签下方的赞助跳转小字行（代理 URL 字段；赞助商列表为空时不渲染）。 */
 .fieldSponsorHint {
   margin: -2px 0 0;
   color: var(--text-secondary);
@@ -187,23 +197,22 @@
   }
 }
 
-/* 与正文融为一体的高亮链接：同字号，复用全站金色（amber）badge 配方，hover 底色加深。 */
+/* 赞助链接：规范琥珀徽标配色，仅过渡背景色 */
 .fieldSponsorLink {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 1px 5px;
-  border: 1px solid var(--amber-30);
-  border-radius: 5px;
-  background: var(--amber-10);
+  border: 1px solid color-mix(in srgb, var(--amber-color) 30%, transparent);
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, var(--amber-color) 10%, transparent);
   color: var(--amber-text);
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
   vertical-align: baseline;
-  transition: background-color 0.15s ease;
+  transition: background-color $transition-fast;
 
   &:hover {
-    background: var(--amber-30);
     text-decoration: none;
   }
 }
@@ -214,24 +223,25 @@
   height: 13px;
 }
 
+/* 搜索跳转高亮：0.8s 选中浅底淡出（纯背景色，不做描边脉冲/位移） */
 .fieldHighlightActive {
-  border-radius: 10px;
-  animation: config-field-highlight 1.8s ease-out;
+  border-radius: $radius-md;
+  animation: config-field-highlight 0.8s linear;
 }
 
 @keyframes config-field-highlight {
-  0% {
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-primary) 55%, transparent);
-  }
-  55% {
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-primary) 32%, transparent);
+  0%,
+  50% {
+    background-color: var(--accent-bg);
+    box-shadow: 0 0 0 6px var(--accent-bg);
   }
   100% {
-    box-shadow: 0 0 0 3px transparent;
+    background-color: transparent;
+    box-shadow: 0 0 0 6px transparent;
   }
 }
 
-/* ---------- 字段组（原 subsection） ---------- */
+/* ---------- 字段组（原 subsection）：卡片内的次级描边容器 ---------- */
 
 .group {
   display: flex;
@@ -239,45 +249,45 @@
   gap: 12px;
   padding: 16px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: transparent;
+  border-radius: $radius-md;
+  background: var(--bg-primary);
 }
 
 .groupHeader {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 
 .groupTitle {
   margin: 0;
   color: var(--text-primary);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.25;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .groupDescription {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
-/* ---------- 字段外壳 ---------- */
+/* ---------- 字段外壳（非 Input 组件的上标签结构，如 Select） ---------- */
 
 .fieldShell {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
 }
 
 .fieldLabel {
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .fieldControl {
@@ -287,9 +297,10 @@
 .fieldHint {
   color: var(--text-secondary);
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
+/* 数字输入右侧的「已禁用」徽标（translateY 仅用于垂直居中定位，非动画） */
 .inlinePill {
   position: absolute;
   right: 8px;
@@ -297,42 +308,25 @@
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
-  min-height: 24px;
-  padding: 0 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--bg-primary);
+  height: 20px;
+  padding: 0 6px;
+  border-radius: $radius-sm;
+  background: var(--bg-tertiary);
   color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 /* ---------- 响应式 ---------- */
 
 @include mobile {
-  .group,
-  .toggleRow {
+  .group {
     padding: 14px;
   }
 }
 
 @media (max-width: 380px) {
-  .group,
-  .toggleRow {
+  .group {
     padding: 12px;
-  }
-}
-
-/* ---------- 无障碍 ---------- */
-
-@media (prefers-reduced-motion: reduce) {
-  .fieldsRoot :global(.input),
-  .toggleRow {
-    transition: none;
-  }
-
-  .fieldHighlightActive {
-    animation: none;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-primary) 32%, transparent);
   }
 }

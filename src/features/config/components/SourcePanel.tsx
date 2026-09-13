@@ -3,17 +3,19 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { IconChevronDown, IconChevronUp, IconSearch } from '@/components/ui/icons';
-import type { UseSourceSearchResult } from '../hooks/useSourceSearch';
-import styles from './SourcePanel.module.scss';
+import type { UseSourceSearchResult } from '@/features/config/hooks/useSourceSearch';
+import styles from '@/features/config/components/SourcePanel.module.scss';
 
-const LazyConfigSourceEditor = lazy(() => import('./ConfigSourceEditor'));
+const LazyConfigSourceEditor = lazy(
+  () => import('@/features/config/components/ConfigSourceEditor')
+);
 
 export type SourceSearchBarProps = {
   search: UseSourceSearchResult;
   disabled: boolean;
 };
 
-/** 源码模式的搜索条：占据工具栏行的搜索槽位（与可视化模式的字段搜索同位置）。 */
+/** 源码模式的搜索条：占据页头操作区的搜索槽位（与可视化模式的字段搜索同位置）。 */
 export function SourceSearchBar({ search, disabled }: SourceSearchBarProps) {
   const { t } = useTranslation();
   const {

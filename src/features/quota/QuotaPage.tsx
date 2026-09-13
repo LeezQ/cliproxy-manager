@@ -17,21 +17,19 @@ import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useNow } from '@/hooks/useNow';
-import { useRevealGroup } from '@/hooks/motion';
 import { useAuthStore, useQuotaStore, useThemeStore } from '@/stores';
 import type { AuthFileItem, ResolvedTheme } from '@/types';
 import { ProviderTabs } from '@/features/authFiles/components/ProviderTabs';
-import { QuotaHeader } from './components/QuotaHeader';
-import { QuotaCard } from './components/QuotaCard';
-import { QuotaTimeline } from './components/QuotaTimeline';
+import { QuotaHeader } from '@/features/quota/components/QuotaHeader';
+import { QuotaCard } from '@/features/quota/components/QuotaCard';
+import { QuotaTimeline } from '@/features/quota/components/QuotaTimeline';
 import {
-  CARD_ENTRANCE_BUDGET_MS,
   QUOTA_PAGE_SIZE,
   QUOTA_SORT_MODES,
   QUOTA_TAB_ORDER,
   type QuotaSortMode,
   type QuotaTabId,
-} from './constants';
+} from '@/features/quota/constants';
 import {
   buildTabCounts,
   classifyQuotaFiles,
@@ -39,14 +37,14 @@ import {
   paginate,
   sortQuotaEntries,
   type QuotaFileEntry,
-} from './logic';
-import { nextRecoveryMs } from './resetSchedule';
-import { QUOTA_ADAPTERS, getQuotaSetter, type QuotaCardState } from './providers';
-import type { QuotaProviderType } from './providers/types';
-import { useQuotaActions } from './hooks/useQuotaActions';
-import { useQuotaBatchLoader } from './hooks/useQuotaBatchLoader';
-import { readQuotaUiState, writeQuotaUiState } from './uiState';
-import styles from './QuotaPage.module.scss';
+} from '@/features/quota/logic';
+import { nextRecoveryMs } from '@/features/quota/resetSchedule';
+import { QUOTA_ADAPTERS, getQuotaSetter, type QuotaCardState } from '@/features/quota/providers';
+import type { QuotaProviderType } from '@/features/quota/providers/types';
+import { useQuotaActions } from '@/features/quota/hooks/useQuotaActions';
+import { useQuotaBatchLoader } from '@/features/quota/hooks/useQuotaBatchLoader';
+import { readQuotaUiState, writeQuotaUiState } from '@/features/quota/uiState';
+import styles from '@/features/quota/QuotaPage.module.scss';
 
 const TAB_IDS: string[] = ['all', ...QUOTA_TAB_ORDER];
 const SKELETON_CARD_COUNT = 6;
@@ -70,8 +68,6 @@ export function QuotaPage() {
     () => readQuotaUiState()?.sortMode ?? 'default'
   );
   const [page, setPage] = useState(1);
-  // 页头 + tabs 的入场级联（标题 → meta → 动作 → tabs，级差 70ms）
-  const revealRef = useRevealGroup<HTMLDivElement>();
 
   const disableControls = connectionStatus !== 'connected';
 
@@ -84,6 +80,7 @@ export function QuotaPage() {
       const data = await authFilesApi.list();
       setFiles(data?.files || []);
     } catch (err: unknown) {
+      console.error('[quota] 加载认证文件列表失败', err);
       const message = err instanceof Error ? err.message : t('notification.refresh_failed');
       setError(message);
     } finally {
@@ -227,30 +224,12 @@ export function QuotaPage() {
 
   const canUseActions = !disableControls && !loading;
 
-  /* ---------- 首屏卡片一次性级联入场 ----------
-   * 首批数据渲染后立即翻转 cardsAnimated；已挂载的卡片在挂载时捕获过自己的
-   * 延迟（QuotaCard 内 useState 初始化），后续切 tab/翻页/刷新新挂载的卡片
-   * 拿到 null —— 不重播。 */
-
-  const [cardsAnimated, setCardsAnimated] = useState(false);
-  const enableCardEntrance = !cardsAnimated && !loading && pageItems.length > 0;
-  useEffect(() => {
-    if (enableCardEntrance) {
-      setCardsAnimated(true);
-    }
-  }, [enableCardEntrance]);
-  const cardEntranceDelay = (index: number): number | null => {
-    if (!enableCardEntrance) return null;
-    if (pageItems.length <= 1) return 0;
-    return Math.round((index / (pageItems.length - 1)) * CARD_ENTRANCE_BUDGET_MS);
-  };
-
   /* ---------- 渲染 ---------- */
 
   const isEmpty = !loading && filteredEntries.length === 0;
 
   return (
-    <div className={styles.page} ref={revealRef}>
+    <div className={styles.page}>
       <QuotaHeader
         totalCount={entries.length}
         loadedCount={loadedCount}
@@ -261,10 +240,10 @@ export function QuotaPage() {
       />
 
       <section className={styles.workbench}>
-        {/* tabs + 排序作为一个整体入场（useRevealGroup 会给每个 [data-reveal]
-            后代加一级级差，所以排序控件放在同一个节点里而不是做兄弟） */}
-        <div className={styles.tabsRow} data-reveal>
+        {/* 筛选卡片：与认证文件页同构——左侧提供商 tabs（可横向滚动），右端排序下拉 */}
+        <div className={styles.tabsRow}>
           <ProviderTabs
+            className={styles.tabs}
             types={TAB_IDS}
             counts={tabCounts}
             active={tab}
@@ -291,7 +270,7 @@ export function QuotaPage() {
         {loading ? (
           <div className={styles.grid} aria-hidden="true">
             {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
-              <Skeleton key={index} height={168} rounded={14} />
+              <Skeleton key={index} height={168} rounded={8} />
             ))}
           </div>
         ) : isEmpty ? (
@@ -316,7 +295,7 @@ export function QuotaPage() {
           />
         ) : (
           <div className={styles.grid}>
-            {pageItems.map((entry, index) => (
+            {pageItems.map((entry) => (
               <QuotaCard
                 key={`${entry.type}:${entry.file.name}`}
                 entry={entry}
@@ -324,7 +303,6 @@ export function QuotaPage() {
                 resolvedTheme={resolvedTheme}
                 canRefresh={canUseActions && !entry.file.disabled}
                 resetting={resettingQuotaName === entry.file.name}
-                entranceDelayMs={cardEntranceDelay(index)}
                 onRefresh={() => void refreshQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
                 onReset={() => resetQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
               />

@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
-import { configFieldDomId } from '../../searchIndex';
-import styles from './Field.module.scss';
+import { configFieldDomId } from '@/features/config/searchIndex';
+import styles from '@/features/config/components/fields/Field.module.scss';
 
-/** 搜索跳转的脉冲高亮 class（useFieldJump 命令式挂载/移除）。 */
+/** 搜索跳转的背景色高亮 class（useFieldJump 命令式挂载/移除，0.8s）。 */
 export const FIELD_HIGHLIGHT_CLASS: string = styles.fieldHighlightActive;
 
 /**

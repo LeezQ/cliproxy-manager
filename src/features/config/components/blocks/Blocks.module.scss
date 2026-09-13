@@ -1,7 +1,8 @@
 @use '../../../../styles/mixins' as *;
 
 /* 区块编辑器（API 密钥 / 字符串列表 / 插件源认证 / 载荷规则）的共享样式。
-   规则从旧 VisualConfigEditor.module.scss 收编，几何统一到 10px 圆角并引用动效 tokens。 */
+   对齐规范：白底 + 1px 边框 + 8px 圆角、无阴影；标签 13px/500；
+   过渡只允许颜色类属性（$transition-fast），强度条等宽度变化直接到位。 */
 
 /* ---------- 可展开输入 ---------- */
 
@@ -42,7 +43,7 @@
   line-height: 1;
   cursor: pointer;
   opacity: 0.58;
-  transition: opacity var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
+  transition: opacity $transition-fast;
 
   &:hover {
     opacity: 1;
@@ -66,7 +67,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -77,9 +78,9 @@
 }
 
 .blockLabel {
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
   line-height: 1.4;
 }
 
@@ -88,11 +89,85 @@
   justify-content: flex-end;
 }
 
+/* ---------- API 密钥列表：单层边框列表，行间分割线 ---------- */
+
+.keyEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.keyHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.keyLabel {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.keyHint {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.keyList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-primary);
+}
+
+.keyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 8px 6px 14px;
+
+  & + & {
+    border-top: 1px solid var(--border-color);
+  }
+}
+
+.keyValue {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-family: $font-mono;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.keyActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+.keyDelete:global(.btn) {
+  color: var(--error-color);
+
+  &:hover:not(:disabled) {
+    color: var(--error-color);
+    background: color-mix(in srgb, var(--error-color) 10%, transparent);
+  }
+}
+
 .emptyState {
   border: 1px dashed var(--border-color);
-  border-radius: 10px;
+  border-radius: $radius-md;
   padding: 16px;
   color: var(--text-secondary);
+  font-size: 13px;
   text-align: center;
   background: transparent;
 }
@@ -103,10 +178,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px;
+  padding: 16px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--bg-secondary) 64%, transparent);
+  border-radius: $radius-md;
+  background: var(--bg-primary);
 }
 
 .ruleCardHeader {
@@ -120,7 +195,7 @@
 .ruleCardTitle {
   color: var(--text-primary);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.25;
 }
 
@@ -152,7 +227,7 @@
 }
 
 /* 强度参考条：四段承载档位，颜色承载严重度。
-   段的填充走 scaleX（只碰 transform），键入时逐字重算也不掉帧。 */
+   按全站动效策略去掉逐段点亮的缩放过渡与排队延迟，填充状态直接到位。 */
 
 .strengthMeter {
   display: flex;
@@ -173,7 +248,6 @@
   overflow: hidden;
   // 轨道 = 填充色的淡化步阶，未点亮的段也带着当前状态
   background: color-mix(in srgb, var(--strength-color) 16%, transparent);
-  transition: background-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
 }
 
 .strengthSegmentFill {
@@ -181,26 +255,11 @@
   height: 100%;
   border-radius: inherit;
   background: var(--strength-color);
-  transform: scaleX(0);
-  transform-origin: left center;
-  // 段内比常规交互再快一档，把预算让给段间的 stagger
-  transition:
-    transform var(--dur-press, 160ms) var(--ease-out-strong, ease-out),
-    background-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
+  // 未点亮的段不显示填充；点亮时整段直接填满（无过渡）
+  visibility: hidden;
 
-  // 延迟写在目标态上：点亮时依次排队，熄灭是系统响应，立刻发生
   &[data-filled='true'] {
-    transform: scaleX(1);
-    transition-delay: var(--segment-delay, 0ms);
-  }
-
-  // 降级只去掉位移和排队，颜色变化保留（它才是状态本身）
-  @media (prefers-reduced-motion: reduce) {
-    transition: background-color var(--dur-hover, 200ms) linear;
-
-    &[data-filled='true'] {
-      transition-delay: 0ms;
-    }
+    visibility: visible;
   }
 }
 
@@ -209,7 +268,6 @@
   font-size: 12px;
   line-height: 16px;
   color: var(--strength-color);
-  transition: color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
 }
 
 /* ---------- 插件源认证 ---------- */
@@ -231,10 +289,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--bg-secondary) 42%, transparent);
+  border-radius: $radius-md;
+  background: var(--bg-primary);
 }
 
 .storeAuthRuleHeader {
@@ -248,8 +306,8 @@
     min-width: 0;
     overflow: hidden;
     color: var(--text-primary);
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 14px;
+    font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -272,9 +330,9 @@
   gap: 6px;
 
   > span {
-    color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
   }
 }
 
@@ -284,9 +342,9 @@
   gap: 7px;
 
   > span {
-    color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
   }
 
   small {
@@ -308,8 +366,8 @@
   gap: 7px;
   min-height: 28px;
   color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 13px;
+  font-weight: 500;
   line-height: 1.4;
 
   input {
@@ -452,13 +510,5 @@
   .storeAuthRule,
   .ruleCard {
     padding: 12px;
-  }
-}
-
-/* ---------- 无障碍 ---------- */
-
-@media (prefers-reduced-motion: reduce) {
-  .expandableToggle {
-    transition: none;
   }
 }

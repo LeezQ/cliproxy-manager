@@ -1,16 +1,18 @@
-// 搜索跳转：切换到目标分区 tab → 等目标挂载 → 展开折叠组 → 滚动居中 → 1800ms 脉冲高亮。
+// 搜索跳转：切换到目标分区 tab → 等目标挂载 → 展开折叠组 → 瞬时滚动居中 → 800ms 背景色高亮。
 // 旧实现要与横向滚动吸附轮播搏斗（两段式 scrollIntoView）；轮播已退役，只剩纵向滚动。
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { prefersReducedMotion } from '@/hooks/motion';
 import type { VisualConfigValues } from '@/types/visualConfig';
-import { FIELD_HIGHLIGHT_CLASS } from '../components/fields/FieldPrimitives';
-import type { ConfigTabId } from '../constants';
+import { FIELD_HIGHLIGHT_CLASS } from '@/features/config/components/fields/FieldPrimitives';
+import type { ConfigTabId } from '@/features/config/constants';
 import {
   configFieldDomId,
   type ConfigFieldSearchEntry,
   type VisualSectionId,
-} from '../searchIndex';
+} from '@/features/config/searchIndex';
+
+/** 字段高亮持续时长，与 Field.module.scss 中 config-field-highlight 动画时长保持一致（≤ 0.8s）。 */
+const HIGHLIGHT_DURATION_MS = 800;
 
 export type UseFieldJumpArgs = {
   values: VisualConfigValues;
@@ -68,8 +70,9 @@ export function useFieldJump({ values, setActiveSection }: UseFieldJumpArgs) {
         highlightedElRef.current?.classList.remove(FIELD_HIGHLIGHT_CLASS);
       }
 
+      // 瞬时滚动（全站动效策略：禁用平滑滚动）
       el.scrollIntoView({
-        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        behavior: 'auto',
         block: 'center',
         inline: 'nearest',
       });
@@ -79,7 +82,7 @@ export function useFieldJump({ values, setActiveSection }: UseFieldJumpArgs) {
         el.classList.remove(FIELD_HIGHLIGHT_CLASS);
         highlightTimerRef.current = null;
         highlightedElRef.current = null;
-      }, 1800);
+      }, HIGHLIGHT_DURATION_MS);
     };
 
     requestAnimationFrame(() => attempt(1));

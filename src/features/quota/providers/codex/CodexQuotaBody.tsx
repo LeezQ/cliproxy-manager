@@ -1,5 +1,5 @@
 /**
- * Codex 额度渲染体：套餐 chip 行（elite=Pro 20x 液态铂金 / premium=金卡）、
+ * Codex 额度渲染体：套餐 chip 行（elite=Pro 20x 主色徽标 / premium=琥珀徽标）、
  * 重置积分明细、用量窗口水位条。
  */
 
@@ -18,10 +18,14 @@ import {
 import { resolveTimeZoneLabel } from '@/utils/time/timezone';
 import { formatDateTimeValue } from '@/utils/format';
 import { useNow } from '@/hooks/useNow';
-import { QuotaMeter } from '../../components/QuotaMeter';
-import { QuotaResetLabel } from '../../components/QuotaResetLabel';
-import { collectQuotaRowInstants, pickUrgentRowId, resetCreditRowId } from '../../resetSchedule';
-import type { QuotaBodyProps, QuotaClassMap } from '../../types';
+import { QuotaMeter } from '@/features/quota/components/QuotaMeter';
+import { QuotaResetLabel } from '@/features/quota/components/QuotaResetLabel';
+import {
+  collectQuotaRowInstants,
+  pickUrgentRowId,
+  resetCreditRowId,
+} from '@/features/quota/resetSchedule';
+import type { QuotaBodyProps, QuotaClassMap } from '@/features/quota/types';
 
 const getPlanValueClass = (planType: string | null, classes: QuotaClassMap): string => {
   // elite/premium 顺序契约由 resolvePlanTier 承载（tests/quotaPlanTier.test.ts 守护）。

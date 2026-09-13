@@ -6,10 +6,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import type { AntigravityQuotaState, AntigravityQuotaSubscription } from '@/types';
-import { QuotaMeter } from '../../components/QuotaMeter';
-import { collectQuotaRowInstants, pickUrgentRowId } from '../../resetSchedule';
-import type { QuotaBodyProps } from '../../types';
-import { getNextAntigravityCountdownUpdateDelay } from './countdown';
+import { QuotaMeter } from '@/features/quota/components/QuotaMeter';
+import { collectQuotaRowInstants, pickUrgentRowId } from '@/features/quota/resetSchedule';
+import type { QuotaBodyProps } from '@/features/quota/types';
+import { getNextAntigravityCountdownUpdateDelay } from '@/features/quota/providers/antigravity/countdown';
 
 const formatAntigravityDuration = (t: TFunction, deltaMs: number): string => {
   const totalMinutes = Math.max(1, Math.ceil(deltaMs / 60000));

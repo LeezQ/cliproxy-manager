@@ -1,15 +1,16 @@
 /**
- * 额度卡片：头部（提供商图标 + mono 文件名）+ 四态 body + 动作 footer。
+ * 额度卡片：头部（提供商图标 + 文件名 + 提供商名）+ 四态 body + 动作 footer。
  *
+ * 视觉：白底 + 1px 边框 + 8px 圆角，无阴影、无入场动画、悬停不抬升。
  * - idle：整个 body 是一个点击加载按钮（上游直连有速率考虑，不自动拉取）；
  * - loading：双幽灵行骨架（aria-busy，文字等价视觉隐藏）；
- * - error：失败色条 + footer 刷新即重试；
+ * - error：故障徽标色条 + footer 刷新即重试；
  * - success：provider Body（穿 QuotaBody.module.scss 全页外衣）。
  */
 
-import { useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { IconRefreshCw } from '@/components/ui/icons';
+import { Button } from '@/components/ui/Button';
+import { IconAlertTriangle, IconRefreshCw } from '@/components/ui/icons';
 import type { ResolvedTheme } from '@/types';
 import { resolveQuotaErrorMessage } from '@/utils/quota';
 import {
@@ -18,11 +19,11 @@ import {
   getTypeLabel,
   isThemeSurfaceIconProvider,
 } from '@/features/authFiles/constants';
-import { bindQuotaClasses } from '../types';
-import { QUOTA_ADAPTERS, type QuotaCardState } from '../providers';
-import { isQuotaRefreshDisabled, type QuotaFileEntry } from '../logic';
-import bodyStyles from './QuotaBody.module.scss';
-import styles from './QuotaCard.module.scss';
+import { bindQuotaClasses } from '@/features/quota/types';
+import { QUOTA_ADAPTERS, type QuotaCardState } from '@/features/quota/providers';
+import { isQuotaRefreshDisabled, type QuotaFileEntry } from '@/features/quota/logic';
+import bodyStyles from '@/features/quota/components/QuotaBody.module.scss';
+import styles from '@/features/quota/components/QuotaCard.module.scss';
 
 /** 额度页全页外衣：QuotaBody 模块绑定成类型化契约（缺键在模块初始化即抛）。 */
 const quotaClasses = bindQuotaClasses(bodyStyles, 'QuotaBody.module.scss');
@@ -33,33 +34,15 @@ export type QuotaCardProps = {
   resolvedTheme: ResolvedTheme;
   canRefresh: boolean;
   resetting: boolean;
-  /** 首屏级联入场延迟；null = 不入场（切 tab / 翻页 / 刷新新挂载的卡片）。 */
-  entranceDelayMs?: number | null;
   onRefresh: () => void;
   onReset: () => void;
 };
 
 export function QuotaCard(props: QuotaCardProps) {
-  const {
-    entry,
-    quota,
-    resolvedTheme,
-    canRefresh,
-    resetting,
-    entranceDelayMs,
-    onRefresh,
-    onReset,
-  } = props;
+  const { entry, quota, resolvedTheme, canRefresh, resetting, onRefresh, onReset } = props;
   const { t } = useTranslation();
   const adapter = QUOTA_ADAPTERS[entry.type];
   const file = entry.file;
-
-  // 挂载时捕获一次延迟：后续 props 变 null 不影响本卡（React 19 禁渲染期读 ref）
-  const [mountEntranceDelayMs] = useState<number | null>(entranceDelayMs ?? null);
-  const entranceStyle =
-    mountEntranceDelayMs === null
-      ? undefined
-      : ({ '--card-delay': `${mountEntranceDelayMs}ms` } as CSSProperties);
 
   const status = quota?.status ?? 'idle';
   const loading = status === 'loading';
@@ -77,10 +60,7 @@ export function QuotaCard(props: QuotaCardProps) {
     Boolean(adapter.canResetQuota?.(quota));
 
   return (
-    <article
-      className={`${styles.card} ${mountEntranceDelayMs === null ? '' : styles.cardEnter}`}
-      style={entranceStyle}
-    >
+    <article className={styles.card}>
       <header className={styles.head}>
         <span
           className={styles.iconWrap}
@@ -97,8 +77,12 @@ export function QuotaCard(props: QuotaCardProps) {
             <span className={styles.iconFallback}>{typeLabel.slice(0, 1).toUpperCase()}</span>
           )}
         </span>
-        <span className={styles.fileName} title={file.name}>
-          {file.name}
+        {/* 文件名为卡片标题，提供商名作为次级说明，身份一眼可辨 */}
+        <span className={styles.headText}>
+          <span className={styles.fileName} title={file.name}>
+            {file.name}
+          </span>
+          <span className={styles.typeLabel}>{typeLabel}</span>
         </span>
       </header>
 
@@ -110,7 +94,7 @@ export function QuotaCard(props: QuotaCardProps) {
             onClick={onRefresh}
             disabled={!canRefresh}
           >
-            <IconRefreshCw size={15} aria-hidden="true" className={styles.idleGlyph} />
+            <IconRefreshCw size={16} aria-hidden="true" className={styles.idleGlyph} />
             <span className={styles.idleHint}>{t(`${adapter.i18nPrefix}.idle`)}</span>
           </button>
         ) : loading ? (
@@ -125,7 +109,10 @@ export function QuotaCard(props: QuotaCardProps) {
           </div>
         ) : status === 'error' ? (
           <div className={styles.errorStrip} role="alert">
-            {t(`${adapter.i18nPrefix}.load_failed`, { message: errorMessage })}
+            <IconAlertTriangle size={16} aria-hidden="true" className={styles.errorGlyph} />
+            <span className={styles.errorText}>
+              {t(`${adapter.i18nPrefix}.load_failed`, { message: errorMessage })}
+            </span>
           </div>
         ) : quota ? (
           <adapter.Body quota={quota} classes={quotaClasses} />
@@ -134,30 +121,39 @@ export function QuotaCard(props: QuotaCardProps) {
         )}
       </div>
 
+      {/* footer：次级描边小按钮（复用全局 Button），刷新中仅图标旋转 */}
       {status !== 'idle' && (
         <footer className={styles.actionRow}>
           {showReset && (
-            <button
-              type="button"
-              className={styles.actionPill}
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onReset}
               disabled={!canRefresh || loading || resetting}
               title={t('codex_quota.reset_button')}
             >
-              <IconRefreshCw size={13} className={resetting ? styles.spinning : undefined} />
+              <IconRefreshCw
+                size={14}
+                aria-hidden="true"
+                className={resetting ? styles.spinning : undefined}
+              />
               {t('codex_quota.reset_button')}
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
-            className={styles.actionPill}
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onRefresh}
             disabled={isQuotaRefreshDisabled(canRefresh, loading, resetting)}
             title={t('auth_files.quota_refresh_hint')}
           >
-            <IconRefreshCw size={13} className={loading ? styles.spinning : undefined} />
+            <IconRefreshCw
+              size={14}
+              aria-hidden="true"
+              className={loading ? styles.spinning : undefined}
+            />
             {t('auth_files.quota_refresh_single')}
-          </button>
+          </Button>
         </footer>
       )}
     </article>

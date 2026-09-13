@@ -8,10 +8,14 @@ import { useTranslation } from 'react-i18next';
 import type { XaiBillingSummary, XaiQuotaState } from '@/types';
 import { buildResetDisplay, formatQuotaResetTime, parseIsoToMs } from '@/utils/quota';
 import { useNow } from '@/hooks/useNow';
-import { QuotaMeter } from '../../components/QuotaMeter';
-import { QuotaResetLabel } from '../../components/QuotaResetLabel';
-import { XAI_WEEKLY_ROW_ID, collectQuotaRowInstants, pickUrgentRowId } from '../../resetSchedule';
-import type { QuotaBodyProps } from '../../types';
+import { QuotaMeter } from '@/features/quota/components/QuotaMeter';
+import { QuotaResetLabel } from '@/features/quota/components/QuotaResetLabel';
+import {
+  XAI_WEEKLY_ROW_ID,
+  collectQuotaRowInstants,
+  pickUrgentRowId,
+} from '@/features/quota/resetSchedule';
+import type { QuotaBodyProps } from '@/features/quota/types';
 
 const formatUsdFromCents = (cents: number | null): string => {
   if (cents === null) return '--';

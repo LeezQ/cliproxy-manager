@@ -3,14 +3,11 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { animate } from 'motion/mini';
 import { Button } from '@/components/ui/Button';
-import { prefersReducedMotion } from '@/hooks/motion';
 import { useActionBarHeightVar } from '@/hooks/useActionBarHeightVar';
-import styles from './BatchActionBar.module.scss';
+import styles from '@/features/authFiles/components/BatchActionBar.module.scss';
 
-const easePower3Out = (progress: number) => 1 - (1 - progress) ** 4;
-const easePower2In = (progress: number) => progress ** 3;
+/** 容器的基础居中变换：淡入淡出期间必须保留，否则会错位半个宽度 */
 const BASE_TRANSFORM = 'translateX(-50%)';
-const HIDDEN_TRANSFORM = 'translateX(-50%) translateY(56px)';
 
 export type BatchActionBarProps = {
   selectionCount: number;
@@ -29,9 +26,9 @@ export type BatchActionBarProps = {
 };
 
 /**
- * 悬浮批量操作条：portal 到 body 的玻璃工具栏。
- * - 选中数 >0 时上浮入场（0.28s 强减速），清零后加速退场（0.22s）再卸载；
- * - reduced-motion 下只做透明度淡入淡出（保留 translateX(-50%) 基础变换，防止错位半宽）；
+ * 悬浮批量操作条：portal 到 body 的白底浮层工具栏。
+ * - 选中数 >0 时 120ms 淡入，清零后 120ms 淡出再卸载；不做位移动画
+ *   （保留 translateX(-50%) 基础变换，防止错位半宽）；
  * - 实时高度写入 --auth-files-action-bar-height 供页面底部留白。
  */
 export function BatchActionBar(props: BatchActionBarProps) {
@@ -77,56 +74,33 @@ export function BatchActionBar(props: BatchActionBarProps) {
     animationRef.current?.stop();
     animationRef.current = null;
 
-    const reduced = prefersReducedMotion();
-
     if (currentCount > 0 && previousCount === 0) {
-      if (reduced) {
-        el.style.transform = BASE_TRANSFORM;
-        animationRef.current = animate(
-          el,
-          { opacity: [0, 1] },
-          {
-            duration: 0.15,
-            ease: 'linear',
-            onComplete: () => {
-              el.style.opacity = '1';
-            },
-          }
-        );
-      } else {
-        animationRef.current = animate(
-          el,
-          { transform: [HIDDEN_TRANSFORM, BASE_TRANSFORM], opacity: [0, 1] },
-          {
-            duration: 0.28,
-            ease: easePower3Out,
-            onComplete: () => {
-              el.style.transform = BASE_TRANSFORM;
-              el.style.opacity = '1';
-            },
-          }
-        );
-      }
+      // 入场：只做透明度淡入
+      el.style.transform = BASE_TRANSFORM;
+      animationRef.current = animate(
+        el,
+        { opacity: [0, 1] },
+        {
+          duration: 0.12,
+          ease: 'linear',
+          onComplete: () => {
+            el.style.opacity = '1';
+          },
+        }
+      );
     } else if (currentCount === 0 && previousCount > 0) {
+      // 退场：淡出结束后若仍无选中项才卸载，避免快速重选时闪烁
       const finishExit = () => {
         if (selectionCountRef.current === 0) {
           setVisible(false);
         }
       };
-      if (reduced) {
-        el.style.transform = BASE_TRANSFORM;
-        animationRef.current = animate(
-          el,
-          { opacity: [1, 0] },
-          { duration: 0.12, ease: 'linear', onComplete: finishExit }
-        );
-      } else {
-        animationRef.current = animate(
-          el,
-          { transform: [BASE_TRANSFORM, HIDDEN_TRANSFORM], opacity: [1, 0] },
-          { duration: 0.22, ease: easePower2In, onComplete: finishExit }
-        );
-      }
+      el.style.transform = BASE_TRANSFORM;
+      animationRef.current = animate(
+        el,
+        { opacity: [1, 0] },
+        { duration: 0.12, ease: 'linear', onComplete: finishExit }
+      );
     }
 
     previousCountRef.current = currentCount;

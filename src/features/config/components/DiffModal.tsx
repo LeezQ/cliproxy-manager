@@ -4,7 +4,7 @@ import { Text } from '@codemirror/state';
 import { Chunk } from '@codemirror/merge';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import styles from './DiffModal.module.scss';
+import styles from '@/features/config/components/DiffModal.module.scss';
 
 type DiffModalProps = {
   open: boolean;

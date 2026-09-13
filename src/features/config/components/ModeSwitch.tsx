@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import type { ConfigEditorMode } from '../constants';
-import styles from './ModeSwitch.module.scss';
+import type { ConfigEditorMode } from '@/features/config/constants';
+import styles from '@/features/config/components/ModeSwitch.module.scss';
 
 export type ModeSwitchProps = {
   mode: ConfigEditorMode;
@@ -9,8 +9,8 @@ export type ModeSwitchProps = {
 };
 
 /**
- * 可视化 / 源码 segmented 切换。源码模式是整份文档的另一种表示（不是第 9 个分区），
- * 所以它不进 tabs，常驻 tabs 行右端（移动端上移到头部动作行）。
+ * 可视化 / 源码分段控件。源码模式是整份文档的另一种表示（不是第 9 个分区），
+ * 所以它不进 tabs，常驻页头操作区（搜索框右侧）。
  */
 export function ModeSwitch({ mode, disabled = false, onChange }: ModeSwitchProps) {
   const { t } = useTranslation();
