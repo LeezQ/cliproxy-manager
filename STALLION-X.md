@@ -41,6 +41,27 @@
 
 **改视觉时优先只动 `stallion-x.scss`**，不要直接改上游的 `themes.scss` / `layout.scss`，否则合并上游时会冲突。
 
+## 3. 移除推广与运营内容
+
+上游在界面和文档里放了赞助商广告与带推广参数的注册链接，本 fork 全部移除：
+
+| 位置 | 上游内容 | 处理 |
+|---|---|---|
+| 配置面板「代理 URL」字段下方 | 「没有合适的代理？」+ BestProxy 推广链接 | `src/features/config/sponsors.ts` 置为空数组，上游约定为空时整行不渲染；删除其 logo 资源 |
+| OAuth 登录页顶部 | Kimi 置顶推荐卡，含带 `aff=` 参数的「立即注册」按钮 | `src/pages/OAuthPage.tsx` 去掉置顶与注册按钮，Kimi 与其他提供商平级展示 |
+| 侧边栏 | 配置了 APIKEY.FUN 时把「快速开始」替换成赞助商入口 | `MainLayout.tsx` 删除相关判断与导入 |
+| README / README_CN | 赞助商段落与图片 | 删除段落和 `assets/apimart-*.png`，顶部加 fork 说明 |
+
+**合并上游时注意**：上游频繁增删赞助商。凡是 `sponsors.ts`、`OAuthPage.tsx` 推荐卡、README 赞助段落出现冲突，一律保留本 fork 的无推广版本；合并后执行下面的检查，确认产物里没有混入新的推广链接。
+
+```bash
+bun run build
+grep -o -i -E "aff=|keyword=|utm_|sponsored|apimart|apikey\.fan|bestproxy" dist/index.html | sort | uniq -c
+```
+
+多语言文件里仍有被裁页面用到的赞助商名称文案（如 APIKEY.FUN、FennoAI、七牛云），它们不会在保留的五个页面上显示。
+这几个 JSON 上游改动频繁，为避免每次合并冲突而未删除。
+
 ## 同步上游
 
 ```bash

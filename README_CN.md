@@ -1,5 +1,7 @@
 # CLI Proxy API 管理中心
 
+> **Stallion-X 定制版**：只保留认证文件、OAuth 登录、配额管理、日志查看、配置面板，采用 Stallion-X 视觉，已移除赞助与推广内容。与上游的差异见 [STALLION-X.md](STALLION-X.md)。
+
 用于管理与故障排查 **CLI Proxy API** 的单文件 Web UI（React + TypeScript），通过 **Management API** 完成配置、凭据与日志等管理操作。
 
 [English](README.md)
@@ -8,14 +10,6 @@
 **最低版本要求**: ≥ 7.2.147（推荐最新）
 
 从6.0.19版本开始，Web UI 随主程序一起提供；服务运行后，通过 API 端口上的"/management.html"访问它。
-
-## 赞助商
-
-[![https://go.apimart.ai/gh-cli-proxy-api-management-center](./assets/apimart-zh.png)](https://go.apimart.ai/gh-cli-proxy-api-management-center)
-
-感谢 APIMart 赞助了本项目！
-
-APIMart 是专注 AI 图片/视频生成的低价 API 平台，GPT-Image-2 低至 $0.006/张，1 美元可出图 160+ 张。图片、视频一套异步 API 通吃，提交任务拿 ID、回调取结果，跑批万张不超时、换模型不改代码。按量付费、无月费，通过[此注册链接](https://go.apimart.ai/gh-cli-proxy-api-management-center)注册即可开用。
 
 ## 这是什么（以及不是什么）
 

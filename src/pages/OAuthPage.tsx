@@ -12,7 +12,6 @@ import { copyToClipboard } from '@/utils/clipboard';
 import { getErrorMessage, isRecord } from '@/utils/helpers';
 import { notifyAuthFilesChanged } from '@/features/authFiles/authFilesEvents';
 import { getPluginTitle, resolvePluginAssetURL } from '@/features/plugins/pluginResources';
-import { getKimiAffiliateUrl } from '@/features/providers/kimi';
 import type { PluginListEntry } from '@/types';
 import { createOAuthAttempts, type OAuthAttempt } from './oauthAttempts';
 import styles from './OAuthPage.module.scss';
@@ -241,7 +240,7 @@ const resolveCallbackUrl = (provider: string, input: string, state?: string): st
 };
 
 export function OAuthPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const apiBase = useAuthStore((state) => state.apiBase);
   const { showNotification } = useNotificationStore();
@@ -549,9 +548,8 @@ export function OAuthPage() {
     }
   };
 
-  const renderOAuthProviderCard = (provider: OAuthProviderCard, featured = false) => {
+  const renderOAuthProviderCard = (provider: OAuthProviderCard) => {
     const state = states[provider.id] || {};
-    const showKimiSignUp = featured && provider.kind === 'builtin' && provider.id === 'kimi';
     const canSubmitCallback =
       (provider.kind === 'plugin' || CALLBACK_SUPPORTED.has(provider.id)) && Boolean(state.url);
     const loginButtonLabel =
@@ -569,7 +567,6 @@ export function OAuthPage() {
     return (
       <Card
         key={provider.id}
-        className={featured ? styles.featuredCard : undefined}
         title={
           <span className={styles.cardTitle}>
             <OAuthProviderIcon provider={provider} theme={resolvedTheme} />
@@ -577,32 +574,13 @@ export function OAuthPage() {
           </span>
         }
         extra={
-          showKimiSignUp ? (
-            <div className={styles.featuredActions}>
-              <Button
-                onClick={() =>
-                  window.open(
-                    getKimiAffiliateUrl(i18n.resolvedLanguage ?? i18n.language),
-                    '_blank',
-                    'noopener,noreferrer'
-                  )
-                }
-              >
-                {t('auth_login.kimi_sign_up_button')}
-              </Button>
-              <Button onClick={() => startAuth(provider.id)} loading={state.polling}>
-                {loginButtonLabel}
-              </Button>
-            </div>
-          ) : (
-            <Button onClick={() => startAuth(provider.id)} loading={state.polling}>
-              {loginButtonLabel}
-            </Button>
-          )
+          <Button onClick={() => startAuth(provider.id)} loading={state.polling}>
+            {loginButtonLabel}
+          </Button>
         }
       >
         <div className={styles.cardContent}>
-          <div className={featured ? styles.featuredHint : styles.cardHint}>
+          <div className={styles.cardHint}>
             {getProviderText(provider, 'oauth_hint')}
           </div>
           {state.url && (
@@ -695,23 +673,15 @@ export function OAuthPage() {
     );
   };
 
-  const featuredProvider = providerCards.find((provider) => provider.id === 'kimi');
-  const otherOAuthProviders = providerCards.filter((provider) => provider.id !== 'kimi');
-
   return (
     <div className={styles.container}>
       <h1 className={styles.pageTitle}>{t('nav.oauth', { defaultValue: 'OAuth' })}</h1>
 
       <div className={styles.content}>
-        {featuredProvider && (
-          <section className={styles.providerSection}>
-            {renderOAuthProviderCard(featuredProvider, true)}
-          </section>
-        )}
-
+        {/* Stallion-X：上游把 Kimi 置顶为带推广注册链接的推荐卡，这里改为所有提供商平级展示 */}
         <section className={styles.providerSection}>
           <div className={styles.providerList}>
-            {otherOAuthProviders.map((provider) => renderOAuthProviderCard(provider))}
+            {providerCards.map((provider) => renderOAuthProviderCard(provider))}
           </div>
         </section>
 
