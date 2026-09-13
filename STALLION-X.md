@@ -176,7 +176,11 @@ remote-management:
 
 ### 发布新版本
 
-Actions 已在本 fork 启用，无需再手动开启。
+**前提：fork 的 Actions 需要在网页上手动放行一次。** 仓库设置里 `actions/permissions` 显示
+`enabled: true`、两个 workflow 也都是 `active`，但 GitHub 对 fork 另有一道门禁，
+不点过 Actions 页面上的「I understand my workflows, go ahead and enable them」，
+push 和 tag 都不会触发任何运行（`actions/runs` 的 `total_count` 恒为 0）。
+放行之前只能本地构建后手工发布，见下面的兜底流程。
 
 ```bash
 bun install --frozen-lockfile
@@ -192,6 +196,19 @@ git push origin v1.23.0        # 只推这一个 tag，绝不能用 --tags
 
 本 fork 的版本线从 `v1.23.0` 起，高于全部继承自上游的标签（最新 `v1.22.18`）。
 
+Actions 尚未放行时的兜底发布流程，产物与工作流构建的完全一致：
+
+```bash
+VERSION=v1.23.0 bun run build
+cp dist/index.html /tmp/management.html
+git log --pretty=format:"- %h %s" v1.22.18..v1.23.0 > /tmp/notes.md
+gh release create v1.23.0 /tmp/management.html -R LeezQ/cliproxy-manager \
+  --title "v1.23.0" --notes-file /tmp/notes.md
+```
+
+关键是必须显式传 `VERSION`，否则 `getVersion()` 会退到 `git describe`，
+产物里会写进类似 `v1.22.16-2-gbd6edde` 的字符串，失去版本判断的意义。
+
 ### 改配置不需要重启
 
 后端有配置热重载，改完 `config.yaml` 约 10 秒内生效，不会中断在途的流式响应：
@@ -203,7 +220,13 @@ chown cliproxy:cliproxy /opt/cliproxy/config.yaml && chmod 600 /opt/cliproxy/con
 tail -f /opt/cliproxy/logs/main.log | grep -E "config_reload|management asset"
 ```
 
-两点注意：systemd 单元没有 `ExecReload`，`systemctl reload` 会失败；
+**不要用 `sed -i` 改这个文件。** `sed -i` 是写临时文件再 rename，会换掉 inode，
+而 file watcher 盯的是原来那个 inode，改完不会触发任何重载，日志里静悄悄什么都没有。
+必须原地截断写入才能被监听到，`cp 源文件 config.yaml` 就是原地写。
+已经误用 `sed -i` 的话，watcher 已经失效，只能重启进程让它重新挂上。
+
+其余注意：systemd 单元没有 `ExecReload`，`systemctl reload` 会失败；
+root 改完要 `chown cliproxy:cliproxy` 并 `chmod 600` 改回去，否则面板的配置编辑器会写不进；
 短时间内连改两次配置可能撞上 `management asset sync skipped by throttle`，改一次就好。
 
 ### 验证
