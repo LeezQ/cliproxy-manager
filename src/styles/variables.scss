@@ -24,17 +24,17 @@ $spacing-2xl: 48px;
 // 圆角
 $radius-sm: 4px;
 $radius-md: 8px;
-$radius-lg: 10px; // Stallion-X：8px 为主 surface 半径，大圆角只留给浮层
+$radius-lg: 8px; // Stallion-X：8px 为主 surface 半径，大圆角只留给浮层
 $radius-full: 9999px;
 
-// 阴影
-$shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-$shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-$shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+// 阴影（Stallion-X：层级靠边框表达，阴影整体减弱，只有浮层使用 $shadow-lg）
+$shadow-sm: 0 1px 2px 0 rgb(16 23 37 / 0.04);
+$shadow-md: 0 2px 6px -2px rgb(16 23 37 / 0.08);
+$shadow-lg: 0 12px 28px -8px rgb(16 23 37 / 0.16);
 
-// 过渡
-$transition-fast: 150ms ease;
-$transition-normal: 300ms ease;
+// 过渡（Stallion-X 减弱动效：只做颜色类过渡，时长统一压短）
+$transition-fast: 120ms ease;
+$transition-normal: 150ms ease;
 
 // 断点
 $breakpoint-mobile: 768px;

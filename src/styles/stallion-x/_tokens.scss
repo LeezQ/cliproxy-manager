@@ -1,0 +1,212 @@
+/**
+ * Stallion-X 设计令牌：Signal Atlas / 流量航图。
+ *
+ * 色值来自 stallion-x/web/src/index.css，映射关系：
+ *   上游 --bg-secondary（页面底）  ← Stallion-X --background
+ *   上游 --bg-primary（卡片/容器） ← Stallion-X --card
+ *   上游 --bg-tertiary（悬停/次级）← Stallion-X --muted
+ *   上游 --border-color            ← Stallion-X --border
+ *   上游 --border-primary          ← Stallion-X --input（输入框描边）
+ *   上游 --primary-color           ← Stallion-X --primary（Relay Blue）
+ *   上游 --success-color           ← Stallion-X --healthy
+ *   上游 --warning/--error-color   ← Stallion-X --fault（上游两者同义，保持同义）
+ *   上游 --quota-medium/--amber    ← Stallion-X --decision
+ *
+ * 规则沿用主站：高饱和颜色只用于请求路径、健康状态与异常；层级靠边框而非阴影表达。
+ * 本文件在 themes.scss 之后加载，靠「同选择器、后声明」覆盖上游取值。
+ */
+@use '../variables.scss' as *;
+
+/* ---------- 亮色主题：Control Fog 工作台 ---------- */
+:root {
+  --bg-secondary: #f4f7f8;
+  --bg-primary: #ffffff;
+  --bg-tertiary: #e9eef1;
+  --bg-hover: #e1e8ec;
+  --bg-quinary: #f8fafb;
+  --bg-error-light: color-mix(in srgb, #d94c5c 10%, transparent);
+  --floating-surface: #ffffff;
+  --floating-shadow: 0 12px 28px -8px rgb(16 23 37 / 0.16), 0 0 0 1px rgb(16 23 37 / 0.02);
+
+  --text-primary: #101725;
+  --text-secondary: #526173;
+  --text-tertiary: #7b8898;
+  --text-quaternary: #a9b4bf;
+
+  --border-color: #d7e0e6;
+  --border-primary: #c8d3dc;
+  --border-hover: #b4c1cc;
+
+  --primary-color: #315cff;
+  --primary-hover: #2a50e6;
+  --primary-active: #2444bd;
+  --primary-contrast: #ffffff;
+
+  --success-color: #078a80;
+  --quota-medium-color: #d89016;
+  --warning-color: #d94c5c;
+  --error-color: #d94c5c;
+
+  --warning-bg: color-mix(in srgb, #d94c5c 10%, transparent);
+  --warning-border: color-mix(in srgb, #d94c5c 32%, transparent);
+
+  --success-badge-bg: color-mix(in srgb, #078a80 12%, #ffffff);
+  --success-badge-text: #04675f;
+  --success-badge-border: color-mix(in srgb, #078a80 36%, transparent);
+
+  --failure-badge-bg: color-mix(in srgb, #d94c5c 12%, #ffffff);
+  --failure-badge-text: #a92f40;
+  --failure-badge-border: color-mix(in srgb, #d94c5c 34%, transparent);
+
+  --count-badge-bg: #e7ecff;
+  --count-badge-text: #2444bd;
+
+  /* 主站层级靠边框表达，阴影只保留极弱的一层 */
+  --shadow: 0 1px 2px 0 rgb(16 23 37 / 0.04);
+  --shadow-lg: 0 12px 28px -8px rgb(16 23 37 / 0.16);
+
+  --amber-color: #d89016;
+  --amber-text: #805408;
+
+  --viz-success: #078a80;
+  --viz-failure: #d94c5c;
+
+  /* 动效令牌：上游组件通过它们取时长与曲线，统一压短为无回弹的线性过渡 */
+  --ease-out-strong: ease-out;
+  --dur-press: 100ms;
+  --dur-hover: 120ms;
+
+  /* 毛玻璃全部关闭：浮层与吸顶条使用实色 surface，避免模糊造成的层次噪音 */
+  --glass-backdrop-filter: none;
+  --glass-filter: none;
+  --glass-bg: var(--bg-primary);
+  --glass-bg-secondary: var(--bg-secondary);
+  --glass-border: var(--border-color);
+
+  /* ---- 以下为品牌层新增的令牌，上游不存在 ---- */
+  --font-heading: #{$font-heading};
+  --accent-bg: #e7ecff;
+  --accent-fg: #2444bd;
+  --sidebar-bg: #edf2f4;
+  --sidebar-fg: #273449;
+  --sidebar-muted: #526173;
+  --sidebar-accent: #dfe6ff;
+  --sidebar-accent-fg: #1e3da8;
+  --sidebar-border: #d2dce3;
+  --header-bg: #f4f7f8;
+  --header-border: #e1e7ec;
+  --table-head-bg: #f3f6f7;
+  --tooltip-bg: #101725;
+  --tooltip-fg: #f1f5f7;
+  --brand-panel-bg: #101725;
+}
+
+/* ---------- 纯白主题：主站没有此变体，按 Control Fog 去掉底色层 ---------- */
+[data-theme='white'] {
+  --bg-secondary: #ffffff;
+  --bg-primary: #ffffff;
+  --bg-tertiary: #f1f5f7;
+  --bg-hover: #e9eef1;
+  --bg-quinary: #fafbfc;
+  --floating-surface: #ffffff;
+
+  --text-primary: #101725;
+  --text-secondary: #526173;
+  --text-tertiary: #7b8898;
+  --text-quaternary: #a9b4bf;
+
+  --border-color: #e1e8ed;
+  --border-primary: #d0dae1;
+  --border-hover: #b4c1cc;
+
+  --primary-color: #315cff;
+  --primary-hover: #2a50e6;
+  --primary-active: #2444bd;
+
+  --success-color: #078a80;
+  --quota-medium-color: #d89016;
+  --warning-color: #d94c5c;
+  --error-color: #d94c5c;
+
+  --count-badge-bg: #e7ecff;
+  --count-badge-text: #2444bd;
+
+  --accent-bg: #e7ecff;
+  --accent-fg: #2444bd;
+  --sidebar-bg: #f8fafb;
+  --sidebar-border: #e1e8ed;
+  --header-bg: #ffffff;
+  --header-border: #e1e8ed;
+  --table-head-bg: #f6f8f9;
+}
+
+/* ---------- 暗色主题：Night Relay 底板，状态色取同色相高亮变体 ---------- */
+[data-theme='dark'] {
+  --bg-secondary: #0b111c;
+  --bg-primary: #101725;
+  --bg-tertiary: #1b2637;
+  --bg-hover: #223044;
+  --bg-quinary: #0e1521;
+  --bg-error-light: color-mix(in srgb, #ff7b89 16%, transparent);
+  --floating-surface: #151e2e;
+  --floating-shadow: 0 14px 32px -8px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(255 255 255 / 0.02);
+
+  --text-primary: #f1f5f7;
+  --text-secondary: #c3cdd6;
+  --text-tertiary: #8f9cab;
+  --text-quaternary: #5f6d7e;
+
+  --border-color: #2b394b;
+  --border-primary: #3a4a5e;
+  --border-hover: #4a5b70;
+
+  /* 浅蓝主色上配深色文字，与主站暗色按钮一致；白字在 #7890ff 上对比度不足 */
+  --primary-color: #7890ff;
+  --primary-hover: #8ea1ff;
+  --primary-active: #a3b2ff;
+  --primary-contrast: #08101f;
+
+  --success-color: #4fc8bb;
+  --quota-medium-color: #f2b84b;
+  --warning-color: #ff7b89;
+  --error-color: #ff7b89;
+
+  --warning-bg: color-mix(in srgb, #ff7b89 16%, transparent);
+  --warning-border: color-mix(in srgb, #ff7b89 42%, transparent);
+  --warning-text: #ff9daa;
+
+  --success-badge-bg: color-mix(in srgb, #4fc8bb 16%, transparent);
+  --success-badge-text: #78ded3;
+  --success-badge-border: color-mix(in srgb, #4fc8bb 42%, transparent);
+
+  --failure-badge-bg: color-mix(in srgb, #ff7b89 16%, transparent);
+  --failure-badge-text: #ff9daa;
+  --failure-badge-border: color-mix(in srgb, #ff7b89 42%, transparent);
+
+  --count-badge-bg: #202e52;
+  --count-badge-text: #dbe3ff;
+
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.35);
+  --shadow-lg: 0 14px 32px -8px rgb(0 0 0 / 0.5);
+
+  --amber-color: #f2b84b;
+  --amber-text: #ffd17a;
+
+  --viz-success: #4fc8bb;
+  --viz-failure: #ff7b89;
+
+  --accent-bg: #202e52;
+  --accent-fg: #dbe3ff;
+  --sidebar-bg: #0e1521;
+  --sidebar-fg: #dce4e9;
+  --sidebar-muted: #a8b5c2;
+  --sidebar-accent: #202e52;
+  --sidebar-accent-fg: #dbe3ff;
+  --sidebar-border: #263447;
+  --header-bg: #0b111c;
+  --header-border: #1f2b3b;
+  --table-head-bg: #151e2e;
+  --tooltip-bg: #1b2637;
+  --tooltip-fg: #f1f5f7;
+  --brand-panel-bg: #0e1521;
+}

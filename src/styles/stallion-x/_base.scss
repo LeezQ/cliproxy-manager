@@ -1,0 +1,89 @@
+/**
+ * Stallion-X 基础排版与全局交互规则。
+ *
+ * 字体分工与主站一致：Geist 正文、IBM Plex Sans Condensed 标题、JetBrains Mono 机器数据。
+ */
+@use '../variables.scss' as *;
+
+body {
+  font-feature-settings:
+    'kern' 1,
+    'liga' 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* 主题切换直接生效，不做背景色渐变 */
+  transition: none;
+}
+
+/*
+ * Condensed 标题字体只含拉丁字形，中文会回落到正文字体。
+ * 标题里用它会让「OAuth 登录」「Kimi OAuth」这类中英混排一半窄体一半常规体，
+ * 因此所有标题沿用正文字体（Geist + 系统中文字体），层级只靠字号与字重表达；
+ * 标题字体仅保留给侧边栏品牌方块中的单个字母。
+ */
+h1,
+h2,
+h3 {
+  font-family: inherit;
+}
+
+/* 机器数据（金额、延迟、Token）使用等宽数字，便于纵向对齐 */
+code,
+kbd,
+samp,
+pre {
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary-color) 22%, transparent);
+}
+
+/* 原生可聚焦元素共享清晰的 2px 外圈；:where 保持零优先级，组件自身的焦点样式仍可覆盖 */
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* 细滚动条：保持高密度控制台的可用面积 */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: $radius-full;
+
+  &:hover {
+    background: var(--text-tertiary);
+  }
+}
+
+* {
+  scrollbar-color: var(--border-color) transparent;
+  scrollbar-width: thin;
+}
+
+/* ---------- 动效兜底 ---------- */
+
+/* 滚动一律瞬时定位，不做平滑滚动 */
+html,
+.content {
+  scroll-behavior: auto;
+}
+
+/* 用户在系统层请求减弱动效时，连保留的加载旋转也停掉，状态变化直接呈现最终结果 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

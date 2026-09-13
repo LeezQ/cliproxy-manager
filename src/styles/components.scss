@@ -1,60 +1,90 @@
-@use 'sass:color';
+/**
+ * 全局基础组件样式（Stallion-X Signal Atlas 版）
+ *
+ * 视觉原则与主站 shadcn 组件保持一致：
+ * - 层级靠 1px 边框表达，阴影只保留极弱的一层，浮层才使用明显投影；
+ * - 主 surface 圆角 8px，按钮/输入框高度 36px；
+ * - 交互反馈只做颜色过渡（120ms），不做位移、缩放、回弹等装饰动效。
+ */
 @use './variables.scss' as *;
 
+/* ---------- 按钮：default / outline / ghost / destructive 四种形态 ---------- */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: $spacing-sm;
+  gap: 6px;
+  min-height: 36px;
   border: 1px solid transparent;
   border-radius: $radius-md;
-  padding: 10px 14px;
-  font-weight: 600;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
-  transition: all $transition-fast;
-  background-color: var(--bg-secondary);
+  user-select: none;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+  background-color: var(--bg-primary);
   color: var(--text-primary);
 
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  /* 主按钮：Relay Blue 实色 */
   &.btn-primary {
     background-color: var(--primary-color);
     color: var(--primary-contrast, #fff);
     border-color: var(--primary-color);
 
-    &:hover {
+    &:hover:not(:disabled) {
       background-color: var(--primary-hover);
       border-color: var(--primary-hover);
     }
   }
 
+  /* 次按钮：白底描边，对应主站 outline */
   &.btn-secondary {
-    background-color: var(--bg-tertiary);
-    border-color: var(--border-color);
+    background-color: var(--bg-primary);
+    border-color: var(--border-primary);
     color: var(--text-primary);
 
-    &:hover {
-      background-color: var(--bg-hover, var(--bg-tertiary));
+    &:hover:not(:disabled) {
+      background-color: var(--bg-tertiary);
       border-color: var(--border-hover);
     }
   }
 
+  /* 幽灵按钮：无底色，悬停时出现 muted 底 */
   &.btn-ghost {
     background: transparent;
     border-color: transparent;
     color: var(--text-secondary);
 
-    &:hover {
+    &:hover:not(:disabled) {
       color: var(--text-primary);
       background: var(--bg-tertiary);
     }
   }
 
+  /* 危险按钮：浅红底 + 红字，避免大面积高饱和红色 */
   &.btn-danger {
-    background-color: $error-color;
-    border-color: $error-color;
-    color: #fff;
+    background-color: color-mix(in srgb, var(--error-color) 10%, transparent);
+    border-color: color-mix(in srgb, var(--error-color) 28%, transparent);
+    color: var(--error-color);
 
-    &:hover {
-      background-color: color.adjust($error-color, $lightness: -5%);
+    &:hover:not(:disabled) {
+      background-color: color-mix(in srgb, var(--error-color) 16%, transparent);
     }
   }
 
@@ -63,69 +93,78 @@
   }
 
   &.btn-sm {
-    padding: 8px 10px;
-    font-size: 14px;
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 13px;
   }
 
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 }
 
-[data-theme='dark'] {
-  .btn {
-    color: #fff;
-  }
-
-  .btn.btn-secondary,
-  .btn.btn-ghost {
-    color: #fff;
-  }
-}
-
+/* ---------- 输入框 ---------- */
 .input,
 textarea {
   width: 100%;
-  border: 1px solid var(--border-color);
+  min-height: 36px;
+  border: 1px solid var(--border-primary);
   border-radius: $radius-md;
-  padding: 10px 12px;
-  background-color: var(--bg-secondary);
+  padding: 8px 12px;
+  background-color: var(--bg-primary);
   color: var(--text-primary);
+  font-size: 14px;
   transition:
     border-color $transition-fast,
     box-shadow $transition-fast;
 
+  &::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  &:hover:not(:disabled):not(:focus) {
+    border-color: var(--border-hover);
+  }
+
   &:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba($primary-color, 0.18);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 18%, transparent);
+  }
+
+  &:disabled {
+    background-color: var(--bg-tertiary);
+    color: var(--text-tertiary);
+    cursor: not-allowed;
   }
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: $spacing-xs;
+  gap: 6px;
   margin-bottom: $spacing-md;
 
   label {
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--text-primary);
   }
 
   .hint {
     color: var(--text-secondary);
-    font-size: 13px;
+    font-size: 12px;
   }
 }
 
+/* ---------- 卡片 ---------- */
 .card {
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: $radius-lg;
-  box-shadow: var(--shadow);
-  padding: $spacing-lg;
+  box-shadow: none;
+  padding: 20px;
 }
 
 .card-header {
@@ -143,19 +182,21 @@ textarea {
   .title {
     flex: 1 1 auto;
     min-width: 0;
-    font-size: 18px;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 600;
     color: var(--text-primary);
   }
 }
 
+/* ---------- 状态徽标 ---------- */
 .status-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border-radius: $radius-full;
-  font-size: 13px;
+  padding: 2px 8px;
+  border-radius: $radius-sm;
+  font-size: 12px;
+  font-weight: 500;
   border: 1px solid var(--border-color);
   margin-bottom: $spacing-md;
 
@@ -165,21 +206,16 @@ textarea {
   }
 
   &.success {
-    color: $success-color;
-    border-color: rgba($success-color, 0.35);
-    background: rgba($success-color, 0.08);
+    color: var(--success-badge-text);
+    border-color: var(--success-badge-border);
+    background: var(--success-badge-bg);
   }
 
-  &.warning {
-    color: $warning-color;
-    border-color: rgba($warning-color, 0.35);
-    background: rgba($warning-color, 0.08);
-  }
-
+  &.warning,
   &.error {
-    color: $error-color;
-    border-color: rgba($error-color, 0.35);
-    background: rgba($error-color, 0.08);
+    color: var(--failure-badge-text);
+    border-color: var(--failure-badge-border);
+    background: var(--failure-badge-bg);
   }
 
   &.muted {
@@ -187,68 +223,68 @@ textarea {
   }
 }
 
+/* ---------- 全局通知：右上角，短暂淡入淡出 ---------- */
 .notification-container {
   position: fixed;
-  top: $spacing-lg;
-  right: $spacing-lg;
+  top: 16px;
+  right: 16px;
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
   z-index: $z-notification;
-  max-width: 360px;
+  max-width: 380px;
 }
 
 @keyframes notification-enter {
   from {
     opacity: 0;
-    transform: translateX(100%);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
   }
 }
 
 @keyframes notification-exit {
   from {
     opacity: 1;
-    transform: translateX(0);
   }
   to {
     opacity: 0;
-    transform: translateX(100%);
   }
 }
 
 .notification {
-  padding: $spacing-md;
+  padding: 10px 10px 10px 14px;
   border-radius: $radius-md;
-  box-shadow: var(--shadow);
+  box-shadow: var(--floating-shadow);
   border: 1px solid var(--border-color);
-  background: var(--bg-primary);
+  background: var(--floating-surface, var(--bg-primary));
   color: var(--text-primary);
+  font-size: 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: $spacing-sm;
 
-  // Animation states
+  // 动画状态：时长需与 NotificationContainer.tsx 中 ANIMATION_DURATION 一致
   &.entering {
-    animation: notification-enter 0.3s ease-out forwards;
+    animation: notification-enter 120ms linear forwards;
   }
 
   &.exiting {
-    animation: notification-exit 0.3s ease-in forwards;
+    animation: notification-exit 120ms linear forwards;
   }
 
+  /* 语义色只落在左侧 3px 色条上，正文保持中性 */
   &.success {
-    border-color: rgba($success-color, 0.4);
+    border-left: 3px solid var(--success-color);
   }
-  &.warning {
-    border-color: rgba($warning-color, 0.4);
-  }
+  &.warning,
   &.error {
-    border-color: rgba($error-color, 0.4);
+    border-left: 3px solid var(--error-color);
+  }
+  &.info {
+    border-left: 3px solid var(--primary-color);
   }
 
   .message {
@@ -260,17 +296,17 @@ textarea {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     background: transparent;
     border: none;
-    color: var(--text-secondary);
-    border-radius: $radius-md;
+    color: var(--text-tertiary);
+    border-radius: $radius-sm;
     cursor: pointer;
     transition:
-      color 0.15s ease,
-      background-color 0.15s ease;
+      color $transition-fast,
+      background-color $transition-fast;
 
     svg {
       display: block;
@@ -278,27 +314,28 @@ textarea {
 
     &:hover {
       color: var(--text-primary);
-      background: var(--bg-secondary);
+      background: var(--bg-tertiary);
     }
   }
 }
 
 .pill {
-  padding: 4px 10px;
+  padding: 2px 8px;
   border-radius: $radius-full;
-  background: var(--bg-secondary);
+  background: var(--bg-tertiary);
   color: var(--text-secondary);
   border: 1px solid var(--border-color);
   font-size: 12px;
 }
 
+/* ---------- 加载指示：属于状态反馈，保留旋转 ---------- */
 .loading-spinner {
   // Fallback: legacy white spinner (in case color-mix is unsupported)
-  border: 3px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   border-top-color: #fff;
   border-radius: 50%;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   animation: spin 0.8s linear infinite;
 }
 
@@ -318,26 +355,28 @@ textarea {
   }
 }
 
+/* ---------- 对话框：遮罩与面板只做 120ms 淡入淡出 ---------- */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgb(16 23 37 / 0.32);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: $z-modal;
   padding: $spacing-lg;
 
+  // 时长需与 Modal.tsx 中 CLOSE_ANIMATION_DURATION 一致
   &.modal-overlay-entering {
-    animation: modal-overlay-fade-in 0.25s ease-out forwards;
+    animation: modal-fade-in 120ms linear forwards;
   }
 
   &.modal-overlay-closing {
-    animation: modal-overlay-fade-out 0.35s ease-in forwards;
+    animation: modal-fade-out 120ms linear forwards;
   }
 }
 
-@keyframes modal-overlay-fade-in {
+@keyframes modal-fade-in {
   from {
     opacity: 0;
   }
@@ -346,7 +385,7 @@ textarea {
   }
 }
 
-@keyframes modal-overlay-fade-out {
+@keyframes modal-fade-out {
   from {
     opacity: 1;
   }
@@ -359,44 +398,20 @@ textarea {
   background: var(--bg-primary);
   border-radius: $radius-lg;
   border: 1px solid var(--border-color);
-  box-shadow: $shadow-lg;
+  box-shadow: var(--floating-shadow);
   max-width: 100%;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   position: relative;
-  // 关闭按钮中心位置: right 12px + 16px = 28px, top 12px + 16px = 28px
-  transform-origin: calc(100% - 28px) 28px;
 
   &.modal-entering {
-    animation: modal-scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation: modal-fade-in 120ms linear forwards;
   }
 
   &.modal-closing {
-    animation: modal-collapse-to-close 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-}
-
-@keyframes modal-scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.85) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes modal-collapse-to-close {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0);
+    animation: modal-fade-out 120ms linear forwards;
   }
 }
 
@@ -407,18 +422,17 @@ textarea {
   width: 32px;
   height: 32px;
   padding: 0;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-tertiary);
   cursor: pointer;
-  border-radius: $radius-full;
+  border-radius: $radius-md;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition:
-    color 0.15s ease,
-    background-color 0.15s ease,
-    transform 0.15s ease;
+    color $transition-fast,
+    background-color $transition-fast;
   z-index: 10;
 
   svg {
@@ -428,52 +442,45 @@ textarea {
   &:hover {
     color: var(--text-primary);
     background: var(--bg-tertiary);
-    transform: scale(1.1);
-  }
-
-  &:active {
-    transform: scale(0.95);
   }
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.6;
-    transform: none;
+    opacity: 0.5;
   }
 
   &:disabled:hover {
-    color: var(--text-secondary);
-    background: var(--bg-secondary);
-    transform: none;
+    color: var(--text-tertiary);
+    background: transparent;
   }
 }
 
 .modal-header {
   display: flex;
   align-items: center;
-  padding: $spacing-md $spacing-lg;
+  padding: 16px 56px 16px 20px;
   border-bottom: 1px solid var(--border-color);
 
   .modal-title {
-    font-weight: 700;
-    font-size: 18px;
+    font-weight: 600;
+    font-size: 16px;
     color: var(--text-primary);
   }
 }
 
 .modal-body {
-  padding: $spacing-lg;
+  padding: 20px;
   overflow: auto;
   max-height: 65vh;
 }
 
 .modal-footer {
-  padding: $spacing-md $spacing-lg;
+  padding: 12px 20px;
   border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: flex-end;
   gap: $spacing-sm;
-  background: var(--bg-primary);
+  background: var(--bg-quinary);
 }
 
 @media (max-width: $breakpoint-mobile) {
@@ -530,11 +537,12 @@ textarea {
   }
 }
 
+/* ---------- 空状态：居中弱化文案，与主站表格空态一致 ---------- */
 .empty-state {
-  border: 1px dashed var(--border-color);
+  border: 1px dashed var(--border-primary);
   border-radius: $radius-lg;
-  padding: $spacing-lg;
-  background: var(--bg-secondary);
+  padding: 32px 24px;
+  background: var(--bg-primary);
   display: flex;
   justify-content: space-between;
   gap: $spacing-md;
@@ -547,11 +555,12 @@ textarea {
   }
 
   .empty-icon {
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
-    border-radius: $radius-full;
-    border: 2px solid var(--border-color);
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    border-radius: $radius-md;
+    border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -560,19 +569,20 @@ textarea {
 
     svg {
       display: block;
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       flex-shrink: 0;
     }
   }
 
   .empty-title {
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text-primary);
   }
 
   .empty-desc {
     color: var(--text-secondary);
+    font-size: 13px;
     margin-top: 4px;
   }
 
@@ -599,7 +609,7 @@ textarea {
 .item-row {
   border: 1px solid var(--border-color);
   border-radius: $radius-md;
-  padding: $spacing-md;
+  padding: 12px 16px;
   background: var(--bg-primary);
   display: flex;
   align-items: center;
@@ -610,19 +620,18 @@ textarea {
   .item-meta {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
   }
 
   .item-title {
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text-primary);
   }
 
   .item-subtitle {
     color: var(--text-secondary);
-    font-family:
-      ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-      'Courier New', monospace;
+    font-family: $font-mono;
+    font-size: 12px;
     word-break: break-all;
   }
 
@@ -633,11 +642,11 @@ textarea {
 }
 
 .error-box {
-  background: rgba($error-color, 0.1);
-  border: 1px solid rgba($error-color, 0.4);
+  background: var(--failure-badge-bg);
+  border: 1px solid var(--failure-badge-border);
   border-radius: $radius-md;
   padding: $spacing-sm $spacing-md;
-  color: $error-color;
+  color: var(--failure-badge-text);
 }
 
 .stack {

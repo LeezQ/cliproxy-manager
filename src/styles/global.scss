@@ -7,16 +7,13 @@
 @use './reset.scss';
 @use './themes.scss';
 @use './components.scss';
-@use './layout.scss';
-// Stallion-X 品牌层：必须最后引入，靠层叠顺序覆盖上游主题与布局
+// Stallion-X 品牌层：必须最后引入，靠层叠顺序覆盖上游主题。
+// 其中 stallion-x/shell 完整实现了应用外壳，因此不再引入上游 layout.scss。
 @use './stallion-x.scss';
 
 body {
   background-color: var(--bg-secondary);
   color: var(--text-primary);
-  transition:
-    background-color $transition-normal,
-    color $transition-normal;
 }
 
 html.modal-open,
@@ -28,22 +25,5 @@ body.modal-open .content {
   overflow: hidden;
 }
 
-// 滚动条样式
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: $radius-full;
-
-  &:hover {
-    background: var(--border-hover);
-  }
-}
+// 滚动条样式见 stallion-x/_base.scss
 
