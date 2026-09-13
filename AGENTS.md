@@ -34,6 +34,8 @@ The production artifact is a single `dist/index.html` with JS/CSS and bundled as
 
 Preserve hash routing and single-file deployment. Changes to assets, imports, code splitting, or build configuration must not introduce required external build artifacts. Do not edit generated `dist/` files. App version is injected as `__APP_VERSION__` from `VERSION`, then git tags, then the package version, falling back to `dev`.
 
+Never push tags in bulk. `release.yml` triggers on `push: tags: ['v*']`, so `git push origin --tags` or `git push --follow-tags` fires a build for every newly created upstream tag. Those builds contain none of this fork's work, yet publish as the newest release, which silently reverts the production panel to an upstream build within the backend's 3-hour sync window. Publish with `git push origin vX.Y.Z` only. This fork's version line starts at `v1.23.0`, above every inherited upstream tag.
+
 ## API Contracts & State
 
 - Treat backend contracts as the source of truth. Inspect `../CLIProxyAPI` before changing endpoint names, payloads, provider keys, OAuth callback parameters, auth-file semantics, or plugin/config contracts. If that checkout is unavailable, report the missing evidence rather than guessing; do not modify the backend unless requested.
@@ -73,5 +75,6 @@ Maintain shared repository guidance in `AGENTS.md`. When updating it, synchroniz
 This repository is a Stallion-X maintained fork. Read `STALLION-X.md` before changing routes, navigation, styles, or dependencies. In short:
 
 - Only five routes are exposed (`/auth-files`, `/oauth`, `/quota`, `/logs`, `/config`). Removed features are unrouted, not deleted; keep their source directories so upstream merges stay clean.
-- Put visual changes in `src/styles/stallion-x.scss` instead of editing upstream `themes.scss` or `layout.scss`.
+- The UI follows the Stallion-X main site (shadcn-style cool-grey workbench). Design tokens live in `src/styles/stallion-x/_tokens.scss`, the app shell in `src/styles/stallion-x/_shell.scss` + `src/components/layout/MainLayout.tsx`; upstream `layout.scss` and `PageTransition` are no longer used. Use token CSS variables, bordered (shadowless) cards, and `PageHeader` (`src/components/common/PageHeader.tsx`) for page titles.
+- Motion is globally reduced: `prefersReducedMotion()` in `src/hooks/motion.ts` always returns true. Do not add entrance, stagger, translate/scale hover, or other decorative animations; only spinners, skeleton shimmer, and short 120ms fades are allowed.
 - When adding dependencies, pass `BUN_CONFIG_REGISTRY=https://registry.npmjs.org/` so `bun.lock` does not pick up mirror URLs.
