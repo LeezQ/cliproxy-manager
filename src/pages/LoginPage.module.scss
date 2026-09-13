@@ -14,7 +14,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background: #000000;
+  background: var(--brand-panel-bg, #000000); // Stallion-X：由品牌层注入 Night Relay 深蓝
   padding: $spacing-2xl;
   position: relative;
   overflow: hidden;

@@ -67,3 +67,11 @@ Never commit real management keys, provider credentials, auth files, or other se
 Use Conventional Commits, such as `feat(providers): add a provider` or `fix(auth-files): preserve disabled actions`. Keep changes focused. Pull requests should include a summary, linked issue when applicable, backend version/reproduction details for integration work, UI screenshots or notes when relevant, and verification results.
 
 Maintain shared repository guidance in `AGENTS.md`. When updating it, synchronize the local `CLAUDE.md` to identical content if present; `CLAUDE.md` is currently ignored and untracked, so shared guidance must not depend on it. Keep guidance aligned with source and configuration rather than duplicating long implementation details.
+
+## Stallion-X Fork
+
+This repository is a Stallion-X maintained fork. Read `STALLION-X.md` before changing routes, navigation, styles, or dependencies. In short:
+
+- Only five routes are exposed (`/auth-files`, `/oauth`, `/quota`, `/logs`, `/config`). Removed features are unrouted, not deleted; keep their source directories so upstream merges stay clean.
+- Put visual changes in `src/styles/stallion-x.scss` instead of editing upstream `themes.scss` or `layout.scss`.
+- When adding dependencies, pass `BUN_CONFIG_REGISTRY=https://registry.npmjs.org/` so `bun.lock` does not pick up mirror URLs.

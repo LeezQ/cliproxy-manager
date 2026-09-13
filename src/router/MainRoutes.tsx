@@ -1,52 +1,37 @@
 import { Navigate, useRoutes, type Location } from 'react-router-dom';
-import { DashboardPage } from '@/features/dashboard/DashboardPage';
-import { ProvidersWorkbenchPage } from '@/features/providers/ProvidersWorkbenchPage';
 import { AuthFilesPage } from '@/features/authFiles/AuthFilesPage';
 import { AuthFilesOAuthExcludedEditPage } from '@/pages/AuthFilesOAuthExcludedEditPage';
 import { AuthFilesOAuthModelAliasEditPage } from '@/pages/AuthFilesOAuthModelAliasEditPage';
 import { OAuthPage } from '@/pages/OAuthPage';
 import { QuotaPage } from '@/features/quota/QuotaPage';
-import { PluginResourcePage } from '@/features/plugins/PluginResourcePage';
-import { PluginsPage } from '@/features/plugins/PluginsPage';
-import { PluginStorePage } from '@/features/plugins/PluginStorePage';
 import { ConfigPage } from '@/features/config/ConfigPage';
 import { LogsPage } from '@/pages/LogsPage';
-import { SystemPage } from '@/pages/SystemPage';
-import { useAuthStore } from '@/stores';
 
-const createMainRoutes = (supportsPlugin: boolean) => [
-  { path: '/', element: <DashboardPage /> },
-  { path: '/dashboard', element: <DashboardPage /> },
+/**
+ * Stallion-X 裁剪版路由表。
+ *
+ * 只保留 OAuth 登录、认证文件、配额管理、日志查看、配置面板五个功能。
+ * 仪表盘、快速开始、AI 提供商、插件管理、插件商店、中心信息仅从路由摘除，
+ * 对应源码目录原样保留：OAuthPage 仍依赖插件与提供商模块的工具函数，
+ * 且不删目录可以让 `git merge upstream/main` 保持无冲突。
+ * 旧路径统一重定向到认证文件页，避免书签或上游内部跳转落到空白页。
+ */
+const DEFAULT_ROUTE = '/auth-files';
+
+const mainRoutes = [
+  { path: '/', element: <Navigate to={DEFAULT_ROUTE} replace /> },
   { path: '/settings', element: <Navigate to="/config" replace /> },
   { path: '/api-keys', element: <Navigate to="/config" replace /> },
-  { path: '/quick-start', element: <ProvidersWorkbenchPage fixedBrand="apikeyFun" /> },
-  { path: '/quick-start/*', element: <Navigate to="/quick-start" replace /> },
-  { path: '/ai-providers', element: <ProvidersWorkbenchPage /> },
-  { path: '/ai-providers/*', element: <Navigate to="/ai-providers" replace /> },
   { path: '/auth-files', element: <AuthFilesPage /> },
   { path: '/auth-files/oauth-excluded', element: <AuthFilesOAuthExcludedEditPage /> },
   { path: '/auth-files/oauth-model-alias', element: <AuthFilesOAuthModelAliasEditPage /> },
   { path: '/oauth', element: <OAuthPage /> },
   { path: '/quota', element: <QuotaPage /> },
-  ...(supportsPlugin
-    ? [
-        { path: '/plugin-pages/:pluginId/:menuIndex', element: <PluginResourcePage /> },
-        { path: '/plugins', element: <PluginsPage /> },
-        { path: '/plugin-store', element: <PluginStorePage /> },
-        { path: '/plugins/*', element: <Navigate to="/plugins" replace /> },
-      ]
-    : [
-        { path: '/plugin-pages/*', element: <Navigate to="/" replace /> },
-        { path: '/plugins/*', element: <Navigate to="/" replace /> },
-        { path: '/plugin-store', element: <Navigate to="/" replace /> },
-      ]),
   { path: '/config', element: <ConfigPage /> },
   { path: '/logs', element: <LogsPage /> },
-  { path: '/system', element: <SystemPage /> },
-  { path: '*', element: <Navigate to="/" replace /> },
+  { path: '*', element: <Navigate to={DEFAULT_ROUTE} replace /> },
 ];
 
 export function MainRoutes({ location }: { location?: Location }) {
-  const supportsPlugin = useAuthStore((state) => state.supportsPlugin);
-  return useRoutes(createMainRoutes(supportsPlugin), location);
+  return useRoutes(mainRoutes, location);
 }

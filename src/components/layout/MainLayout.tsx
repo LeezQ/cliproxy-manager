@@ -102,6 +102,23 @@ interface SidebarNavGroup {
 const flattenNavItems = (items: SidebarNavItem[]): SidebarNavLinkItem[] =>
   items.flatMap((item) => (item.kind === 'drawer' ? item.children : [item]));
 
+/**
+ * Stallion-X 裁剪版只展示这五个入口：认证文件、OAuth 登录、配额管理、日志查看、配置面板。
+ * 上游的导航数组保持原样，由此处统一过滤，合并上游导航改动时不产生冲突。
+ */
+const VISIBLE_NAV_PATHS = new Set(['/auth-files', '/oauth', '/quota', '/logs', '/config']);
+
+/** 过滤掉未保留的导航项（含插件抽屉），并移除过滤后为空的分组 */
+const filterVisibleNavGroups = (groups: SidebarNavGroup[]): SidebarNavGroup[] =>
+  groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => item.kind !== 'drawer' && VISIBLE_NAV_PATHS.has(item.path)
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+
 /** 点击菜单外或按下 Escape 时关闭弹出菜单 */
 function useMenuDismiss(
   open: boolean,
@@ -592,7 +609,7 @@ export function MainLayout() {
     icon: sidebarIcons.quickStart,
   };
 
-  const navGroups: SidebarNavGroup[] = [
+  const navGroups: SidebarNavGroup[] = filterVisibleNavGroups([
     {
       id: 'operate',
       labelKey: 'nav_groups.operate',
@@ -697,7 +714,7 @@ export function MainLayout() {
           },
         ]
       : []),
-  ];
+  ]);
   const navItems = navGroups.flatMap((group) => flattenNavItems(group.items));
   const navOrder = navItems.map((item) => item.path);
   const getRouteOrder = (pathname: string) => {

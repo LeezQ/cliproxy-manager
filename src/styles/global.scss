@@ -8,6 +8,8 @@
 @use './themes.scss';
 @use './components.scss';
 @use './layout.scss';
+// Stallion-X 品牌层：必须最后引入，靠层叠顺序覆盖上游主题与布局
+@use './stallion-x.scss';
 
 body {
   background-color: var(--bg-secondary);
