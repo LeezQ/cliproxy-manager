@@ -6,7 +6,8 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
-import { IconChevronDown } from './icons';
+import { IconChevronDown } from '@/components/ui/icons';
+import styles from '@/components/ui/AutocompleteInput.module.scss';
 
 interface AutocompleteInputProps {
   label?: string;
@@ -24,6 +25,10 @@ interface AutocompleteInputProps {
   rightElement?: ReactNode;
 }
 
+/**
+ * 带建议列表的输入框：输入即过滤 options，支持方向键 / Enter / Esc / Tab。
+ * 建议面板绝对定位在输入框下方，视觉与 Select 下拉面板保持一致。
+ */
 export function AutocompleteInput({
   label,
   value,
@@ -108,10 +113,10 @@ export function AutocompleteInput({
   return (
     <div className={`form-group ${wrapperClassName}`} ref={containerRef} style={wrapperStyle}>
       {label && <label htmlFor={id}>{label}</label>}
-      <div style={{ position: 'relative' }}>
+      <div className={styles.field}>
         <input
           id={id}
-          className={`input ${className}`.trim()}
+          className={['input', styles.input, className].filter(Boolean).join(' ')}
           value={value}
           onChange={handleInputChange}
           onFocus={() => setIsOpen(true)}
@@ -119,64 +124,35 @@ export function AutocompleteInput({
           placeholder={placeholder}
           disabled={disabled}
           autoComplete="off"
-          style={{ paddingRight: 32 }}
         />
+        {/* 右侧附加区：点击切换建议面板 */}
         <div
-          style={{
-            position: 'absolute',
-            right: 8,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            display: 'flex',
-            alignItems: 'center',
-            pointerEvents: disabled ? 'none' : 'auto',
-            cursor: 'pointer',
-            height: '100%',
-          }}
+          className={[styles.trailing, disabled ? styles.trailingDisabled : '']
+            .filter(Boolean)
+            .join(' ')}
           onClick={() => !disabled && setIsOpen(!isOpen)}
         >
           {rightElement}
-          <IconChevronDown size={16} style={{ opacity: 0.5, marginLeft: 4 }} />
+          <IconChevronDown size={16} className={styles.chevron} />
         </div>
 
         {isOpen && filteredOptions.length > 0 && !disabled && (
-          <div
-            className="autocomplete-dropdown"
-            style={{
-              position: 'absolute',
-              top: 'calc(100% + 4px)',
-              left: 0,
-              right: 0,
-              zIndex: 1000,
-              backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--radius-md)',
-              maxHeight: 200,
-              overflowY: 'auto',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-            }}
-          >
+          <div className={['autocomplete-dropdown', styles.dropdown].filter(Boolean).join(' ')}>
             {filteredOptions.map((opt, index) => (
               <div
                 key={`${opt.value}-${index}`}
+                className={[
+                  styles.option,
+                  index === highlightedIndex ? styles.optionHighlighted : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 onClick={() => handleSelect(opt.value)}
-                style={{
-                  padding: '8px 12px',
-                  cursor: 'pointer',
-                  backgroundColor:
-                    index === highlightedIndex ? 'var(--bg-tertiary)' : 'transparent',
-                  color: 'var(--text-primary)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  fontSize: '0.9rem',
-                }}
                 onMouseEnter={() => setHighlightedIndex(index)}
               >
-                <span style={{ fontWeight: 500 }}>{opt.value}</span>
+                <span className={styles.optionValue}>{opt.value}</span>
                 {opt.label && opt.label !== opt.value && (
-                  <span style={{ fontSize: '0.85em', color: 'var(--text-secondary)' }}>
-                    {opt.label}
-                  </span>
+                  <span className={styles.optionLabel}>{opt.label}</span>
                 )}
               </div>
             ))}

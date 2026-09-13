@@ -1,7 +1,14 @@
 @use '../../../styles/mixins' as *;
 @use '../../../styles/variables' as *;
 
+/**
+ * Skeleton：加载占位块。
+ * 保留 1.5s 线性 shimmer（规范允许的少数动画之一），底色为 --bg-tertiary，
+ * 高光取 --bg-hover；系统开启「减少动态效果」时退化为静态色块。
+ */
 .skeleton {
+  display: block;
+  border-radius: $radius-md;
   background: linear-gradient(
     90deg,
     var(--bg-tertiary) 0%,
@@ -9,9 +16,7 @@
     var(--bg-tertiary) 100%
   );
   background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-  border-radius: var(--radius-md);
-  display: block;
+  animation: shimmer 1.5s linear infinite;
 }
 
 @keyframes shimmer {

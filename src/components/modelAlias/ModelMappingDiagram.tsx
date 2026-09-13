@@ -13,23 +13,27 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { OAuthModelAliasEntry } from '@/types';
 import { useThemeStore } from '@/stores';
-import { AliasColumn, ProviderColumn, SourceColumn } from './ModelMappingDiagramColumns';
-import { DiagramContextMenu } from './ModelMappingDiagramContextMenu';
+import {
+  AliasColumn,
+  ProviderColumn,
+  SourceColumn,
+} from '@/components/modelAlias/ModelMappingDiagramColumns';
+import { DiagramContextMenu } from '@/components/modelAlias/ModelMappingDiagramContextMenu';
 import {
   AddAliasModal,
   RenameAliasModal,
   SettingsAliasModal,
   SettingsSourceModal,
-} from './ModelMappingDiagramModals';
+} from '@/components/modelAlias/ModelMappingDiagramModals';
 import type {
   AliasNode,
   AuthFileModelItem,
   ContextMenuState,
   DiagramLine,
   SourceNode,
-} from './ModelMappingDiagramTypes';
-import { hasModelAliasConflict } from './aliasValidation';
-import styles from './ModelMappingDiagram.module.scss';
+} from '@/components/modelAlias/ModelMappingDiagramTypes';
+import { hasModelAliasConflict } from '@/components/modelAlias/aliasValidation';
+import styles from '@/components/modelAlias/ModelMappingDiagram.module.scss';
 
 export interface ModelMappingDiagramProps {
   modelAlias: Record<string, OAuthModelAliasEntry[]>;

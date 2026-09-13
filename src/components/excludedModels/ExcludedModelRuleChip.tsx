@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { IconX } from '@/components/ui/icons';
-import styles from './ExcludedModelRuleChip.module.scss';
+import styles from '@/components/excludedModels/ExcludedModelRuleChip.module.scss';
 
 /**
  * 排除项 chip —— 按**来源**区分三种形态，取代两处近乎重复的手写标记

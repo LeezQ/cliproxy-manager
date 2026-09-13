@@ -1,9 +1,17 @@
 @use '../../../styles/mixins' as *;
 @use '../../../styles/variables' as *;
 
+/**
+ * Table：对齐 Stallion-X 主站表格。
+ * - 外层白卡片 + 1px 边框 + 8px 圆角，横向溢出时内部滚动；
+ * - 表头 44px 高、--table-head-bg 底、12px / 600 / 次级文字色；
+ * - 行底部 1px 分割线，悬停为 40% 的 --bg-tertiary，选中为主色 8% 浅底；
+ * - 单元格 12px 16px 内边距，行内容 14px。
+ */
+
 .wrap {
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: $radius-lg;
   overflow: hidden;
   background: var(--bg-primary);
 }
@@ -16,20 +24,23 @@
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-primary);
 }
 
+/* ---------- 表头 ---------- */
 .head {
-  background: var(--muted-bg);
+  background: var(--table-head-bg);
 
   th {
-    color: var(--muted-foreground);
-    font-weight: 500;
-    font-size: 12px;
-    text-align: left;
-    padding: 10px 14px;
+    height: 44px;
+    padding: 0 16px;
     border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
     vertical-align: middle;
   }
 
@@ -42,22 +53,23 @@
   background: var(--bg-primary);
 }
 
+/* ---------- 数据行 ---------- */
 .row {
   transition: background-color $transition-fast;
 
   td {
-    padding: 12px 14px;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--border-color);
-    vertical-align: top;
     line-height: 1.5;
+    vertical-align: middle;
   }
 
   &:hover td {
-    background: color-mix(in srgb, var(--accent-bg) 50%, transparent);
+    background: color-mix(in srgb, var(--bg-tertiary) 40%, transparent);
   }
 
   &.selected td {
-    background: var(--primary-8);
+    background: color-mix(in srgb, var(--primary-color) 8%, transparent);
   }
 }
 
@@ -65,6 +77,8 @@
   border-bottom: none;
 }
 
+/* 数字列右对齐，并使用等宽数字 */
 .alignRight {
+  font-variant-numeric: tabular-nums;
   text-align: right;
 }

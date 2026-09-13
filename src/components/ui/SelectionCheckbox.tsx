@@ -1,6 +1,6 @@
 import type { ChangeEvent, ReactNode } from 'react';
-import { IconCheck } from './icons';
-import styles from './SelectionCheckbox.module.scss';
+import { IconCheck } from '@/components/ui/icons';
+import styles from '@/components/ui/SelectionCheckbox.module.scss';
 
 interface SelectionCheckboxProps {
   checked: boolean;
@@ -13,6 +13,10 @@ interface SelectionCheckboxProps {
   labelClassName?: string;
 }
 
+/**
+ * 复选框（shadcn Checkbox 风格）：16px 方框 / 4px 圆角 / 选中主色底 + 对勾。
+ * 原生 input 视觉隐藏但保留焦点与读屏语义，可选渲染右侧文字标签。
+ */
 export function SelectionCheckbox({
   checked,
   onChange,

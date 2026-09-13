@@ -1,6 +1,10 @@
 import type { DragEvent, MouseEvent as ReactMouseEvent, RefObject } from 'react';
-import type { AliasNode, ProviderNode, SourceNode } from './ModelMappingDiagramTypes';
-import styles from './ModelMappingDiagram.module.scss';
+import type {
+  AliasNode,
+  ProviderNode,
+  SourceNode,
+} from '@/components/modelAlias/ModelMappingDiagramTypes';
+import styles from '@/components/modelAlias/ModelMappingDiagram.module.scss';
 
 interface ProviderColumnProps {
   providerNodes: ProviderNode[];

@@ -11,6 +11,10 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   rightElement?: ReactNode;
 }
 
+/**
+ * 表单输入框：标签 + 36px 输入框（全局 .input 样式）+ 提示 / 错误行。
+ * rightElement 渲染在输入框内部右侧（如显示密钥按钮），此时输入框右侧自动预留空间避免文字被遮挡。
+ */
 export function Input({
   label,
   labelExtra,
@@ -41,10 +45,19 @@ export function Input({
           aria-invalid={Boolean(error) || rest['aria-invalid']}
           aria-describedby={describedBy}
           {...rest}
+          // 有右侧附加元素时预留右内边距；调用方显式传入的 style 优先
+          style={rightElement ? { paddingRight: 44, ...rest.style } : rest.style}
         />
         {rightElement && (
           <div
-            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}
+            style={{
+              position: 'absolute',
+              right: 4,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              display: 'flex',
+              alignItems: 'center',
+            }}
           >
             {rightElement}
           </div>

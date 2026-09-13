@@ -1,3 +1,7 @@
+/**
+ * 排除规则标签：20px 左右高、4px 圆角的等宽小标签。
+ * 实线 = 手动勾选，虚线 = 通配规则推导，弱化虚线 = 目录外模型；移除按钮不再按压缩放。
+ */
 .chipRow {
   display: flex;
   flex-wrap: wrap;
@@ -11,8 +15,9 @@
   gap: 4px;
   min-width: 0;
   max-width: 100%;
-  padding: 4px 5px 4px 9px;
-  border-radius: $radius-full;
+  min-height: 24px;
+  padding: 1px 3px 1px 8px;
+  border-radius: $radius-sm;
   color: var(--text-primary);
   font-family: $font-mono;
   font-size: 11px;
@@ -34,7 +39,8 @@
 /* 显式勾选：实线 + primary 染色，读起来是「我选的」。 */
 .exact {
   border: 1px solid color-mix(in srgb, var(--primary-color) 45%, var(--border-color));
-  background: color-mix(in srgb, var(--primary-color) 8%, var(--bg-primary));
+  background: var(--accent-bg);
+  color: var(--accent-fg);
 }
 
 /* 规则派生：虚线 = 「不是逐个挑的，是某条规则算出来的」。 */
@@ -56,22 +62,17 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 3px;
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
   transition:
-    background-color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-    color var(--dur-hover, 200ms) var(--ease-out-strong, ease-out),
-    transform var(--dur-press, 160ms) var(--ease-out-strong, ease-out);
-
-  &:active:not(:disabled) {
-    transform: scale(0.9);
-  }
+    background-color $transition-fast,
+    color $transition-fast;
 
   &:focus-visible {
     outline: 2px solid var(--primary-color);
@@ -88,15 +89,5 @@
       background: var(--bg-tertiary);
       color: var(--text-primary);
     }
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .remove {
-    transition: none;
-  }
-
-  .remove:active:not(:disabled) {
-    transform: none;
   }
 }

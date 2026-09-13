@@ -3,6 +3,18 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useNotificationStore } from '@/stores';
 
+/** 确认弹窗正文样式：14px 次级文字，放宽行高便于阅读长提示 */
+const MESSAGE_STYLE = {
+  margin: 0,
+  color: 'var(--text-secondary)',
+  fontSize: 14,
+  lineHeight: 1.6,
+} as const;
+
+/**
+ * 全局确认弹窗：由 notificationStore.showConfirmation 驱动。
+ * Stallion-X 重构：操作按钮移入 Modal 的 footer 区（右对齐，取消为次级按钮），正文使用令牌色。
+ */
 export function ConfirmationModal() {
   const { t } = useTranslation();
   const confirmation = useNotificationStore((state) => state.confirmation);
@@ -50,20 +62,27 @@ export function ConfirmationModal() {
   };
 
   return (
-    <Modal open={isOpen} onClose={handleCancel} title={title} closeDisabled={isLoading}>
+    <Modal
+      open={isOpen}
+      onClose={handleCancel}
+      title={title}
+      closeDisabled={isLoading}
+      footer={
+        <>
+          <Button variant="secondary" onClick={handleCancel} disabled={isLoading}>
+            {cancelText || t('common.cancel')}
+          </Button>
+          <Button variant={variant} onClick={handleConfirm} loading={isLoading}>
+            {confirmText || t('common.confirm')}
+          </Button>
+        </>
+      }
+    >
       {typeof message === 'string' ? (
-        <p style={{ margin: '1rem 0' }}>{message}</p>
+        <p style={MESSAGE_STYLE}>{message}</p>
       ) : (
-        <div style={{ margin: '1rem 0' }}>{message}</div>
+        <div style={MESSAGE_STYLE}>{message}</div>
       )}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
-        <Button variant="ghost" onClick={handleCancel} disabled={isLoading}>
-          {cancelText || t('common.cancel')}
-        </Button>
-        <Button variant={variant} onClick={handleConfirm} loading={isLoading}>
-          {confirmText || t('common.confirm')}
-        </Button>
-      </div>
     </Modal>
   );
 }

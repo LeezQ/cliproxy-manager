@@ -1,5 +1,12 @@
 @use '../../styles/variables' as *;
 
+/**
+ * SelectionCheckbox：对齐 shadcn Checkbox。
+ * - 方框 16px / 4px 圆角 / --border-primary 描边 / 白底；
+ * - 选中为主色底 + --primary-contrast 对勾；
+ * - 只保留颜色类过渡，去掉按压缩放。
+ */
+
 .root {
   position: relative;
   display: inline-flex;
@@ -11,9 +18,10 @@
 
 .disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
+/* 原生 input 视觉隐藏 */
 .input {
   position: absolute;
   width: 1px;
@@ -27,61 +35,56 @@
   white-space: nowrap;
 }
 
+/* 方框 */
 .box {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  border-radius: 7px;
-  border: 1px solid var(--border-color);
-  background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
-  color: var(--primary-contrast, #fff);
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border-primary);
+  border-radius: $radius-sm;
+  background: var(--bg-primary);
+  color: var(--primary-contrast, #fff);
   transition:
     border-color $transition-fast,
     background-color $transition-fast,
-    box-shadow $transition-fast,
-    transform $transition-fast;
+    box-shadow $transition-fast;
 }
 
 .root:hover .box {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 16%, transparent);
-}
-
-.root:active .box {
-  transform: scale(0.95);
+  border-color: var(--border-hover);
 }
 
 .disabled:hover .box {
-  border-color: var(--border-color);
-  box-shadow: none;
+  border-color: var(--border-primary);
 }
 
-.disabled:active .box {
-  transform: none;
-}
-
+/* 键盘焦点 ring */
 .input:focus-visible + .box {
   border-color: var(--primary-color);
-  box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--primary-color) 16%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--primary-color) 50%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent);
 }
 
-.boxChecked {
+/* 选中态：主色底，悬停保持主色描边 */
+.boxChecked,
+.root:hover .boxChecked {
   border-color: var(--primary-color);
   background: var(--primary-color);
 }
 
 .boxChecked svg {
   display: block;
-  stroke-width: 2.4;
+  width: 12px;
+  height: 12px;
+  stroke-width: 3;
 }
 
 .label {
   color: var(--text-primary);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
+  line-height: 1.4;
 }

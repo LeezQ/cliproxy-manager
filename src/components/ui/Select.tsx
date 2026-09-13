@@ -9,9 +9,10 @@ import {
   type CSSProperties,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { IconChevronDown } from './icons';
-import styles from './Select.module.scss';
+import { IconCheck, IconChevronDown } from '@/components/ui/icons';
+import styles from '@/components/ui/Select.module.scss';
 
+/** 下拉选项：value 为提交值，label 为展示文案 */
 export interface SelectOption {
   value: string;
   label: string;
@@ -32,8 +33,10 @@ interface SelectProps {
   id?: string;
 }
 
+// 浮层与视口边缘的最小留白
 const VIEWPORT_MARGIN = 8;
-const DROPDOWN_OFFSET = 6;
+// 面板与触发器之间的间距（对齐 shadcn Select 的 4px 偏移）
+const DROPDOWN_OFFSET = 4;
 const DROPDOWN_MAX_HEIGHT = 240;
 const DROPDOWN_Z_INDEX = 2010;
 
@@ -43,12 +46,15 @@ const resolveDropdownStyle = (element: HTMLElement): CSSProperties => {
   const rect = element.getBoundingClientRect();
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
-  const width = Math.min(rect.width, Math.max(0, viewportWidth - VIEWPORT_MARGIN * 2));
+  // 面板最小与触发器等宽；选项文案更长时按内容撑开（与 shadcn Select 一致），但不超出视口
+  const minWidth = Math.min(rect.width, Math.max(0, viewportWidth - VIEWPORT_MARGIN * 2));
   const left = clamp(
     rect.left,
     VIEWPORT_MARGIN,
-    Math.max(VIEWPORT_MARGIN, viewportWidth - width - VIEWPORT_MARGIN)
+    Math.max(VIEWPORT_MARGIN, viewportWidth - minWidth - VIEWPORT_MARGIN)
   );
+  const maxWidth = Math.max(minWidth, viewportWidth - left - VIEWPORT_MARGIN);
+  const sizing: CSSProperties = { left, minWidth, maxWidth, width: 'max-content' };
   const spaceBelow = viewportHeight - rect.bottom - VIEWPORT_MARGIN - DROPDOWN_OFFSET;
   const spaceAbove = rect.top - VIEWPORT_MARGIN - DROPDOWN_OFFSET;
   const direction = spaceBelow >= DROPDOWN_MAX_HEIGHT || spaceBelow >= spaceAbove ? 'down' : 'up';
@@ -61,21 +67,24 @@ const resolveDropdownStyle = (element: HTMLElement): CSSProperties => {
     ? {
         position: 'fixed',
         top: rect.bottom + DROPDOWN_OFFSET,
-        left,
-        width,
+        ...sizing,
         maxHeight,
         zIndex: DROPDOWN_Z_INDEX,
       }
     : {
         position: 'fixed',
         bottom: viewportHeight - rect.top + DROPDOWN_OFFSET,
-        left,
-        width,
+        ...sizing,
         maxHeight,
         zIndex: DROPDOWN_Z_INDEX,
       };
 };
 
+/**
+ * 通用下拉选择器（shadcn Select 风格）。
+ * 触发器为 36px 高的描边按钮，面板通过 portal 渲染到 body 并按视口空间自动向上/向下展开；
+ * 支持方向键、Home/End、Enter/空格、Esc、Tab 等键盘交互，保留完整的 listbox ARIA 语义。
+ */
 export function Select({
   value,
   options,
@@ -295,7 +304,13 @@ export function Select({
               onKeyDown={handleKeyDown}
               onClick={() => commitSelection(index)}
             >
-              {opt.label}
+              <span className={styles.optionLabel}>{opt.label}</span>
+              {/* 已选项右侧显示对勾，替代原先的主色描边块 */}
+              {active ? (
+                <span className={styles.optionCheck} aria-hidden="true">
+                  <IconCheck size={14} />
+                </span>
+              ) : null}
             </button>
           );
         })}
@@ -331,7 +346,7 @@ export function Select({
             {displayText}
           </span>
           <span className={styles.triggerIcon} aria-hidden="true">
-            <IconChevronDown size={14} />
+            <IconChevronDown size={16} />
           </span>
         </button>
       </div>

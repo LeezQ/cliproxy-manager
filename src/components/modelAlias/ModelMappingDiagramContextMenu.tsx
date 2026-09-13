@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { TFunction } from 'i18next';
-import type { ContextMenuState } from './ModelMappingDiagramTypes';
-import styles from './ModelMappingDiagram.module.scss';
+import type { ContextMenuState } from '@/components/modelAlias/ModelMappingDiagramTypes';
+import styles from '@/components/modelAlias/ModelMappingDiagram.module.scss';
 
 interface DiagramContextMenuProps {
   contextMenu: ContextMenuState | null;

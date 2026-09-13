@@ -1,6 +1,6 @@
 import { useState, type HTMLAttributes, type PropsWithChildren, type ReactNode } from 'react';
-import { IconChevronDown } from '../icons';
-import styles from './Collapsible.module.scss';
+import { IconChevronDown } from '@/components/ui/icons';
+import styles from '@/components/ui/Collapsible/Collapsible.module.scss';
 
 interface CollapsibleProps extends HTMLAttributes<HTMLDetailsElement> {
   label: ReactNode;
@@ -11,6 +11,10 @@ interface CollapsibleProps extends HTMLAttributes<HTMLDetailsElement> {
   flush?: boolean;
 }
 
+/**
+ * 折叠区块：支持受控（open + onToggle）与非受控（defaultOpen）两种用法。
+ * 使用原生 details/summary，保证键盘与读屏可用；展开不做动画，便于程序化强制展开。
+ */
 export function Collapsible({
   label,
   hint,

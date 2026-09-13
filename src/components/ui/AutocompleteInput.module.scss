@@ -1,0 +1,91 @@
+/**
+ * AutocompleteInput：可输入的下拉建议框。
+ * 输入框复用全局 .input（36px / 8px 圆角）；建议面板与 Select 下拉保持一致：
+ * --floating-surface 底 + --floating-shadow + 4px 内边距，选项 34px 高、高亮 --bg-tertiary。
+ */
+
+/* 输入框与右侧图标的定位容器 */
+.field {
+  position: relative;
+}
+
+/* 右侧预留 chevron（以及可选附加元素）的空间；加父级提升优先级以覆盖全局 .input 内边距 */
+.field .input {
+  padding-right: 32px;
+}
+
+/* 右侧附加区：自定义元素 + chevron，点击可切换面板 */
+.trailing {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.trailingDisabled {
+  pointer-events: none;
+}
+
+.chevron {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* 建议面板 */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  max-height: 220px;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--floating-surface);
+  box-shadow: var(--floating-shadow);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* 建议项：主值 + 可选的次级说明 */
+.option {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background-color $transition-fast;
+}
+
+.optionHighlighted {
+  background: var(--bg-tertiary);
+}
+
+.optionValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.optionLabel {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

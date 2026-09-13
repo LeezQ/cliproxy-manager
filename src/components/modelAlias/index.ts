@@ -1,2 +1,5 @@
-export { ModelMappingDiagram } from './ModelMappingDiagram';
-export type { ModelMappingDiagramProps, ModelMappingDiagramRef } from './ModelMappingDiagram';
+export { ModelMappingDiagram } from '@/components/modelAlias/ModelMappingDiagram';
+export type {
+  ModelMappingDiagramProps,
+  ModelMappingDiagramRef,
+} from '@/components/modelAlias/ModelMappingDiagram';

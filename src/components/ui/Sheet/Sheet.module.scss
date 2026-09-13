@@ -4,20 +4,18 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background: rgb(16 23 37 / 0.32);
   z-index: 2000;
   display: flex;
   justify-content: flex-end;
   opacity: 0;
 
   &.entering {
-    animation: sheet-fade-in 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: sheet-fade-in 120ms linear forwards;
   }
 
   &.exiting {
-    animation: sheet-fade-out 280ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation: sheet-fade-out 120ms linear forwards;
   }
 }
 
@@ -25,22 +23,20 @@
   position: relative;
   background: var(--bg-primary);
   border-left: 1px solid var(--border-color);
-  box-shadow:
-    -8px 0 32px rgba(0, 0, 0, 0.16),
-    var(--floating-shadow);
-  transform: translate3d(100%, 0, 0);
-  will-change: transform;
+  /* Stallion-X：抽屉不再从右侧滑入，只随遮罩一起短暂淡入，层级靠边框与一层弱投影表达 */
+  box-shadow: -12px 0 32px rgb(16 23 37 / 0.1);
+  opacity: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
   outline: none;
 
   &.entering {
-    animation: sheet-slide-in 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: sheet-fade-in 120ms linear forwards;
   }
 
   &.exiting {
-    animation: sheet-slide-out 280ms cubic-bezier(0.32, 0, 0.67, 0) forwards;
+    animation: sheet-fade-out 120ms linear forwards;
   }
 }
 
@@ -62,24 +58,6 @@
   }
 }
 
-@keyframes sheet-slide-in {
-  from {
-    transform: translate3d(100%, 0, 0);
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes sheet-slide-out {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(100%, 0, 0);
-  }
-}
-
 .sizeMd {
   width: min(640px, 100vw);
 }
@@ -92,6 +70,7 @@
   width: min(960px, 100vw);
 }
 
+/* 头部 / 主体 / 底部三段式布局，分割线使用 --border-color */
 .header {
   flex-shrink: 0;
   padding: 20px 56px 20px 24px;
@@ -101,24 +80,28 @@
   gap: 4px;
 }
 
+/* 分组小标签：11px / 600 / 字距 .06em，与侧边栏分组标题一致 */
 .eyebrow {
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted-foreground);
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
 }
 
+/* 抽屉标题：正文字体 18px / 600（与卡片标题一致，避免中英混排字体割裂） */
 .title {
   font-size: 18px;
   font-weight: 600;
+  line-height: 1.3;
   color: var(--text-primary);
   margin: 0;
 }
 
+/* 抽屉说明：14px 次级文字 */
 .description {
-  font-size: 13px;
-  color: var(--muted-foreground);
+  font-size: 14px;
+  color: var(--text-secondary);
   line-height: 1.5;
   margin: 0;
 }
@@ -142,8 +125,8 @@
 
 .closeBtn {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 16px;
+  right: 16px;
   width: 32px;
   height: 32px;
   display: flex;
@@ -205,11 +188,10 @@
   }
 
   .content.entering {
-    transform: none;
+    opacity: 1;
   }
 
   .content.exiting {
-    transform: translate3d(100%, 0, 0);
+    opacity: 0;
   }
 }
-

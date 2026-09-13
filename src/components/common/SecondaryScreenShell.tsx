@@ -2,8 +2,9 @@ import { forwardRef, type ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { IconChevronLeft } from '@/components/ui/icons';
-import styles from './SecondaryScreenShell.module.scss';
+import styles from '@/components/common/SecondaryScreenShell.module.scss';
 
+/** 二级页面外壳参数 */
 export type SecondaryScreenShellProps = {
   title: ReactNode;
   onBack?: () => void;
@@ -18,6 +19,10 @@ export type SecondaryScreenShellProps = {
   children?: ReactNode;
 };
 
+/**
+ * 二级编辑页外壳：顶部为「返回按钮 + 标题 + 右侧操作」的标题区（与 PageHeader 视觉一致），
+ * 下方为内容区或加载态。ref 透传到最外层容器（页面用于绑定手势返回）。
+ */
 export const SecondaryScreenShell = forwardRef<HTMLDivElement, SecondaryScreenShellProps>(
   function SecondaryScreenShell(
     {
@@ -45,23 +50,24 @@ export const SecondaryScreenShell = forwardRef<HTMLDivElement, SecondaryScreenSh
         <div className={[styles.topBar, topBarClassName].filter(Boolean).join(' ')}>
           {onBack ? (
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onClick={onBack}
               className={styles.backButton}
               aria-label={resolvedBackAriaLabel}
             >
               <span className={styles.backIcon}>
-                <IconChevronLeft size={18} />
+                <IconChevronLeft size={16} />
               </span>
               <span className={styles.backText}>{backLabel}</span>
             </Button>
           ) : (
             <div />
           )}
-          <div className={styles.topBarTitle} title={titleTooltip}>
+          {/* 标题：单行省略，字符串标题通过 title 属性提供完整文本 */}
+          <h1 className={styles.topBarTitle} title={titleTooltip}>
             {title}
-          </div>
+          </h1>
           <div className={styles.rightSlot}>{rightAction}</div>
         </div>
 

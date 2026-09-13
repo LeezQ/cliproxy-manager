@@ -1,8 +1,14 @@
 import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconAlertTriangle, IconChevronDown, IconLoader2 } from '@/components/ui/icons';
-import { ExcludedModelChipRow, ExcludedModelRuleChip } from './ExcludedModelRuleChip';
-import { ExcludedModelsPanel, type ExcludedModelCandidate } from './ExcludedModelsPanel';
+import {
+  ExcludedModelChipRow,
+  ExcludedModelRuleChip,
+} from '@/components/excludedModels/ExcludedModelRuleChip';
+import {
+  ExcludedModelsPanel,
+  type ExcludedModelCandidate,
+} from '@/components/excludedModels/ExcludedModelsPanel';
 import {
   formatExcludedRulesText,
   getModelExclusionState,
@@ -12,8 +18,8 @@ import {
   splitExcludedRules,
   summarizeExclusion,
   toggleExcludedRule,
-} from './excludedModelRules';
-import styles from './ExcludedModelsPicker.module.scss';
+} from '@/components/excludedModels/excludedModelRules';
+import styles from '@/components/excludedModels/ExcludedModelsPicker.module.scss';
 
 export type { ExcludedModelCandidate };
 

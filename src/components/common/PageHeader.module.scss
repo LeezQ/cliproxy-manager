@@ -1,0 +1,131 @@
+/**
+ * 页面标题区样式
+ * - 标题 24px / 600，说明 14px 次级色；
+ * - 统计项合并为一条白底横条，格与格之间 1px 分隔线，避免多个同款色块堆叠；
+ * - 操作按钮固定在右上角，与标题首行对齐。
+ */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+/* 左侧：标题块 + 统计条，空间不足时统计条换到下一行 */
+.main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  min-width: 0;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* 统计条：单个容器，子项之间画竖向分隔线 */
+.stats {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-primary);
+}
+
+.stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 14px;
+
+  & + & {
+    border-left: 1px solid var(--border-color);
+  }
+}
+
+.statLabel {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.statValue {
+  font-family: $font-mono;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.tone-primary,
+.tone-neutral {
+  color: var(--text-primary);
+}
+
+.tone-success {
+  color: var(--success-color);
+}
+
+.tone-danger {
+  color: var(--error-color);
+}
+
+/* 操作按钮：不收缩、不换到左侧 */
+.actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: $breakpoint-mobile) {
+  .header {
+    flex-direction: column;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .actions {
+    justify-content: flex-start;
+  }
+}

@@ -1,0 +1,76 @@
+/**
+ * EmptyState：对齐 Stallion-X 主站表格空态。
+ * 居中弱化展示：可选小图标 + 13px 次级色标题 + 14px 说明 + 可选操作按钮；
+ * 无虚线边框、无底色块。选择器叠加全局类名以提高优先级，覆盖 components.scss 中旧的 .empty-state 样式。
+ */
+
+.root:global(.empty-state) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 16px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  text-align: center;
+}
+
+.content:global(.empty-content) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 可选小图标：无底色方框，仅弱化色线性图标 */
+.icon:global(.empty-icon) {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+
+  svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.title:global(.empty-title) {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* 说明文字不限定固定宽度，按容器宽度排版；必须换行时用 balance 让各行长度均衡，避免末行只剩一两个字 */
+.desc:global(.empty-desc) {
+  max-width: 100%;
+  margin-top: 0;
+  text-wrap: balance;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}

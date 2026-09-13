@@ -3,13 +3,13 @@ export {
   type ExcludedModelCandidate,
   type ExcludedModelsCatalogState,
   type ExcludedModelsPickerProps,
-} from './ExcludedModelsPicker';
+} from '@/components/excludedModels/ExcludedModelsPicker';
 export {
   ExcludedModelChipRow,
   ExcludedModelRuleChip,
   type ExcludedModelChipVariant,
   type ExcludedModelRuleChipProps,
-} from './ExcludedModelRuleChip';
+} from '@/components/excludedModels/ExcludedModelRuleChip';
 export {
   DISABLE_ALL_RULE,
   formatExcludedRulesText,
@@ -30,4 +30,4 @@ export {
   type ModelExclusionState,
   type RuleMatchSummary,
   type SplitExcludedRules,
-} from './excludedModelRules';
+} from '@/components/excludedModels/excludedModelRules';

@@ -1,5 +1,5 @@
 import type { CSSProperties, HTMLAttributes } from 'react';
-import styles from './Skeleton.module.scss';
+import styles from '@/components/ui/Skeleton/Skeleton.module.scss';
 
 interface SkeletonProps extends HTMLAttributes<HTMLDivElement> {
   width?: number | string;
@@ -7,6 +7,7 @@ interface SkeletonProps extends HTMLAttributes<HTMLDivElement> {
   rounded?: number | string;
 }
 
+/** 骨架屏占位块：可直接传入宽高与圆角，默认 8px 圆角 + shimmer */
 export function Skeleton({ width, height, rounded, className, style, ...rest }: SkeletonProps) {
   const merged: CSSProperties = {
     ...style,

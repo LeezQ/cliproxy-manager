@@ -6,13 +6,14 @@ import type {
   TdHTMLAttributes,
   ThHTMLAttributes,
 } from 'react';
-import styles from './Table.module.scss';
+import styles from '@/components/ui/Table/Table.module.scss';
 
 interface TableProps extends TableHTMLAttributes<HTMLTableElement> {
   className?: string;
   cols?: ReactNode;
 }
 
+/** 表格外壳：白色描边卡片 + 横向滚动容器，可通过 cols 传入 colgroup 定义列宽 */
 export function Table({ children, cols, className, ...rest }: PropsWithChildren<TableProps>) {
   const tableCls = [styles.table, className].filter(Boolean).join(' ');
   return (

@@ -1,5 +1,14 @@
 @use '../../styles/mixins' as *;
 
+/**
+ * Select：对齐 Stallion-X 主站 shadcn Select。
+ * - 触发器 36px 高 / 8px 圆角 / --border-primary 描边 / 白底 / 右侧 chevron；
+ * - 下拉面板使用浮层令牌（--floating-surface + --floating-shadow），4px 内边距；
+ * - 选项 34px 高，悬停 / 键盘高亮为 --bg-tertiary，已选项右侧显示对勾；
+ * - 只保留颜色类过渡，不做箭头旋转与面板入场动画。
+ */
+
+/* 外层包裹：决定触发器是否占满父容器宽度 */
 .wrap {
   position: relative;
   display: inline-flex;
@@ -10,53 +19,64 @@
   width: 100%;
 }
 
+/* ---------- 触发器 ---------- */
 .trigger {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--border-color);
+  height: 36px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--border-primary);
   border-radius: $radius-md;
   background-color: var(--bg-primary);
-  box-shadow: var(--shadow);
+  box-shadow: none;
   color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
   appearance: none;
   text-align: left;
   box-sizing: border-box;
+  transition:
+    border-color $transition-fast,
+    box-shadow $transition-fast;
 
-  &:hover {
+  &:hover:not(:disabled) {
     border-color: var(--border-hover);
   }
 
-  &:focus {
+  /* 焦点环：仅键盘聚焦或展开时显示主色描边 + 3px 浅色 ring */
+  &:focus-visible,
+  &[aria-expanded='true'] {
     outline: none;
-    box-shadow:
-      var(--shadow),
-      0 0 0 3px rgba($primary-color, 0.18);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 18%, transparent);
   }
 
-  &[aria-expanded='true'] {
-    border-color: var(--primary-color);
-    box-shadow:
-      var(--shadow),
-      0 0 0 3px rgba($primary-color, 0.18);
+  &:focus:not(:focus-visible):not([aria-expanded='true']) {
+    outline: none;
+  }
+
+  &:disabled {
+    background-color: var(--bg-tertiary);
+    color: var(--text-tertiary);
+    cursor: not-allowed;
   }
 }
 
+/* 紧凑尺寸：工具栏、表格行内使用 */
 .triggerSm {
-  height: 28px;
-  padding: 0 10px;
-  font-size: 12px;
-  box-shadow: none;
+  height: 32px;
+  padding: 0 8px 0 10px;
+  font-size: 13px;
 }
 
 .triggerText {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -66,59 +86,86 @@
   color: var(--text-tertiary);
 }
 
+/* 右侧 chevron：弱化色，不随展开旋转 */
 .triggerIcon {
   display: inline-flex;
-  color: var(--text-secondary);
   flex-shrink: 0;
-  transition: transform 0.2s ease;
+  color: var(--text-tertiary);
 
-  [aria-expanded='true'] > & {
-    transform: rotate(180deg);
+  svg {
+    display: block;
   }
 }
 
+/* ---------- 下拉面板 ---------- */
 .dropdown {
   position: fixed;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: $radius-lg;
-  padding: 6px;
-  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
   max-height: 240px;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--floating-surface);
+  box-shadow: var(--floating-shadow);
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  box-sizing: border-box;
 }
 
+/* 选项：34px 高，右侧预留对勾位置 */
 .option {
-  padding: 8px 12px;
-  border-radius: $radius-md;
-  border: 1px solid transparent;
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 30px 6px 8px;
+  border: 0;
+  border-radius: 6px;
   background: transparent;
   color: var(--text-primary);
-  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
   text-align: left;
-  font-size: 13px;
-  font-weight: 500;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease;
-  flex-shrink: 0;
+  cursor: pointer;
+  transition: background-color $transition-fast;
 
-  &:hover {
-    background: var(--bg-secondary);
+  &:focus-visible {
+    outline: none;
+    background: var(--bg-tertiary);
   }
 }
 
-.optionActive {
-  border-color: rgba($primary-color, 0.5);
-  background: rgba($primary-color, 0.1);
-  font-weight: 600;
+.optionLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* 已选项：文字加粗一档 + 右侧对勾，不再使用主色描边块 */
+.optionActive {
+  font-weight: 500;
+}
+
+.optionCheck {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: inline-flex;
+  color: var(--text-primary);
+  transform: translateY(-50%);
+
+  svg {
+    display: block;
+  }
+}
+
+/* 悬停与键盘高亮共用同一底色（悬停时组件会同步 highlightedIndex） */
 .optionHighlighted {
-  background: var(--bg-secondary);
+  background: var(--bg-tertiary);
 }

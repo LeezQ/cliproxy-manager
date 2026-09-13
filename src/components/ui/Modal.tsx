@@ -22,7 +22,8 @@ interface ModalProps {
   closeDisabled?: boolean;
 }
 
-const CLOSE_ANIMATION_DURATION = 350;
+/** 关闭淡出时长，需与 components.scss 中 .modal-closing 的动画时长保持一致（Stallion-X 减弱动效） */
+const CLOSE_ANIMATION_DURATION = 120;
 
 export function Modal({
   open,

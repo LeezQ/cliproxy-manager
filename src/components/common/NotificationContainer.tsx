@@ -8,7 +8,8 @@ interface AnimatedNotification extends Notification {
   isExiting?: boolean;
 }
 
-const ANIMATION_DURATION = 300; // ms
+/** 通知淡入淡出时长，需与 components.scss 中 .notification 动画一致（Stallion-X 减弱动效） */
+const ANIMATION_DURATION = 120; // ms
 
 export function NotificationContainer() {
   const { t } = useTranslation();

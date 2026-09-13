@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { IconTrash2 } from '@/components/ui/icons';
-import type { AliasNode, SourceNode } from './ModelMappingDiagramTypes';
-import styles from './ModelMappingDiagram.module.scss';
+import type { AliasNode, SourceNode } from '@/components/modelAlias/ModelMappingDiagramTypes';
+import styles from '@/components/modelAlias/ModelMappingDiagram.module.scss';
 
 interface RenameAliasModalProps {
   open: boolean;

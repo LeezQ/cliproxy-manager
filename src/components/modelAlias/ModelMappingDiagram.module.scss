@@ -1,5 +1,11 @@
 @use '../../styles/variables' as *;
 
+/**
+ * 模型别名映射图（提供商 → 源模型 → 别名 三列 + SVG 连线）。
+ * Stallion-X 重构：节点为白底描边小卡片，悬停只改变边框色，不再上浮 / 加阴影；
+ * 右键菜单使用浮层令牌；过渡只保留颜色类属性。
+ */
+
 .scrollContainer {
   width: 100%;
   overflow-x: auto;
@@ -73,10 +79,12 @@
   }
 }
 
+/* 列标题：分组小标签样式 11px / 600 / 字距 .06em */
 .columnHeader {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
   text-transform: uppercase;
   margin-bottom: 8px;
   padding: 0 4px;
@@ -85,8 +93,9 @@
 .item {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 10px 14px;
+  border-radius: $radius-md;
+  padding: 8px 12px;
+  min-height: 36px;
   font-size: 13px;
   color: var(--text-primary);
   display: flex;
@@ -95,26 +104,29 @@
   width: 100%;
   max-width: 280px;
   position: relative;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+  transition:
+    border-color $transition-fast,
+    background-color $transition-fast,
+    box-shadow $transition-fast;
 
+  /* 悬停：仅边框加深，不抬升 */
   &:hover {
-    border-color: var(--primary-color);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border-color: var(--border-hover);
     z-index: 10;
   }
 
+  /* 拖拽目标：主色描边 + 选中浅底（用 inset ring 代替加粗边框，避免布局跳动） */
   &.dropTarget {
-    background-color: var(--bg-secondary);
+    background-color: var(--accent-bg);
     border-color: var(--primary-color);
-    border-width: 2px;
+    box-shadow: inset 0 0 0 1px var(--primary-color);
   }
 
   &.selected {
     border-color: var(--primary-color);
-    background-color: var(--bg-secondary);
-    box-shadow: 0 0 0 2px rgba($primary-color, 0.18);
+    background-color: var(--accent-bg);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 18%, transparent);
   }
 }
 
@@ -143,17 +155,22 @@
     align-items: center;
     justify-content: center;
     border: none;
-    background: var(--bg-secondary);
-    border-radius: 4px;
+    background: transparent;
+    border-radius: $radius-sm;
     cursor: pointer;
     color: var(--text-secondary);
     transition:
-      background-color 0.15s,
-      color 0.15s;
+      background-color $transition-fast,
+      color $transition-fast;
 
     &:hover {
-      background: var(--border-color);
+      background: var(--bg-tertiary);
       color: var(--text-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 1px;
     }
   }
 
@@ -216,11 +233,15 @@
   right: -3px;
 }
 
+/* 中性徽标：20px 高 / 4px 圆角 / --bg-tertiary 底 */
 .providerBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
   font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--bg-secondary);
+  padding: 0 6px;
+  border-radius: $radius-sm;
+  background: var(--bg-tertiary);
   color: var(--text-secondary);
   margin-right: 8px;
   font-weight: 500;
@@ -233,38 +254,44 @@
   white-space: nowrap;
 }
 
+/* 计数徽标：等宽数字，4px 圆角 */
 .itemCount {
   font-size: 11px;
-  color: var(--text-tertiary);
+  font-family: $font-mono;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
   margin-left: 8px;
-  background: var(--bg-secondary);
+  background: var(--bg-tertiary);
   padding: 1px 6px;
-  border-radius: 10px;
+  border-radius: $radius-sm;
 }
 
 .contextMenu {
   position: fixed;
-  background: var(--bg-primary);
+  background: var(--floating-surface);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: $radius-md;
+  box-shadow: var(--floating-shadow);
   z-index: 9999;
-  min-width: 120px;
+  min-width: 140px;
   overflow: hidden;
-  padding: 4px 0;
+  padding: 4px;
 
+  /* 菜单项：34px 高，悬停 --bg-tertiary */
   .menuItem {
-    padding: 8px 12px;
-    font-size: 13px;
+    min-height: 34px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 14px;
     color: var(--text-primary);
     cursor: pointer;
-    transition: background-color 0.1s;
+    transition: background-color $transition-fast;
     display: flex;
     align-items: center;
     gap: 8px;
 
     &:hover {
-      background-color: var(--bg-secondary);
+      background-color: var(--bg-tertiary);
     }
 
     &.danger {
@@ -278,7 +305,7 @@
 
   .menuDivider {
     height: 1px;
-    margin: 4px 0;
+    margin: 4px -4px;
     background: var(--border-color);
     padding: 0;
     cursor: default;
@@ -307,7 +334,7 @@
   padding: $spacing-sm $spacing-md;
   border: 1px solid var(--border-color);
   border-radius: $radius-md;
-  background: var(--bg-secondary);
+  background: var(--bg-quinary);
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -352,8 +379,9 @@
   background: transparent;
   color: var(--error-color);
   padding: 6px;
-  border-radius: 6px;
+  border-radius: $radius-md;
   cursor: pointer;
+  transition: background-color $transition-fast;
 
   &:hover {
     background: var(--bg-error-light);

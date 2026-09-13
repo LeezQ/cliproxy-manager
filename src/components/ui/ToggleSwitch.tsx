@@ -1,5 +1,5 @@
 import type { ChangeEvent, ReactNode } from 'react';
-import styles from './ToggleSwitch.module.scss';
+import styles from '@/components/ui/ToggleSwitch.module.scss';
 
 interface ToggleSwitchProps {
   checked: boolean;
@@ -10,6 +10,10 @@ interface ToggleSwitchProps {
   labelPosition?: 'left' | 'right';
 }
 
+/**
+ * 开关（shadcn Switch 风格）。
+ * 基于原生 checkbox 实现，保证键盘空格切换与读屏语义；视觉上只做颜色过渡，不做滑块位移动画。
+ */
 export function ToggleSwitch({
   checked,
   onChange,

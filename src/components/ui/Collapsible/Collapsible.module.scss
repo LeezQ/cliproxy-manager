@@ -1,32 +1,40 @@
 @use '../../../styles/mixins' as *;
 @use '../../../styles/variables' as *;
 
+/**
+ * Collapsible：基于原生 <details> 的折叠区块。
+ * 白底 + 1px 边框 + 8px 圆角；展开 / 收起直接切换，不做内容淡入与箭头旋转过渡。
+ */
+
 .root {
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: $radius-lg;
   background: var(--bg-primary);
   overflow: hidden;
 }
 
+/* 摘要行：44px 左右的点击区，悬停为弱化底色 */
 .summary {
-  list-style: none;
-  cursor: pointer;
-  padding: 10px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 44px;
+  padding: 10px 16px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  list-style: none;
+  cursor: pointer;
   user-select: none;
+  transition: background-color $transition-fast;
 
   &::-webkit-details-marker {
     display: none;
   }
 
   &:hover {
-    background: color-mix(in srgb, var(--accent-bg) 35%, transparent);
+    background: color-mix(in srgb, var(--bg-tertiary) 40%, transparent);
   }
 
   &:focus-visible {
@@ -37,24 +45,25 @@
 
 .summaryLabel {
   display: flex;
+  flex: 1;
   align-items: center;
   gap: 10px;
-  flex: 1;
   min-width: 0;
 }
 
 .summaryHint {
+  color: var(--text-secondary);
   font-size: 12px;
-  color: var(--muted-foreground);
   font-weight: 400;
 }
 
+/* 箭头：展开时直接朝上，无旋转动画 */
 .chevron {
+  display: inline-flex;
+  flex-shrink: 0;
   width: 16px;
   height: 16px;
-  color: var(--muted-foreground);
-  transition: transform var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
-  flex-shrink: 0;
+  color: var(--text-tertiary);
 
   .root[open] & {
     transform: rotate(180deg);
@@ -62,35 +71,11 @@
 }
 
 .content {
-  padding: 14px;
+  padding: 16px;
   border-top: 1px solid var(--border-color);
 }
 
 .contentFlush {
   padding: 0;
   border-top: 1px solid var(--border-color);
-}
-
-/* 展开时内容 160ms 淡入。只做透明度、不做高度动画 ——
-   与程序化 details.open = true（搜索跳转强制展开）不会互相打架。 */
-.root[open] > .content,
-.root[open] > .contentFlush {
-  animation: collapsible-content-in var(--dur-press, 160ms) var(--ease-out-strong, ease-out);
-}
-
-@keyframes collapsible-content-in {
-  from {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .chevron {
-    transition: none;
-  }
-
-  .root[open] > .content,
-  .root[open] > .contentFlush {
-    animation: none;
-  }
 }

@@ -5,8 +5,8 @@ import {
   getModelExclusionState,
   type ExclusionStats,
   type ModelExclusionState,
-} from './excludedModelRules';
-import styles from './ExcludedModelsPicker.module.scss';
+} from '@/components/excludedModels/excludedModelRules';
+import styles from '@/components/excludedModels/ExcludedModelsPicker.module.scss';
 
 export interface ExcludedModelCandidate {
   id: string;

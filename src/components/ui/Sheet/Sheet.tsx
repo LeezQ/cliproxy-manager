@@ -34,7 +34,8 @@ interface SheetProps {
   confirmClose?: () => boolean | Promise<boolean>;
 }
 
-const CLOSE_ANIMATION_DURATION = 280;
+/** 关闭淡出时长，需与 Sheet.module.scss 中 exiting 动画时长保持一致（Stallion-X 减弱动效） */
+const CLOSE_ANIMATION_DURATION = 120;
 const SIZE_CLASS: Record<SheetSize, string> = {
   md: styles.sizeMd,
   lg: styles.sizeLg,

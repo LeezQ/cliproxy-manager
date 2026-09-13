@@ -8,30 +8,22 @@ import {
   useMemo,
   useRef,
   useState,
-  type MouseEvent as ReactMouseEvent,
   type SyntheticEvent,
 } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/Button';
-import { PageTransition } from '@/components/common/PageTransition';
 import { MainRoutes } from '@/router/MainRoutes';
-import { authFilesApi, pluginsApi } from '@/services/api';
+import { authFilesApi } from '@/services/api';
 import {
+  IconCheck,
+  IconSearch,
   IconSidebarAuthFiles,
   IconSidebarConfig,
-  IconSidebarDashboard,
   IconSidebarLogs,
   IconSidebarOauth,
-  IconSidebarPlugins,
-  IconSidebarProviders,
-  IconSidebarQuickStart,
   IconSidebarQuota,
-  IconSidebarStore,
-  IconSidebarSystem,
-  IconChevronDown,
 } from '@/components/ui/icons';
-import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
+import { NavSearchDialog, type NavSearchItem } from '@/components/layout/NavSearchDialog';
 import {
   useAuthStore,
   useConfigStore,
@@ -40,83 +32,141 @@ import {
   useThemeStore,
 } from '@/stores';
 import { AUTH_FILES_CHANGED_EVENT } from '@/features/authFiles/authFilesEvents';
-import {
-  collectPluginResourceEntries,
-  PLUGIN_RESOURCES_REFRESH_EVENT,
-  resolvePluginAssetURL,
-  type PluginResourceEntry,
-} from '@/features/plugins/pluginResources';
 import { triggerHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { LANGUAGE_LABEL_KEYS, LANGUAGE_ORDER } from '@/utils/constants';
 import { isSupportedLanguage } from '@/utils/language';
-import { getSidebarShortcutLabel, isSidebarToggleShortcut } from '@/utils/sidebarShortcut';
+import {
+  getNavSearchShortcutLabel,
+  getSidebarShortcutLabel,
+  isNavSearchShortcut,
+  isSidebarToggleShortcut,
+} from '@/utils/sidebarShortcut';
 import type { Theme } from '@/types';
 
-const sidebarIcons: Record<string, ReactNode> = {
-  dashboard: <IconSidebarDashboard size={18} />,
-  quickStart: <IconSidebarQuickStart size={18} />,
-  aiProviders: <IconSidebarProviders size={18} />,
-  authFiles: <IconSidebarAuthFiles size={18} />,
-  oauth: <IconSidebarOauth size={18} />,
-  quota: <IconSidebarQuota size={18} />,
-  plugins: <IconSidebarPlugins size={18} />,
-  pluginStore: <IconSidebarStore size={18} />,
-  config: <IconSidebarConfig size={18} />,
-  logs: <IconSidebarLogs size={18} />,
-  system: <IconSidebarSystem size={18} />,
-};
+/**
+ * Stallion-X 应用外壳。
+ *
+ * 布局与 Stallion-X 主站（AppShell / AppSidebar / Header）保持一致：
+ * - 左侧固定侧边栏：品牌区、按任务分组的导航、底部连接信息；可收起为图标栏（⌘B / Ctrl+B）。
+ * - 右侧内容列：吸顶控制栏（侧边栏开关、页面搜索 ⌘K、刷新、语言、主题、登出）+ 页面内容。
+ *
+ * 与上游的差异：
+ * - 只保留五个入口（认证文件、OAuth 登录、配额管理、日志查看、配置面板），插件页入口不再渲染。
+ * - 移除页面切换动画（PageTransition）与顶部渐隐模糊层，路由切换直接渲染目标页面并回到顶部。
+ */
 
-interface SidebarNavLinkItem {
-  kind?: 'link';
+/** 导航链接项 */
+interface SidebarNavItem {
   path: string;
-  labelKey?: string;
-  metaKey?: string;
-  label?: string;
-  meta?: string;
+  labelKey: string;
+  metaKey: string;
+  /** 额外检索词，供页面搜索使用，不展示 */
+  keywords?: string;
   badge?: number;
   badgeLabel?: string;
   icon: ReactNode;
 }
 
-interface SidebarNavDrawerItem {
-  kind: 'drawer';
-  id: string;
-  label: string;
-  meta?: string;
-  icon: ReactNode;
-  children: SidebarNavLinkItem[];
-}
-
-type SidebarNavItem = SidebarNavLinkItem | SidebarNavDrawerItem;
-
-const NAV_TOOLTIP_ID = 'sidebar-nav-tooltip';
-const NAV_TOOLTIP_VIEWPORT_MARGIN = 8;
-
+/** 导航分组：名称 + 右侧说明 + 链接 */
 interface SidebarNavGroup {
   id: string;
   labelKey: string;
+  hintKey: string;
   items: SidebarNavItem[];
 }
 
-const flattenNavItems = (items: SidebarNavItem[]): SidebarNavLinkItem[] =>
-  items.flatMap((item) => (item.kind === 'drawer' ? item.children : [item]));
+const NAV_TOOLTIP_ID = 'sidebar-nav-tooltip';
 
-/**
- * Stallion-X 裁剪版只展示这五个入口：认证文件、OAuth 登录、配额管理、日志查看、配置面板。
- * 上游的导航数组保持原样，由此处统一过滤，合并上游导航改动时不产生冲突。
- */
-const VISIBLE_NAV_PATHS = new Set(['/auth-files', '/oauth', '/quota', '/logs', '/config']);
+/** 顶栏内联图标的公共属性，与 lucide 图标规格一致 */
+const headerIconProps: SVGProps<SVGSVGElement> = {
+  width: 18,
+  height: 18,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  'aria-hidden': 'true',
+  focusable: 'false',
+};
 
-/** 过滤掉未保留的导航项（含插件抽屉），并移除过滤后为空的分组 */
-const filterVisibleNavGroups = (groups: SidebarNavGroup[]): SidebarNavGroup[] =>
-  groups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter(
-        (item) => item.kind !== 'drawer' && VISIBLE_NAV_PATHS.has(item.path)
-      ),
-    }))
-    .filter((group) => group.items.length > 0);
+const headerIcons = {
+  panelLeft: (
+    <svg {...headerIconProps}>
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="M9 3v18" />
+    </svg>
+  ),
+  menu: (
+    <svg {...headerIconProps}>
+      <path d="M4 7h16" />
+      <path d="M4 12h16" />
+      <path d="M4 17h16" />
+    </svg>
+  ),
+  refresh: (
+    <svg {...headerIconProps}>
+      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+    </svg>
+  ),
+  language: (
+    <svg {...headerIconProps}>
+      <path d="m5 8 6 6" />
+      <path d="m4 14 6-6 2-3" />
+      <path d="M2 5h12" />
+      <path d="M7 2h1" />
+      <path d="m22 22-5-10-5 10" />
+      <path d="M14 18h6" />
+    </svg>
+  ),
+  sun: (
+    <svg {...headerIconProps}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="m4.93 4.93 1.41 1.41" />
+      <path d="m17.66 17.66 1.41 1.41" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="m6.34 17.66-1.41 1.41" />
+      <path d="m19.07 4.93-1.41 1.41" />
+    </svg>
+  ),
+  moon: (
+    <svg {...headerIconProps}>
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" />
+    </svg>
+  ),
+  square: (
+    <svg {...headerIconProps}>
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+    </svg>
+  ),
+  monitor: (
+    <svg {...headerIconProps}>
+      <rect width="20" height="14" x="2" y="3" rx="2" />
+      <path d="M8 21h8" />
+      <path d="M12 17v4" />
+    </svg>
+  ),
+  logout: (
+    <svg {...headerIconProps}>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <path d="m16 17 5-5-5-5" />
+      <path d="M21 12H9" />
+    </svg>
+  ),
+};
+
+/** 主题选项：跟随系统 / 浅色（Control Fog）/ 纯白 / 暗色（Night Relay） */
+const THEME_OPTIONS: Array<{ key: Theme; labelKey: string; icon: ReactNode }> = [
+  { key: 'auto', labelKey: 'theme.auto', icon: headerIcons.monitor },
+  { key: 'light', labelKey: 'theme.light', icon: headerIcons.sun },
+  { key: 'white', labelKey: 'theme.white', icon: headerIcons.square },
+  { key: 'dark', labelKey: 'theme.dark', icon: headerIcons.moon },
+];
 
 /** 点击菜单外或按下 Escape 时关闭弹出菜单 */
 function useMenuDismiss(
@@ -151,186 +201,37 @@ function useMenuDismiss(
   }, [open, menuRef, onClose]);
 }
 
-function PluginSidebarIcon({ src }: { src: string }) {
-  const [failed, setFailed] = useState(false);
-  const showImage = Boolean(src) && !failed;
-
-  return showImage ? (
-    <img src={src} alt="" onError={() => setFailed(true)} />
-  ) : (
-    <IconSidebarPlugins size={18} />
-  );
-}
-
-// Header action icons - smaller size for header buttons
-const headerIconProps: SVGProps<SVGSVGElement> = {
-  width: 16,
-  height: 16,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 2,
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round',
-  'aria-hidden': 'true',
-  focusable: 'false',
+/** 从后端地址中取出 host:port 用于展示；解析失败时原样返回 */
+const formatApiHost = (apiBase: string): string => {
+  if (!apiBase) return '';
+  try {
+    return new URL(apiBase).host;
+  } catch {
+    return apiBase;
+  }
 };
 
-const headerIcons = {
-  refresh: (
-    <svg {...headerIconProps}>
-      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-      <path d="M21 3v5h-5" />
-    </svg>
-  ),
-  menu: (
-    <svg {...headerIconProps}>
-      <path d="M4 7h16" />
-      <path d="M4 12h16" />
-      <path d="M4 17h16" />
-    </svg>
-  ),
-  close: (
-    <svg {...headerIconProps}>
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
-    </svg>
-  ),
-  chevronLeft: (
-    <svg {...headerIconProps}>
-      <path d="m14 18-6-6 6-6" />
-    </svg>
-  ),
-  chevronRight: (
-    <svg {...headerIconProps}>
-      <path d="m10 6 6 6-6 6" />
-    </svg>
-  ),
-  language: (
-    <svg {...headerIconProps}>
-      <circle cx="12" cy="12" r="10" />
-      <path d="M2 12h20" />
-      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-    </svg>
-  ),
-  sun: (
-    <svg {...headerIconProps}>
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2" />
-      <path d="M12 20v2" />
-      <path d="m4.93 4.93 1.41 1.41" />
-      <path d="m17.66 17.66 1.41 1.41" />
-      <path d="M2 12h2" />
-      <path d="M20 12h2" />
-      <path d="m6.34 17.66-1.41 1.41" />
-      <path d="m19.07 4.93-1.41 1.41" />
-    </svg>
-  ),
-  moon: (
-    <svg {...headerIconProps}>
-      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" />
-    </svg>
-  ),
-  whiteTheme: (
-    <svg {...headerIconProps}>
-      <circle cx="12" cy="12" r="7" />
-      <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
-    </svg>
-  ),
-  autoTheme: (
-    <svg {...headerIconProps}>
-      <defs>
-        <clipPath id="mainLayoutAutoThemeSunLeftHalf">
-          <rect x="0" y="0" width="12" height="24" />
-        </clipPath>
-      </defs>
-      <circle cx="12" cy="12" r="4" />
-      <circle
-        cx="12"
-        cy="12"
-        r="4"
-        clipPath="url(#mainLayoutAutoThemeSunLeftHalf)"
-        fill="currentColor"
-      />
-      <path d="M12 2v2" />
-      <path d="M12 20v2" />
-      <path d="M4.93 4.93l1.41 1.41" />
-      <path d="M17.66 17.66l1.41 1.41" />
-      <path d="M2 12h2" />
-      <path d="M20 12h2" />
-      <path d="M6.34 17.66l-1.41 1.41" />
-      <path d="M19.07 4.93l-1.41 1.41" />
-    </svg>
-  ),
-  logout: (
-    <svg {...headerIconProps}>
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <path d="m16 17 5-5-5-5" />
-      <path d="M21 12H9" />
-    </svg>
-  ),
+/** 判断是否 macOS / iOS，用于展示 ⌘ 或 Ctrl 快捷键 */
+const detectMac = (): boolean => {
+  if (typeof navigator === 'undefined') return false;
+  const platform =
+    (navigator as unknown as { userAgentData?: { platform?: string } }).userAgentData?.platform ||
+    navigator.platform ||
+    navigator.userAgent ||
+    '';
+  return /(Mac|iPhone|iPod|iPad)/i.test(platform);
 };
-
-const THEME_CARDS: Array<{
-  key: Theme;
-  labelKey: string;
-  colors: { bg: string; card: string; border: string; text: string; textMuted: string };
-}> = [
-  {
-    key: 'auto',
-    labelKey: 'theme.auto',
-    colors: {
-      bg: 'linear-gradient(135deg, #ffffff 0 50%, #111111 50% 100%)',
-      card: 'linear-gradient(135deg, #ffffff 0 50%, #1a1a1a 50% 100%)',
-      border: '#bdbdbd',
-      text: '#2d2a26',
-      textMuted: 'linear-gradient(135deg, #c9c9c9 0 50%, #5a5a5a 50% 100%)',
-    },
-  },
-  {
-    key: 'white',
-    labelKey: 'theme.white',
-    colors: {
-      bg: '#ffffff',
-      card: '#ffffff',
-      border: '#e5e5e5',
-      text: '#2d2a26',
-      textMuted: '#a29c95',
-    },
-  },
-  {
-    key: 'light',
-    labelKey: 'theme.light',
-    colors: {
-      bg: '#faf9f5',
-      card: '#f0eee8',
-      border: '#e3e1db',
-      text: '#2d2a26',
-      textMuted: '#a29c95',
-    },
-  },
-  {
-    key: 'dark',
-    labelKey: 'theme.dark',
-    colors: {
-      bg: '#151412',
-      card: '#1d1b18',
-      border: '#3a3530',
-      text: '#f6f4f1',
-      textMuted: '#9c958d',
-    },
-  },
-];
 
 export function MainLayout() {
   const { t } = useTranslation();
   const { showNotification } = useNotificationStore();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const logout = useAuthStore((state) => state.logout);
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
   const apiBase = useAuthStore((state) => state.apiBase);
-  const supportsPlugin = useAuthStore((state) => state.supportsPlugin);
+  const serverVersion = useAuthStore((state) => state.serverVersion);
 
   const fetchConfig = useConfigStore((state) => state.fetchConfig);
   const clearCache = useConfigStore((state) => state.clearCache);
@@ -340,101 +241,50 @@ export function MainLayout() {
   const language = useLanguageStore((state) => state.language);
   const setLanguage = useLanguageStore((state) => state.setLanguage);
 
+  /** 移动端抽屉是否打开 */
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  /** 桌面端是否收起为图标栏 */
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [authFilesCount, setAuthFilesCount] = useState<number | null>(null);
   const [railTooltip, setRailTooltip] = useState<{
     targetID: string;
     label: string;
     meta?: string;
-    anchorTop: number;
     top: number;
   } | null>(null);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
-  const [pluginResources, setPluginResources] = useState<PluginResourceEntry[]>([]);
-  const [expandedPluginResourceIDs, setExpandedPluginResourceIDs] = useState<Set<string>>(
-    () => new Set()
-  );
+
   const contentRef = useRef<HTMLDivElement | null>(null);
   const authFilesCountRequestRef = useRef(0);
-  const railTooltipRef = useRef<HTMLDivElement | null>(null);
-  const focusedRailItemRef = useRef<HTMLElement | null>(null);
   const languageMenuRef = useRef<HTMLDivElement | null>(null);
   const themeMenuRef = useRef<HTMLDivElement | null>(null);
-  const headerRef = useRef<HTMLElement | null>(null);
 
-  const fullBrandName = 'CLI Proxy API Management Center';
-  const abbrBrandName = t('title.abbr');
+  const brandName = t('title.abbr');
   const isLogsPage = location.pathname.startsWith('/logs');
-  const isPluginResourcePage = location.pathname.startsWith('/plugin-pages');
+  // 移动端抽屉内始终展示完整标签
   const showSidebarLabels = !sidebarCollapsed || sidebarOpen;
+  const isMac = useMemo(() => detectMac(), []);
+  const sidebarShortcutText = getSidebarShortcutLabel(isMac);
+  const searchShortcutText = getNavSearchShortcutLabel(isMac);
+  const apiHost = formatApiHost(apiBase);
 
-  // Keep floating header height available to sticky mobile elements and overlays.
+  // 路由切换后内容区回到顶部（替代原页面切换动画里的滚动位置管理）
   useLayoutEffect(() => {
-    const updateHeaderHeight = () => {
-      const height = headerRef.current?.offsetHeight;
-      if (height) {
-        document.documentElement.style.setProperty('--header-height', `${height}px`);
-      }
-    };
+    contentRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname]);
 
-    updateHeaderHeight();
-
-    const resizeObserver =
-      typeof ResizeObserver !== 'undefined' && headerRef.current
-        ? new ResizeObserver(updateHeaderHeight)
-        : null;
-    if (resizeObserver && headerRef.current) {
-      resizeObserver.observe(headerRef.current);
-    }
-
-    window.addEventListener('resize', updateHeaderHeight);
-
-    return () => {
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-      window.removeEventListener('resize', updateHeaderHeight);
-    };
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!railTooltip) return;
-
-    const updateRailTooltipPosition = () => {
-      const tooltip = railTooltipRef.current;
-      if (!tooltip) return;
-
-      const halfHeight = tooltip.offsetHeight / 2;
-      const minTop = NAV_TOOLTIP_VIEWPORT_MARGIN + halfHeight;
-      const maxTop = Math.max(
-        minTop,
-        window.innerHeight - NAV_TOOLTIP_VIEWPORT_MARGIN - halfHeight
-      );
-      const top = Math.min(maxTop, Math.max(minTop, railTooltip.anchorTop));
-
-      setRailTooltip((current) => {
-        if (!current || current.targetID !== railTooltip.targetID || current.top === top) {
-          return current;
-        }
-        return { ...current, top };
-      });
-    };
-
-    updateRailTooltipPosition();
-    window.addEventListener('resize', updateRailTooltipPosition);
-    return () => window.removeEventListener('resize', updateRailTooltipPosition);
-  }, [railTooltip]);
-
-  // Keep the content center available to bottom overlays that align with the main area.
+  // 悬浮操作条（批量操作 / 保存栏）需要对齐内容列中心
   useLayoutEffect(() => {
     const updateContentCenter = () => {
       const el = contentRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      document.documentElement.style.setProperty('--content-center-x', `${centerX}px`);
+      document.documentElement.style.setProperty(
+        '--content-center-x',
+        `${rect.left + rect.width / 2}px`
+      );
     };
 
     updateContentCenter();
@@ -443,17 +293,13 @@ export function MainLayout() {
       typeof ResizeObserver !== 'undefined' && contentRef.current
         ? new ResizeObserver(updateContentCenter)
         : null;
-
     if (resizeObserver && contentRef.current) {
       resizeObserver.observe(contentRef.current);
     }
-
     window.addEventListener('resize', updateContentCenter);
 
     return () => {
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
+      resizeObserver?.disconnect();
       window.removeEventListener('resize', updateContentCenter);
       document.documentElement.style.removeProperty('--content-center-x');
     };
@@ -463,16 +309,6 @@ export function MainLayout() {
   const closeThemeMenu = useCallback(() => setThemeMenuOpen(false), []);
   useMenuDismiss(languageMenuOpen, languageMenuRef, closeLanguageMenu);
   useMenuDismiss(themeMenuOpen, themeMenuRef, closeThemeMenu);
-
-  const toggleLanguageMenu = useCallback(() => {
-    setLanguageMenuOpen((prev) => !prev);
-    setThemeMenuOpen(false);
-  }, []);
-
-  const toggleThemeMenu = useCallback(() => {
-    setThemeMenuOpen((prev) => !prev);
-    setLanguageMenuOpen(false);
-  }, []);
 
   const handleThemeSelect = useCallback(
     (nextTheme: Theme) => {
@@ -495,24 +331,11 @@ export function MainLayout() {
 
   useEffect(() => {
     fetchConfig().catch(() => {
-      // Ignore the initial failure; the login flow shows the user-facing prompt.
+      // 首次加载失败时忽略，登录流程会给出面向用户的提示
     });
   }, [fetchConfig]);
 
-  const loadPluginResources = useCallback(async () => {
-    if (connectionStatus !== 'connected' || !supportsPlugin) {
-      setPluginResources([]);
-      return;
-    }
-
-    try {
-      const plugins = await pluginsApi.list();
-      setPluginResources(collectPluginResourceEntries(plugins.plugins));
-    } catch {
-      setPluginResources([]);
-    }
-  }, [connectionStatus, supportsPlugin]);
-
+  /** 读取认证文件数量，用于侧边栏徽标；带请求序号防止旧响应覆盖新状态 */
   const loadAuthFilesCount = useCallback(async () => {
     const requestID = ++authFilesCountRequestRef.current;
     if (connectionStatus !== 'connected') {
@@ -524,235 +347,114 @@ export function MainLayout() {
       const response = await authFilesApi.list();
       if (requestID !== authFilesCountRequestRef.current) return;
       setAuthFilesCount(Array.isArray(response?.files) ? response.files.length : null);
-    } catch {
+    } catch (error) {
       if (requestID !== authFilesCountRequestRef.current) return;
+      console.error('[MainLayout] 读取认证文件数量失败', error);
       setAuthFilesCount(null);
     }
   }, [connectionStatus]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      void loadPluginResources();
       void loadAuthFilesCount();
     }, 0);
 
-    window.addEventListener(PLUGIN_RESOURCES_REFRESH_EVENT, loadPluginResources);
     window.addEventListener(AUTH_FILES_CHANGED_EVENT, loadAuthFilesCount);
 
     return () => {
       authFilesCountRequestRef.current += 1;
       window.clearTimeout(timer);
-      window.removeEventListener(PLUGIN_RESOURCES_REFRESH_EVENT, loadPluginResources);
       window.removeEventListener(AUTH_FILES_CHANGED_EVENT, loadAuthFilesCount);
     };
-  }, [apiBase, loadPluginResources, loadAuthFilesCount]);
+  }, [apiBase, loadAuthFilesCount]);
 
-  const pluginResourceGroups = pluginResources.reduce<
-    Array<{ pluginID: string; pluginTitle: string; entries: PluginResourceEntry[] }>
-  >((groups, resource) => {
-    const group = groups.find((item) => item.pluginID === resource.pluginID);
-    if (group) {
-      group.entries.push(resource);
-      return groups;
-    }
-
-    groups.push({
-      pluginID: resource.pluginID,
-      pluginTitle: resource.pluginTitle,
-      entries: [resource],
-    });
-    return groups;
-  }, []);
-
-  const pluginPageNavItems: SidebarNavItem[] = supportsPlugin
-    ? pluginResourceGroups.flatMap((group): SidebarNavItem[] => {
-        if (group.entries.length === 1) {
-          const resource = group.entries[0];
-          const pluginLogo = resolvePluginAssetURL(resource.pluginLogo, apiBase);
-          return [
-            {
-              path: resource.route,
-              label: resource.label,
-              meta: resource.description,
-              icon: <PluginSidebarIcon src={pluginLogo} />,
-            },
-          ];
-        }
-
-        const pluginLogo = resolvePluginAssetURL(group.entries[0]?.pluginLogo ?? '', apiBase);
-        return [
-          {
-            kind: 'drawer',
-            id: `plugin-pages-${group.pluginID}`,
-            label: group.pluginTitle,
-            meta: t('plugin_resource.page_count', { count: group.entries.length }),
-            icon: <PluginSidebarIcon src={pluginLogo} />,
-            children: group.entries.map((resource) => ({
-              path: resource.route,
-              label: resource.label,
-              meta: resource.description,
-              icon: <span className="nav-sub-dot" aria-hidden="true" />,
-            })),
-          },
-        ];
-      })
-    : [];
-
-  const navGroups: SidebarNavGroup[] = filterVisibleNavGroups([
-    {
-      id: 'operate',
-      labelKey: 'nav_groups.operate',
-      items: [
-        {
-          path: '/',
-          labelKey: 'nav.dashboard',
-          metaKey: 'nav_meta.dashboard',
-          icon: sidebarIcons.dashboard,
-        },
-      ],
-    },
+  /** 导航分组：按「凭证接入 → 用量与排障 → 网关设置」的任务顺序组织 */
+  const navGroups: SidebarNavGroup[] = [
     {
       id: 'gateway',
       labelKey: 'nav_groups.gateway',
+      hintKey: 'nav_group_hints.gateway',
       items: [
-        {
-          path: '/ai-providers',
-          labelKey: 'nav.ai_providers',
-          metaKey: 'nav_meta.ai_providers',
-          icon: sidebarIcons.aiProviders,
-        },
         {
           path: '/auth-files',
           labelKey: 'nav.auth_files',
           metaKey: 'nav_meta.auth_files',
+          keywords: 'auth files credentials 认证 凭证',
           badge: authFilesCount ?? undefined,
           badgeLabel:
             typeof authFilesCount === 'number'
               ? t('sidebar.auth_files_count', { count: authFilesCount })
               : undefined,
-          icon: sidebarIcons.authFiles,
+          icon: <IconSidebarAuthFiles size={17} />,
         },
         {
           path: '/oauth',
           labelKey: 'nav.oauth',
           metaKey: 'nav_meta.oauth',
-          icon: sidebarIcons.oauth,
+          keywords: 'oauth login 登录 授权',
+          icon: <IconSidebarOauth size={17} />,
         },
       ],
     },
     {
       id: 'observe',
       labelKey: 'nav_groups.observe',
+      hintKey: 'nav_group_hints.observe',
       items: [
         {
           path: '/quota',
           labelKey: 'nav.quota_management',
           metaKey: 'nav_meta.quota_management',
-          icon: sidebarIcons.quota,
+          keywords: 'quota usage limit 配额 额度 用量',
+          icon: <IconSidebarQuota size={17} />,
         },
         {
           path: '/logs',
           labelKey: 'nav.logs',
           metaKey: 'nav_meta.logs',
-          icon: sidebarIcons.logs,
+          keywords: 'logs request error 日志 请求 错误',
+          icon: <IconSidebarLogs size={17} />,
         },
       ],
     },
     {
       id: 'control',
       labelKey: 'nav_groups.control',
+      hintKey: 'nav_group_hints.control',
       items: [
         {
           path: '/config',
           labelKey: 'nav.config_management',
           metaKey: 'nav_meta.config_management',
-          icon: sidebarIcons.config,
-        },
-        ...(supportsPlugin
-          ? [
-              {
-                path: '/plugins',
-                labelKey: 'nav.plugins',
-                metaKey: 'nav_meta.plugins',
-                icon: sidebarIcons.plugins,
-              },
-              {
-                path: '/plugin-store',
-                labelKey: 'nav.plugin_store',
-                metaKey: 'nav_meta.plugin_store',
-                icon: sidebarIcons.pluginStore,
-              },
-            ]
-          : []),
-        {
-          path: '/system',
-          labelKey: 'nav.system_info',
-          metaKey: 'nav_meta.system_info',
-          icon: sidebarIcons.system,
+          keywords: 'config yaml settings proxy api key 配置 设置 代理 密钥',
+          icon: <IconSidebarConfig size={17} />,
         },
       ],
     },
-    ...(pluginPageNavItems.length > 0
-      ? [
-          {
-            id: 'plugin-pages',
-            labelKey: 'nav_groups.plugin_pages',
-            items: pluginPageNavItems,
-          },
-        ]
-      : []),
-  ]);
-  const navItems = navGroups.flatMap((group) => flattenNavItems(group.items));
-  const navOrder = navItems.map((item) => item.path);
-  const getRouteOrder = (pathname: string) => {
-    const trimmedPath =
-      pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-    const normalizedPath = trimmedPath === '/dashboard' ? '/' : trimmedPath;
+  ];
 
-    const authFilesIndex = navOrder.indexOf('/auth-files');
-    if (authFilesIndex !== -1) {
-      if (normalizedPath === '/auth-files') return authFilesIndex;
-      if (normalizedPath.startsWith('/auth-files/')) {
-        if (normalizedPath.startsWith('/auth-files/oauth-excluded')) return authFilesIndex + 0.1;
-        if (normalizedPath.startsWith('/auth-files/oauth-model-alias')) return authFilesIndex + 0.2;
-        return authFilesIndex + 0.05;
-      }
-    }
-
-    const exactIndex = navOrder.indexOf(normalizedPath);
-    if (exactIndex !== -1) return exactIndex;
-    const nestedIndex = navOrder.findIndex(
-      (path) => path !== '/' && normalizedPath.startsWith(`${path}/`)
-    );
-    return nestedIndex === -1 ? null : nestedIndex;
-  };
-
-  const getTransitionVariant = useCallback((fromPathname: string, toPathname: string) => {
-    const normalize = (pathname: string) => {
-      const trimmed =
-        pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-      return trimmed === '/dashboard' ? '/' : trimmed;
-    };
-
-    const from = normalize(fromPathname);
-    const to = normalize(toPathname);
-    const isAuthFiles = (pathname: string) =>
-      pathname === '/auth-files' || pathname.startsWith('/auth-files/');
-    if (isAuthFiles(from) && isAuthFiles(to)) return 'ios';
-    return 'vertical';
-  }, []);
+  /** 页面搜索的数据源直接复用导航定义，避免两份入口清单漂移 */
+  const searchItems: NavSearchItem[] = navGroups.flatMap((group) =>
+    group.items.map((item) => ({
+      path: item.path,
+      title: t(item.labelKey),
+      description: t(item.metaKey),
+      keywords: `${t(group.labelKey)} ${item.keywords ?? ''}`,
+      icon: item.icon,
+    }))
+  );
 
   const handleRefreshAll = async () => {
     clearCache();
     const results = await Promise.allSettled([
       fetchConfig(true),
-      loadPluginResources(),
       loadAuthFilesCount(),
       triggerHeaderRefresh(),
     ]);
     const rejected = results.find((result) => result.status === 'rejected');
     if (rejected && rejected.status === 'rejected') {
       const reason = rejected.reason;
+      console.error('[MainLayout] 刷新全部数据失败', reason);
       const message =
         typeof reason === 'string' ? reason : reason instanceof Error ? reason.message : '';
       showNotification(
@@ -764,77 +466,38 @@ export function MainLayout() {
     showNotification(t('notification.data_refreshed'), 'success');
   };
 
-  const togglePluginResourceDrawer = useCallback((drawerID: string) => {
-    setExpandedPluginResourceIDs((current) => {
-      const next = new Set(current);
-      if (next.has(drawerID)) {
-        next.delete(drawerID);
-      } else {
-        next.add(drawerID);
-      }
-      return next;
-    });
-  }, []);
-
+  /** 收起态下悬停或聚焦导航项时，在其右侧显示名称提示 */
   const showRailTooltip = useCallback(
     (event: SyntheticEvent<HTMLElement>, targetID: string, label: string, meta?: string) => {
       const rect = event.currentTarget.getBoundingClientRect();
-      const anchorTop = rect.top + rect.height / 2;
-      setRailTooltip({ targetID, label, meta, anchorTop, top: anchorTop });
+      setRailTooltip({ targetID, label, meta, top: rect.top + rect.height / 2 });
     },
     []
   );
   const hideRailTooltip = useCallback(() => setRailTooltip(null), []);
-  const handleRailTooltipMouseEnter = useCallback(
-    (event: ReactMouseEvent<HTMLElement>, targetID: string, label: string, meta?: string) => {
-      const focusedItem = focusedRailItemRef.current;
-      if (focusedItem && focusedItem !== event.currentTarget) return;
-      showRailTooltip(event, targetID, label, meta);
-    },
-    [showRailTooltip]
-  );
-  const handleRailTooltipMouseLeave = useCallback(() => {
-    if (!focusedRailItemRef.current) hideRailTooltip();
+
+  const toggleSidebar = useCallback(() => {
+    hideRailTooltip();
+    // 移动端切换抽屉，桌面端切换图标栏
+    if (window.matchMedia?.('(max-width: 768px)').matches) {
+      setSidebarOpen((prev) => !prev);
+    } else {
+      setSidebarCollapsed((prev) => !prev);
+    }
   }, [hideRailTooltip]);
-  const handleRailTooltipFocus = useCallback(
-    (event: SyntheticEvent<HTMLElement>, targetID: string, label: string, meta?: string) => {
-      focusedRailItemRef.current = event.currentTarget;
-      showRailTooltip(event, targetID, label, meta);
-    },
-    [showRailTooltip]
-  );
-  const handleRailTooltipBlur = useCallback(
-    (event: SyntheticEvent<HTMLElement>, targetID: string, label: string, meta?: string) => {
-      if (focusedRailItemRef.current === event.currentTarget) {
-        focusedRailItemRef.current = null;
-      }
-      if (event.currentTarget.matches(':hover')) {
-        showRailTooltip(event, targetID, label, meta);
-      } else {
-        hideRailTooltip();
-      }
-    },
-    [hideRailTooltip, showRailTooltip]
-  );
 
-  const isMac = useMemo(() => {
-    if (typeof navigator === 'undefined') return false;
-    const platform =
-      (navigator as unknown as { userAgentData?: { platform?: string } }).userAgentData?.platform ||
-      navigator.platform ||
-      navigator.userAgent ||
-      '';
-    return /(Mac|iPhone|iPod|iPad)/i.test(platform);
-  }, []);
-
-  const shortcutText = getSidebarShortcutLabel(isMac);
-
+  // 全局快捷键：⌘B 收起侧边栏，⌘K 打开页面搜索
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isSidebarToggleShortcut(event)) {
         event.preventDefault();
         hideRailTooltip();
         setSidebarCollapsed((prev) => !prev);
+        return;
+      }
+      if (isNavSearchShortcut(event)) {
+        event.preventDefault();
+        setSearchOpen((prev) => !prev);
       }
     };
 
@@ -842,62 +505,62 @@ export function MainLayout() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [hideRailTooltip]);
 
+  const handleSearchSelect = useCallback(
+    (item: NavSearchItem) => {
+      setSearchOpen(false);
+      setSidebarOpen(false);
+      navigate(item.path);
+    },
+    [navigate]
+  );
+
   const renderNavBadge = (badge?: number, badgeLabel?: string) =>
     typeof badge === 'number' ? (
       <>
         {badge > 0 ? (
           <span className="nav-badge" aria-hidden="true">
-            {badge}
+            {badge > 99 ? '99+' : badge}
           </span>
         ) : null}
         {badgeLabel ? <span className="nav-badge-sr-only">{badgeLabel}</span> : null}
       </>
     ) : null;
 
-  const renderNavLink = (item: SidebarNavLinkItem, className = 'nav-item') => {
-    const itemLabel = item.label ?? (item.labelKey ? t(item.labelKey) : '');
-    const itemMeta = item.meta ?? (item.metaKey ? t(item.metaKey) : '');
+  const renderNavLink = (item: SidebarNavItem) => {
+    const itemLabel = t(item.labelKey);
+    const itemMeta = t(item.metaKey);
     const accessibleLabel = item.badgeLabel ? `${itemLabel}, ${item.badgeLabel}` : itemLabel;
+    // 收起态才挂载提示事件；NavLink 默认对子路径也判定激活，认证文件二级编辑页仍高亮其入口
+    const railHandlers = showSidebarLabels
+      ? {}
+      : {
+          onMouseEnter: (event: SyntheticEvent<HTMLElement>) =>
+            showRailTooltip(event, item.path, itemLabel, itemMeta),
+          onMouseLeave: hideRailTooltip,
+          onFocus: (event: SyntheticEvent<HTMLElement>) =>
+            showRailTooltip(event, item.path, itemLabel, itemMeta),
+          onBlur: hideRailTooltip,
+        };
 
     return (
       <NavLink
         key={item.path}
         to={item.path}
-        className={({ isActive }) => `${className} ${isActive ? 'active' : ''}`}
+        className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
         onClick={() => {
-          focusedRailItemRef.current = null;
           setSidebarOpen(false);
           hideRailTooltip();
         }}
         aria-label={showSidebarLabels ? undefined : accessibleLabel}
         aria-describedby={
-          !showSidebarLabels && itemMeta && railTooltip?.targetID === item.path
-            ? NAV_TOOLTIP_ID
-            : undefined
+          !showSidebarLabels && railTooltip?.targetID === item.path ? NAV_TOOLTIP_ID : undefined
         }
-        onMouseEnter={
-          showSidebarLabels
-            ? undefined
-            : (event) => handleRailTooltipMouseEnter(event, item.path, itemLabel, itemMeta)
-        }
-        onMouseLeave={showSidebarLabels ? undefined : handleRailTooltipMouseLeave}
-        onFocus={
-          showSidebarLabels
-            ? undefined
-            : (event) => handleRailTooltipFocus(event, item.path, itemLabel, itemMeta)
-        }
-        onBlur={
-          showSidebarLabels
-            ? undefined
-            : (event) => handleRailTooltipBlur(event, item.path, itemLabel, itemMeta)
-        }
+        {...railHandlers}
       >
         <span className="nav-icon">{item.icon}</span>
         {showSidebarLabels ? (
           <>
-            <span className="nav-text">
-              <span className="nav-label">{itemLabel}</span>
-            </span>
+            <span className="nav-label">{itemLabel}</span>
             {renderNavBadge(item.badge, item.badgeLabel)}
           </>
         ) : (
@@ -907,314 +570,262 @@ export function MainLayout() {
     );
   };
 
-  const renderNavItem = (item: SidebarNavItem) => {
-    if (item.kind !== 'drawer') {
-      return renderNavLink(item);
-    }
-
-    const isActive = item.children.some((child) => child.path === location.pathname);
-    const isOpen = isActive || expandedPluginResourceIDs.has(item.id);
-
-    return (
-      <div className={`nav-drawer ${isOpen ? 'open' : ''}`} key={item.id}>
-        <button
-          type="button"
-          className={`nav-item nav-drawer-toggle ${isActive ? 'active' : ''} ${
-            isOpen ? 'open' : ''
-          }`}
-          onClick={() => togglePluginResourceDrawer(item.id)}
-          aria-label={showSidebarLabels ? undefined : item.label}
-          aria-describedby={
-            !showSidebarLabels && item.meta && railTooltip?.targetID === item.id
-              ? NAV_TOOLTIP_ID
-              : undefined
-          }
-          aria-expanded={isOpen}
-          onMouseEnter={
-            showSidebarLabels
-              ? undefined
-              : (event) => handleRailTooltipMouseEnter(event, item.id, item.label, item.meta)
-          }
-          onMouseLeave={showSidebarLabels ? undefined : handleRailTooltipMouseLeave}
-          onFocus={
-            showSidebarLabels
-              ? undefined
-              : (event) => handleRailTooltipFocus(event, item.id, item.label, item.meta)
-          }
-          onBlur={
-            showSidebarLabels
-              ? undefined
-              : (event) => handleRailTooltipBlur(event, item.id, item.label, item.meta)
-          }
-        >
-          <span className="nav-icon">{item.icon}</span>
-          {showSidebarLabels && (
-            <>
-              <span className="nav-text">
-                <span className="nav-label">{item.label}</span>
-              </span>
-              <span className="nav-drawer-caret" aria-hidden="true">
-                <IconChevronDown size={14} />
-              </span>
-            </>
-          )}
-        </button>
-        {isOpen ? (
-          <div className="nav-sub-list">
-            {item.children.map((child) => renderNavLink(child, 'nav-item nav-sub-item'))}
-          </div>
-        ) : null}
-      </div>
-    );
-  };
-
-  const mobileSidebarToggleLabel = sidebarOpen
-    ? t('sidebar.toggle_collapse', { defaultValue: 'Close navigation' })
-    : t('sidebar.toggle_expand', { defaultValue: 'Open navigation' });
-
   const sidebarToggleLabel = sidebarCollapsed ? t('sidebar.expand') : t('sidebar.collapse');
+  const mobileSidebarToggleLabel = sidebarOpen
+    ? t('sidebar.toggle_collapse')
+    : t('sidebar.toggle_expand');
+  const connectionLabel =
+    connectionStatus === 'connected'
+      ? t('common.connected_status')
+      : connectionStatus === 'connecting'
+        ? t('common.connecting_status')
+        : t('common.disconnected_status');
+  const currentThemeIcon = THEME_OPTIONS.find((option) => option.key === theme)?.icon ?? headerIcons.sun;
 
   return (
-    <div
-      className={`app-shell ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''} ${
-        isPluginResourcePage ? 'plugin-resource-shell' : ''
-      }`}
-    >
-      <div className="top-gradient-blur" aria-hidden="true" />
+    <div className={`app-shell ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''}`}>
+      {/* 键盘用户可跳过重复导航，直接进入页面内容 */}
+      <a className="skip-link" href="#main-content">
+        {t('sidebar.skip_to_content')}
+      </a>
 
-      <header className="main-header" ref={headerRef}>
-        <button
-          type="button"
-          className="sidebar-toggle-floating"
-          onClick={() => {
-            hideRailTooltip();
-            setSidebarCollapsed((prev) => !prev);
-          }}
-          onMouseEnter={(event) =>
-            handleRailTooltipMouseEnter(event, 'sidebar-toggle', sidebarToggleLabel, shortcutText)
-          }
-          onMouseLeave={handleRailTooltipMouseLeave}
-          onFocus={(event) =>
-            handleRailTooltipFocus(event, 'sidebar-toggle', sidebarToggleLabel, shortcutText)
-          }
-          onBlur={(event) =>
-            handleRailTooltipBlur(event, 'sidebar-toggle', sidebarToggleLabel, shortcutText)
-          }
-          aria-label={`${sidebarToggleLabel} (${shortcutText})`}
-          aria-describedby={railTooltip?.targetID === 'sidebar-toggle' ? NAV_TOOLTIP_ID : undefined}
-        >
-          {sidebarCollapsed ? headerIcons.chevronRight : headerIcons.chevronLeft}
-        </button>
+      <button
+        type="button"
+        className={`sidebar-backdrop ${sidebarOpen ? 'visible' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+        aria-label={t('common.close')}
+        aria-hidden={!sidebarOpen}
+        tabIndex={sidebarOpen ? 0 : -1}
+      />
 
-        <div className="mobile-sidebar-actions">
-          <Button
-            className="mobile-menu-btn"
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen((prev) => !prev)}
-            title={mobileSidebarToggleLabel}
-            aria-label={mobileSidebarToggleLabel}
-          >
-            {sidebarOpen ? headerIcons.close : headerIcons.menu}
-          </Button>
+      <aside
+        className={`sidebar ${sidebarOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`}
+        aria-label={brandName}
+      >
+        {/* 品牌区：主色字标 + 名称 / 副标题 / 界面版本 */}
+        <div className="sidebar-header" title="CLI Proxy API Management Center">
+          <span className="sidebar-brand-mark" aria-hidden="true">
+            {brandName.charAt(0)}
+          </span>
+          {showSidebarLabels && (
+            <span className="sidebar-brand-text">
+              <span className="sidebar-brand-title">{brandName}</span>
+              <span className="sidebar-brand-subtitle">{t('sidebar.subtitle')}</span>
+              <span className="sidebar-brand-build">
+                {t('sidebar.ui_version', { version: __APP_VERSION__ || 'dev' })}
+              </span>
+            </span>
+          )}
         </div>
 
-        <div className="header-actions floating-actions">
-          <Button
-            variant="ghost"
-            size="sm"
+        <nav className="nav-section">
+          {navGroups.map((group, idx) => (
+            <div className="nav-group" key={group.id}>
+              {showSidebarLabels ? (
+                <div className="nav-group-label">
+                  <span>{t(group.labelKey)}</span>
+                  <span className="nav-group-line" aria-hidden="true" />
+                  <span className="nav-group-hint">{t(group.hintKey)}</span>
+                </div>
+              ) : (
+                idx > 0 && <div className="nav-group-divider" aria-hidden="true" />
+              )}
+              {group.items.map(renderNavLink)}
+            </div>
+          ))}
+        </nav>
+
+        {/* 页脚：当前管理的后端实例与服务端版本 */}
+        {showSidebarLabels && (
+          <div className="sidebar-footer">
+            <div className="sidebar-connection" title={apiBase}>
+              <span className={`status-dot ${connectionStatus}`} aria-hidden="true" />
+              <span>{connectionLabel}</span>
+              {apiHost ? <span className="sidebar-connection-host">{apiHost}</span> : null}
+            </div>
+            {serverVersion ? (
+              <div className="sidebar-version">
+                {t('sidebar.server_version', { version: serverVersion })}
+              </div>
+            ) : null}
+          </div>
+        )}
+      </aside>
+
+      {railTooltip && (
+        <div
+          id={NAV_TOOLTIP_ID}
+          className="nav-tooltip"
+          role="tooltip"
+          style={{ top: railTooltip.top }}
+        >
+          <span className="nav-tooltip-label">{railTooltip.label}</span>
+          {railTooltip.meta ? <span className="nav-tooltip-meta">{railTooltip.meta}</span> : null}
+        </div>
+      )}
+
+      <div className={`content${isLogsPage ? ' content-logs' : ''}`} ref={contentRef}>
+        <header className="main-header">
+          <button
+            type="button"
+            className="header-icon-btn desktop-only"
+            onClick={toggleSidebar}
+            title={`${sidebarToggleLabel} (${sidebarShortcutText})`}
+            aria-label={`${sidebarToggleLabel} (${sidebarShortcutText})`}
+          >
+            {headerIcons.panelLeft}
+          </button>
+          <button
+            type="button"
+            className="header-icon-btn mobile-only"
+            onClick={toggleSidebar}
+            title={mobileSidebarToggleLabel}
+            aria-label={mobileSidebarToggleLabel}
+            aria-expanded={sidebarOpen}
+          >
+            {headerIcons.menu}
+          </button>
+
+          <button
+            type="button"
+            className="header-search-trigger"
+            onClick={() => setSearchOpen(true)}
+            aria-label={t('header.search_placeholder')}
+            aria-keyshortcuts="Meta+K Control+K"
+          >
+            <IconSearch size={16} aria-hidden="true" />
+            <span className="header-search-placeholder">{t('header.search_placeholder')}</span>
+            <span className="kbd">{searchShortcutText}</span>
+          </button>
+
+          <div className="header-spacer" />
+
+          {/* 连接状态：颜色之外同时提供文字与 title */}
+          <div className="header-connection desktop-only" title={apiBase}>
+            <span className={`status-dot ${connectionStatus}`} aria-hidden="true" />
+            <span>{connectionLabel}</span>
+          </div>
+          <span className="header-divider desktop-only" aria-hidden="true" />
+
+          <button
+            type="button"
+            className="header-icon-btn"
             onClick={handleRefreshAll}
             title={t('header.refresh_all')}
+            aria-label={t('header.refresh_all')}
           >
             {headerIcons.refresh}
-          </Button>
-          <div className={`language-menu ${languageMenuOpen ? 'open' : ''}`} ref={languageMenuRef}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleLanguageMenu}
+          </button>
+
+          <div className="header-menu" ref={languageMenuRef}>
+            <button
+              type="button"
+              className="header-icon-btn"
+              onClick={() => {
+                setLanguageMenuOpen((prev) => !prev);
+                setThemeMenuOpen(false);
+              }}
               title={t('language.switch')}
               aria-label={t('language.switch')}
               aria-haspopup="menu"
               aria-expanded={languageMenuOpen}
             >
               {headerIcons.language}
-            </Button>
+            </button>
             {languageMenuOpen && (
-              <div
-                className="notification entering language-menu-popover"
-                role="menu"
-                aria-label={t('language.switch')}
-              >
+              <div className="header-menu-popover" role="menu" aria-label={t('language.switch')}>
+                <div className="header-menu-label">{t('language.switch')}</div>
                 {LANGUAGE_ORDER.map((lang) => (
                   <button
                     key={lang}
                     type="button"
-                    className={`language-menu-option ${language === lang ? 'active' : ''}`}
+                    className={`header-menu-option ${language === lang ? 'active' : ''}`}
                     onClick={() => handleLanguageSelect(lang)}
                     role="menuitemradio"
                     aria-checked={language === lang}
                   >
-                    <span>{t(LANGUAGE_LABEL_KEYS[lang])}</span>
-                    {language === lang ? <span className="language-menu-check">✓</span> : null}
+                    <span className="header-menu-option-label">
+                      {t(LANGUAGE_LABEL_KEYS[lang])}
+                    </span>
+                    {language === lang ? (
+                      <span className="header-menu-check">
+                        <IconCheck size={14} />
+                      </span>
+                    ) : null}
                   </button>
                 ))}
               </div>
             )}
           </div>
-          <div className={`theme-menu ${themeMenuOpen ? 'open' : ''}`} ref={themeMenuRef}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleThemeMenu}
+
+          <div className="header-menu" ref={themeMenuRef}>
+            <button
+              type="button"
+              className="header-icon-btn"
+              onClick={() => {
+                setThemeMenuOpen((prev) => !prev);
+                setLanguageMenuOpen(false);
+              }}
               title={t('theme.switch')}
               aria-label={t('theme.switch')}
               aria-haspopup="menu"
               aria-expanded={themeMenuOpen}
             >
-              {theme === 'auto'
-                ? headerIcons.autoTheme
-                : theme === 'dark'
-                  ? headerIcons.moon
-                  : theme === 'white'
-                    ? headerIcons.whiteTheme
-                    : headerIcons.sun}
-            </Button>
+              {currentThemeIcon}
+            </button>
             {themeMenuOpen && (
-              <div
-                className="notification entering theme-menu-popover"
-                role="menu"
-                aria-label={t('theme.switch')}
-              >
-                {THEME_CARDS.map((tc) => (
+              <div className="header-menu-popover" role="menu" aria-label={t('theme.switch')}>
+                <div className="header-menu-label">{t('theme.switch')}</div>
+                {THEME_OPTIONS.map((option) => (
                   <button
-                    key={tc.key}
+                    key={option.key}
                     type="button"
-                    className={`theme-card ${theme === tc.key ? 'active' : ''}`}
-                    onClick={() => handleThemeSelect(tc.key)}
+                    className={`header-menu-option ${theme === option.key ? 'active' : ''}`}
+                    onClick={() => handleThemeSelect(option.key)}
                     role="menuitemradio"
-                    aria-checked={theme === tc.key}
+                    aria-checked={theme === option.key}
                   >
-                    <div
-                      className="theme-card-preview"
-                      style={{
-                        background: tc.colors.bg,
-                        border: `1px solid ${tc.colors.border}`,
-                      }}
-                    >
-                      <div
-                        className="theme-card-header"
-                        style={{
-                          background: tc.colors.card,
-                          borderBottom: `1px solid ${tc.colors.border}`,
-                        }}
-                      />
-                      <div className="theme-card-body">
-                        <div
-                          className="theme-card-sidebar"
-                          style={{
-                            background: tc.colors.card,
-                            borderRight: `1px solid ${tc.colors.border}`,
-                          }}
-                        />
-                        <div className="theme-card-content" style={{ background: tc.colors.bg }}>
-                          <div
-                            className="theme-card-line"
-                            style={{ background: tc.colors.textMuted }}
-                          />
-                          <div
-                            className="theme-card-line short"
-                            style={{ background: tc.colors.textMuted }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <span className="theme-card-label">{t(tc.labelKey)}</span>
+                    {option.icon}
+                    <span className="header-menu-option-label">{t(option.labelKey)}</span>
+                    {theme === option.key ? (
+                      <span className="header-menu-check">
+                        <IconCheck size={14} />
+                      </span>
+                    ) : null}
                   </button>
                 ))}
               </div>
             )}
           </div>
-          <Button variant="ghost" size="sm" onClick={logout} title={t('header.logout')}>
+
+          <button
+            type="button"
+            className="header-icon-btn"
+            onClick={logout}
+            title={t('header.logout')}
+            aria-label={t('header.logout')}
+          >
             {headerIcons.logout}
-          </Button>
-        </div>
-      </header>
+          </button>
+        </header>
 
-      <div className="main-body">
-        <button
-          type="button"
-          className={`sidebar-backdrop ${sidebarOpen ? 'visible' : ''}`}
-          onClick={() => setSidebarOpen(false)}
-          aria-label={t('common.close')}
-          aria-hidden={!sidebarOpen}
-          tabIndex={sidebarOpen ? 0 : -1}
-        />
-
-        <aside
-          className={`sidebar ${sidebarOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`}
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className={`main-content${isLogsPage ? ' main-content-logs' : ''}`}
         >
-          <div className="sidebar-header">
-            <div className="sidebar-brand" title={fullBrandName}>
-              <img src={INLINE_LOGO_JPEG} alt="CPAMC logo" className="sidebar-brand-logo" />
-              {showSidebarLabels && (
-                <span className="sidebar-brand-text">
-                  <span className="sidebar-brand-title">{abbrBrandName}</span>
-                  <span className="sidebar-brand-subtitle">{t('sidebar.subtitle')}</span>
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="nav-section">
-            {navGroups.map((group, idx) => (
-              <div className="nav-group" key={group.id}>
-                {showSidebarLabels ? (
-                  <div className="nav-group-label">{t(group.labelKey)}</div>
-                ) : (
-                  idx > 0 && <div className="nav-group-divider" aria-hidden="true" />
-                )}
-                {group.items.map((item) => renderNavItem(item))}
-              </div>
-            ))}
-          </div>
-        </aside>
-
-        {railTooltip && (
-          <div
-            ref={railTooltipRef}
-            id={NAV_TOOLTIP_ID}
-            className="nav-tooltip"
-            role="tooltip"
-            style={{ top: railTooltip.top }}
-          >
-            <span className="nav-tooltip-label" aria-hidden="true">
-              {railTooltip.label}
-            </span>
-            {railTooltip.meta ? <span className="nav-tooltip-meta">{railTooltip.meta}</span> : null}
-          </div>
-        )}
-
-        <div
-          className={`content${isLogsPage ? ' content-logs' : ''}${
-            isPluginResourcePage ? ' content-plugin-resource' : ''
-          }`}
-          ref={contentRef}
-        >
-          <main
-            className={`main-content${isLogsPage ? ' main-content-logs' : ''}${
-              isPluginResourcePage ? ' main-content-plugin-resource' : ''
-            }`}
-          >
-            <PageTransition
-              render={(location) => <MainRoutes location={location} />}
-              getRouteOrder={getRouteOrder}
-              getTransitionVariant={getTransitionVariant}
-              scrollContainerRef={contentRef}
-            />
-          </main>
-        </div>
+          <MainRoutes />
+        </main>
       </div>
+
+      {searchOpen && (
+        <NavSearchDialog
+          open={searchOpen}
+          items={searchItems}
+          onClose={() => setSearchOpen(false)}
+          onSelect={handleSearchSelect}
+        />
+      )}
     </div>
   );
 }
