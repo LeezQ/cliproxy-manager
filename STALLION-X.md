@@ -123,9 +123,9 @@ bun run verify
 ```
 
 **绝对不要 `git push origin --tags` 或 `git push --follow-tags`。**
-`release.yml` 的触发条件是 `push: tags: ['v*']`，批量推送会为每一个新的上游标签触发一次构建。
-那些构建产物里没有 Stallion-X 的任何改动，发布后又会成为 latest release，
-线上面板将在 3 小时内被静默换回上游版本。发布一律用 `git push origin vX.Y.Z` 单推。
+批量推标签会把线上面板静默换回上游版本，原因见
+[DEPLOYMENT.md 5.3](./DEPLOYMENT.md#53-批量推标签会把线上换回上游版本)。
+发布一律用 `git push origin vX.Y.Z` 单推。
 
 视觉重构改动了五个页面及共享控件的大量样式文件，合并上游涉及这些文件时冲突会较多：
 原则上保留本 fork 的结构与样式，只把上游的逻辑 / 文案 / 新字段合入。合并后在浏览器里过一遍五个页面的亮色与暗色，
@@ -161,97 +161,7 @@ logging-to-file: true
 
 ## 部署
 
-CLIProxyAPI 会调用 `https://api.github.com/repos/{owner}/{repo}/releases/latest`，
-从 `panel-github-repository` 指向仓库的 latest release 下载名为 `management.html` 的资产，
-校验 digest 后缓存到工作目录的 `static/management.html`。同步周期为 3 小时，进程启动时也会立即拉取一次。
+发布流程、线上配置、验证方法、踩过的坑和回滚步骤都在 [DEPLOYMENT.md](./DEPLOYMENT.md)。
 
-线上实际配置（cliproxy.stallion-api.com）：
-
-```yaml
-remote-management:
-  disable-control-panel: false                                    # 为 true 会关掉整个管理页路由
-  panel-github-repository: "https://github.com/LeezQ/cliproxy-manager"
-  # disable-auto-update-panel 保持缺省（false），自动更新正是发布链路的最后一环
-```
-
-### 发布新版本
-
-**前提：fork 的 Actions 需要在网页上手动放行一次。** 仓库设置里 `actions/permissions` 显示
-`enabled: true`、两个 workflow 也都是 `active`，但 GitHub 对 fork 另有一道门禁，
-不点过 Actions 页面上的「I understand my workflows, go ahead and enable them」，
-push 和 tag 都不会触发任何运行（`actions/runs` 的 `total_count` 恒为 0）。
-放行之前只能本地构建后手工发布，见下面的兜底流程。
-
-```bash
-bun install --frozen-lockfile
-bun run verify
-git push origin main
-git tag v1.23.0
-git push origin v1.23.0        # 只推这一个 tag，绝不能用 --tags
-```
-
-`.github/workflows/release.yml` 会构建并把 `dist/index.html` 重命名为 `management.html` 上传到 release。
-标签名会经由工作流的 `VERSION` 环境变量注入 `__APP_VERSION__`，直接显示在界面上，
-也是判断线上跑的是哪个版本最省事的依据。
-
-本 fork 的版本线从 `v1.23.0` 起，高于全部继承自上游的标签（最新 `v1.22.18`）。
-
-Actions 尚未放行时的兜底发布流程，产物与工作流构建的完全一致：
-
-```bash
-VERSION=v1.23.0 bun run build
-cp dist/index.html /tmp/management.html
-git log --pretty=format:"- %h %s" v1.22.18..v1.23.0 > /tmp/notes.md
-gh release create v1.23.0 /tmp/management.html -R LeezQ/cliproxy-manager \
-  --title "v1.23.0" --notes-file /tmp/notes.md
-```
-
-关键是必须显式传 `VERSION`，否则 `getVersion()` 会退到 `git describe`，
-产物里会写进类似 `v1.22.16-2-gbd6edde` 的字符串，失去版本判断的意义。
-
-### 改配置不需要重启
-
-后端有配置热重载，改完 `config.yaml` 约 10 秒内生效，不会中断在途的流式响应：
-
-```bash
-cp -p /opt/cliproxy/config.yaml /opt/cliproxy/config.yaml.bak-$(date +%F-%H%M)
-sed -i 's#panel-github-repository: .*#panel-github-repository: "https://github.com/LeezQ/cliproxy-manager"#' /opt/cliproxy/config.yaml
-chown cliproxy:cliproxy /opt/cliproxy/config.yaml && chmod 600 /opt/cliproxy/config.yaml
-tail -f /opt/cliproxy/logs/main.log | grep -E "config_reload|management asset"
-```
-
-**不要用 `sed -i` 改这个文件。** `sed -i` 是写临时文件再 rename，会换掉 inode，
-而 file watcher 盯的是原来那个 inode，改完不会触发任何重载，日志里静悄悄什么都没有。
-必须原地截断写入才能被监听到，`cp 源文件 config.yaml` 就是原地写。
-已经误用 `sed -i` 的话，watcher 已经失效，只能重启进程让它重新挂上。
-
-其余注意：systemd 单元没有 `ExecReload`，`systemctl reload` 会失败；
-root 改完要 `chown cliproxy:cliproxy` 并 `chmod 600` 改回去，否则面板的配置编辑器会写不进；
-短时间内连改两次配置可能撞上 `management asset sync skipped by throttle`，改一次就好。
-
-### 验证
-
-```bash
-gh api repos/LeezQ/cliproxy-manager/releases/latest --jq '{tag:.tag_name, asset:.assets[0].name, digest:.assets[0].digest}'
-ssh cliproxy-server 'sha256sum /opt/cliproxy/static/management.html'
-curl -sS https://cliproxy.stallion-api.com/management.html | shasum -a 256
-curl -sS https://cliproxy.stallion-api.com/management.html | grep -c 'v1\.23\.0'
-```
-
-三处哈希必须一致。日志里要出现 `management asset updated successfully`，
-**不能是** `management asset updated from fallback` —— 见下面这条。
-
-### 静默回退到上游
-
-二进制里硬编码了 `router-for-me/Cli-Proxy-API-Management-Center` 作为兜底源。
-本 fork 的 release 查不到、资产缺失、GitHub API 匿名限流（每 IP 每小时 60 次）或 digest 不匹配时，
-后端会**不报错地**改发上游的面板。所以判断部署是否成功不能只看「页面能打开」，
-要看日志措辞和 sha256。
-
-### 回滚
-
-全部是改配置即可，约 10 秒生效，不需要重启：
-
-1. 把 `panel-github-repository` 改回上游仓库地址
-2. GitHub 不可达时，加 `disable-auto-update-panel: true` 再手工放一个已知可用的 `management.html` 进 `static/`
-3. 极端情况 `disable-control-panel: true` 关掉整个面板路由，代理 API 不受影响
+一句话版本：后端从本仓库 latest release 拉取名为 `management.html` 的资产，
+所以发版就是创建一个带该资产的 release，打标签即可。

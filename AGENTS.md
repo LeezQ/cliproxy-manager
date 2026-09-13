@@ -34,7 +34,7 @@ The production artifact is a single `dist/index.html` with JS/CSS and bundled as
 
 Preserve hash routing and single-file deployment. Changes to assets, imports, code splitting, or build configuration must not introduce required external build artifacts. Do not edit generated `dist/` files. App version is injected as `__APP_VERSION__` from `VERSION`, then git tags, then the package version, falling back to `dev`.
 
-Never push tags in bulk. `release.yml` triggers on `push: tags: ['v*']`, so `git push origin --tags` or `git push --follow-tags` fires a build for every newly created upstream tag. Those builds contain none of this fork's work, yet publish as the newest release, which silently reverts the production panel to an upstream build within the backend's 3-hour sync window. Publish with `git push origin vX.Y.Z` only. This fork's version line starts at `v1.23.0`, above every inherited upstream tag.
+Never push tags in bulk. `release.yml` triggers on `push: tags: ['v*']`, so `git push origin --tags` or `git push --follow-tags` fires a build for every newly created upstream tag. Those builds contain none of this fork's work, yet publish as the newest release, which silently reverts the production panel to an upstream build within the backend's 3-hour sync window. Publish with `git push origin vX.Y.Z` only. This fork's version line starts at `v1.23.0`, above every inherited upstream tag. The release, verification and rollback runbook is `DEPLOYMENT.md`; keep it in sync when the deployment path changes.
 
 ## API Contracts & State
 

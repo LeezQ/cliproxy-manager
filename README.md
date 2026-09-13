@@ -117,7 +117,7 @@ The UI language is automatically detected from browser settings and can be manua
 ## Build & release notes
 
 - Vite produces a **single HTML** output (`dist/index.html`) with all assets inlined (via `vite-plugin-singlefile`).
-- Tagging `vX.Y.Z` triggers `.github/workflows/release.yml` to publish `dist/management.html`.
+- Tagging `vX.Y.Z` triggers `.github/workflows/release.yml` to publish `dist/management.html`. This fork's version line starts at `v1.23.0`; see [DEPLOYMENT.md](DEPLOYMENT.md) for the full release and rollback runbook.
 - The UI version shown on the System page is injected at build time (env `VERSION`, git tag, or `package.json` fallback).
 
 ## Security notes
