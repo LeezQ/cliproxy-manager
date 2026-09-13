@@ -90,7 +90,14 @@
   },
   "header": {
     "refresh_all": "刷新全部",
-    "logout": "登出"
+    "logout": "登出",
+    "search_placeholder": "搜索页面或功能",
+    "search_title": "页面搜索",
+    "search_empty": "没有匹配的页面",
+    "search_group_pages": "页面",
+    "search_hint_navigate": "打开",
+    "search_hint_select": "选择",
+    "search_hint_close": "关闭"
   },
   "connection": {
     "status": "连接状态:"
@@ -759,7 +766,8 @@
     "iflow_oauth_status_error": "认证失败:",
     "iflow_oauth_start_error": "启动 iFlow OAuth 失败:",
     "iflow_oauth_polling_error": "检查认证状态失败:",
-    "remote_access_disabled": "远程访问不支持此登录方式，请从本地 (localhost) 访问"
+    "remote_access_disabled": "远程访问不支持此登录方式，请从本地 (localhost) 访问",
+    "page_description": "通过 OAuth 或设备授权登录各提供商，完成后自动保存认证文件"
   },
   "stats": {
     "success": "成功",
@@ -834,7 +842,10 @@
     "search_empty_desc": "尝试更换关键字或清空筛选条件。",
     "double_click_copy_hint": "双击复制日志原文",
     "copy_success": "已复制日志原文",
-    "copy_failed": "复制失败"
+    "copy_failed": "复制失败",
+    "page_description": "实时查看 CLI Proxy API 输出日志，按方法、状态码与路径筛选排查请求",
+    "stat_buffer_lines": "已缓存日志行",
+    "error_logs_name": "文件名"
   },
   "config_management": {
     "title": "配置面板",
@@ -1167,7 +1178,8 @@
         "update": "更新",
         "add": "添加"
       }
-    }
+    },
+    "description": "以可视化表单或 YAML 源码编辑 CLI Proxy API 的服务端配置"
   },
   "quota_management": {
     "title": "配额管理",
@@ -1209,7 +1221,10 @@
     "weekday_wed": "三",
     "weekday_thu": "四",
     "weekday_fri": "五",
-    "weekday_sat": "六"
+    "weekday_sat": "六",
+    "stat_credentials": "凭证",
+    "stat_loaded": "已加载",
+    "stat_attention": "需关注"
   },
   "plugin_management": {
     "title": "插件管理",
@@ -1429,7 +1444,7 @@
   },
   "theme": {
     "switch": "主题",
-    "light": "羊毛纸",
+    "light": "浅色",
     "white": "纯白",
     "dark": "暗色",
     "auto": "跟随系统"
@@ -1440,7 +1455,10 @@
     "expand": "展开",
     "collapse": "收起",
     "subtitle": "CLI Proxy API 管理控制台",
-    "auth_files_count": "认证文件：{{count}} 个"
+    "auth_files_count": "认证文件：{{count}} 个",
+    "ui_version": "界面 {{version}}",
+    "server_version": "服务 {{version}}",
+    "skip_to_content": "跳到页面内容"
   },
   "footer": {
     "api_version": "CLI Proxy API 版本",
@@ -1734,5 +1752,10 @@
     "modelCatalog": {
       "notLoaded": "未加载"
     }
+  },
+  "nav_group_hints": {
+    "gateway": "凭证接入",
+    "observe": "用量与排障",
+    "control": "网关设置"
   }
 }

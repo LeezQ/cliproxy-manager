@@ -90,7 +90,14 @@
   },
   "header": {
     "refresh_all": "Refresh All",
-    "logout": "Logout"
+    "logout": "Logout",
+    "search_placeholder": "Search pages or features",
+    "search_title": "Page search",
+    "search_empty": "No matching pages",
+    "search_group_pages": "Pages",
+    "search_hint_navigate": "Open",
+    "search_hint_select": "Select",
+    "search_hint_close": "Close"
   },
   "connection": {
     "status": "Connection Status:"
@@ -759,7 +766,8 @@
     "iflow_oauth_status_error": "Authentication failed:",
     "iflow_oauth_start_error": "Failed to start iFlow OAuth:",
     "iflow_oauth_polling_error": "Failed to check authentication status:",
-    "remote_access_disabled": "This login method is not available for remote access. Please access from localhost."
+    "remote_access_disabled": "This login method is not available for remote access. Please access from localhost.",
+    "page_description": "Sign in to providers via OAuth or device authorization; auth files are saved automatically."
   },
   "stats": {
     "success": "Success",
@@ -834,7 +842,10 @@
     "search_empty_desc": "Try a different keyword or clear the filters.",
     "double_click_copy_hint": "Double-click to copy raw log line",
     "copy_success": "Log copied to clipboard",
-    "copy_failed": "Copy failed"
+    "copy_failed": "Copy failed",
+    "page_description": "Inspect CLI Proxy API output in real time and filter requests by method, status and path.",
+    "stat_buffer_lines": "Buffered lines",
+    "error_logs_name": "File name"
   },
   "config_management": {
     "title": "Config Panel",
@@ -1167,7 +1178,8 @@
         "update": "Update",
         "add": "Add"
       }
-    }
+    },
+    "description": "Edit the CLI Proxy API server configuration with visual forms or YAML source"
   },
   "quota_management": {
     "title": "Quota Management",
@@ -1209,7 +1221,10 @@
     "weekday_wed": "Wed",
     "weekday_thu": "Thu",
     "weekday_fri": "Fri",
-    "weekday_sat": "Sat"
+    "weekday_sat": "Sat",
+    "stat_credentials": "Credentials",
+    "stat_loaded": "Loaded",
+    "stat_attention": "Needs attention"
   },
   "plugin_management": {
     "title": "Plugin Management",
@@ -1429,7 +1444,7 @@
   },
   "theme": {
     "switch": "Theme",
-    "light": "Wool Paper",
+    "light": "Light",
     "white": "Pure White",
     "dark": "Dark",
     "auto": "Follow system"
@@ -1440,7 +1455,10 @@
     "expand": "Expand",
     "collapse": "Collapse",
     "subtitle": "CLI Proxy API Console",
-    "auth_files_count": "Authentication files: {{count}}"
+    "auth_files_count": "Authentication files: {{count}}",
+    "ui_version": "UI {{version}}",
+    "server_version": "Server {{version}}",
+    "skip_to_content": "Skip to content"
   },
   "footer": {
     "api_version": "CLI Proxy API Version",
@@ -1734,5 +1752,10 @@
     "modelCatalog": {
       "notLoaded": "Not loaded"
     }
+  },
+  "nav_group_hints": {
+    "gateway": "Credentials",
+    "observe": "Usage & debugging",
+    "control": "Gateway"
   }
 }

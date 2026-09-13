@@ -90,7 +90,14 @@
   },
   "header": {
     "refresh_all": "Обновить всё",
-    "logout": "Выйти"
+    "logout": "Выйти",
+    "search_placeholder": "Поиск страниц и функций",
+    "search_title": "Поиск по страницам",
+    "search_empty": "Нет подходящих страниц",
+    "search_group_pages": "Страницы",
+    "search_hint_navigate": "Открыть",
+    "search_hint_select": "Выбрать",
+    "search_hint_close": "Закрыть"
   },
   "connection": {
     "status": "Статус подключения:"
@@ -758,7 +765,8 @@
     "iflow_oauth_status_error": "Ошибка аутентификации:",
     "iflow_oauth_start_error": "Не удалось запустить iFlow OAuth:",
     "iflow_oauth_polling_error": "Не удалось проверить статус аутентификации:",
-    "remote_access_disabled": "Этот способ входа недоступен при удалённом доступе. Подключитесь с localhost."
+    "remote_access_disabled": "Этот способ входа недоступен при удалённом доступе. Подключитесь с localhost.",
+    "page_description": "Вход к провайдерам через OAuth или авторизацию устройства; файлы авторизации сохраняются автоматически."
   },
   "stats": {
     "success": "Успех",
@@ -833,7 +841,10 @@
     "search_empty_desc": "Попробуйте другой запрос или сбросьте фильтры.",
     "double_click_copy_hint": "Дважды нажмите, чтобы скопировать строку журнала",
     "copy_success": "Строка журнала скопирована",
-    "copy_failed": "Не удалось скопировать"
+    "copy_failed": "Не удалось скопировать",
+    "page_description": "Просмотр журналов CLI Proxy API в реальном времени с фильтрацией по методу, статусу и пути.",
+    "stat_buffer_lines": "Строк в буфере",
+    "error_logs_name": "Имя файла"
   },
   "config_management": {
     "title": "Панель конфигурации",
@@ -1166,7 +1177,8 @@
         "update": "Обновить",
         "add": "Добавить"
       }
-    }
+    },
+    "description": "Редактируйте конфигурацию сервера CLI Proxy API через визуальные формы или исходный YAML"
   },
   "quota_management": {
     "title": "Управление квотами",
@@ -1208,7 +1220,10 @@
     "weekday_wed": "Ср",
     "weekday_thu": "Чт",
     "weekday_fri": "Пт",
-    "weekday_sat": "Сб"
+    "weekday_sat": "Сб",
+    "stat_credentials": "Учётные данные",
+    "stat_loaded": "Загружено",
+    "stat_attention": "Требуют внимания"
   },
   "plugin_management": {
     "title": "Управление плагинами",
@@ -1419,7 +1434,7 @@
   },
   "theme": {
     "switch": "Тема",
-    "light": "Шерстяная бумага",
+    "light": "Светлая",
     "white": "Чисто-белая",
     "dark": "Тёмная",
     "auto": "Следовать системе"
@@ -1430,7 +1445,10 @@
     "expand": "Развернуть",
     "collapse": "Свернуть",
     "subtitle": "Консоль управления CLI Proxy API",
-    "auth_files_count": "Файлов аутентификации: {{count}}"
+    "auth_files_count": "Файлов аутентификации: {{count}}",
+    "ui_version": "UI {{version}}",
+    "server_version": "Сервер {{version}}",
+    "skip_to_content": "Перейти к содержимому"
   },
   "footer": {
     "api_version": "Версия CLI Proxy API",
@@ -1724,5 +1742,10 @@
     "modelCatalog": {
       "notLoaded": "Не загружено"
     }
+  },
+  "nav_group_hints": {
+    "gateway": "Учётные данные",
+    "observe": "Использование и отладка",
+    "control": "Шлюз"
   }
 }
