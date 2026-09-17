@@ -1,0 +1,51 @@
+import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+
+// The quota host binds CSS-module classes at import time, which Bun cannot render.
+// Keep these source contracts small; browser checks cover the actual card interactions.
+const source = readFileSync(
+  new URL('../src/features/authFiles/components/AuthFileCard.tsx', import.meta.url),
+  'utf8'
+);
+
+describe('auth file card presentation contract', () => {
+  // Stallion-X 的卡片头部是「提供商图标 + 中性类型徽标 + 状态徽标 + 账号」，
+  // 与上游的纯文字身份不同，因此这里断言 fork 自己的结构。
+  test('shows the provider icon, a neutral type badge and a state badge next to the identity', () => {
+    expect(source).toContain('getAuthFileIcon');
+    expect(source).toContain('styles.avatarImage');
+    expect(source).toContain('styles.typeBadge');
+    expect(source).toContain('stateBadge');
+    expect(source).toContain('{identity.primary}');
+    expect(source).toContain('{identity.secondary}');
+  });
+
+  test('uses one footer toggle and credential-specific accessible names', () => {
+    const header = source.split('<header')[1].split('</header>')[0];
+    const footer = source.split('<footer')[1].split('</footer>')[0];
+    expect(source.match(/<ToggleSwitch/g)).toHaveLength(1);
+    expect(header).not.toContain('<ToggleSwitch');
+    expect(header).toContain("ariaLabel={t('auth_files.card_select', { name: file.name })}");
+    expect(header).not.toContain('aria-label=');
+    expect(footer).toContain('<ToggleSwitch');
+    expect(footer).toContain("t('auth_files.card_toggle', { name: file.name })");
+    expect(footer).toContain('checked={!file.disabled}');
+    expect(footer).toContain('statusUpdating[file.name] === true || isManualRefreshing');
+    expect(footer).toContain('!isRuntimeOnly &&');
+  });
+
+  test('retains individual management actions and warning detail', () => {
+    for (const handler of [
+      'onShowModels(file)',
+      'onDownload(file.name)',
+      'onManualRefresh(file)',
+      'onOpenPrefixProxyEditor(file)',
+      'onDelete(file.name)',
+    ]) {
+      expect(source).toContain(handler);
+    }
+    expect(source).toContain('rawStatusMessage && hasStatusWarning');
+    expect(source).toContain('showManualRefreshButton');
+    expect(source).toContain('file.disabled ||');
+  });
+});

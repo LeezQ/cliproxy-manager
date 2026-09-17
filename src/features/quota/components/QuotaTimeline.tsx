@@ -17,6 +17,7 @@ import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatRelativeInstant, TYPE_COLORS } from '@/utils/quota';
+import { getQuotaCacheKey, getQuotaDisplayName } from '@/utils/quota/identity';
 import { useNow } from '@/hooks/useNow';
 import type { ResolvedTheme, ThemeColors } from '@/types';
 import {
@@ -92,8 +93,11 @@ export function QuotaTimeline({
   const laneInputs = useMemo(
     () =>
       entries.map((entry) => ({
-        name: entry.file.name,
-        displayName: displayNameFor(entry.file.name),
+        name: getQuotaCacheKey(entry.file),
+        displayName:
+          entry.type === 'devin'
+            ? getQuotaDisplayName(entry.file)
+            : displayNameFor(entry.file.name),
         provider: entry.type,
         quota: quotaFor(entry),
       })),

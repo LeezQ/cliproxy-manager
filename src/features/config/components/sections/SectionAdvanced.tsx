@@ -16,10 +16,11 @@ import {
   FieldStack,
   ToggleRow,
 } from '@/features/config/components/fields/FieldPrimitives';
+import { isHiddenProvider } from '@/features/hiddenProviders';
 import { PluginStoreAuthEditor } from '@/features/config/components/blocks/PluginStoreAuthEditor';
 import { StringListEditor } from '@/features/config/components/blocks/StringListEditor';
 
-/** 06 高级与实验：插件源（只存 env 变量名）、签名缓存、Claude/Codex 请求头默认值。 */
+/** 06 高级与实验：插件源（只存 env 变量名）、供应商敏感词、签名缓存、Claude/Codex 请求头默认值。 */
 export function SectionAdvanced({ values, disabled, onChange }: ConfigSectionProps) {
   const { t } = useTranslation();
 
@@ -33,6 +34,10 @@ export function SectionAdvanced({ values, disabled, onChange }: ConfigSectionPro
   );
   const handleAntigravitySensitiveWordsChange = useCallback(
     (antigravitySensitiveWords: string[]) => onChange({ antigravitySensitiveWords }),
+    [onChange]
+  );
+  const handleDevinSensitiveWordsChange = useCallback(
+    (devinSensitiveWords: string[]) => onChange({ devinSensitiveWords }),
     [onChange]
   );
 
@@ -172,6 +177,45 @@ export function SectionAdvanced({ values, disabled, onChange }: ConfigSectionPro
             </FieldGrid>
           </FieldStack>
         </Collapsible>
+
+        {/* Devin 专属配置：该提供商在本 fork 中不展示（见 features/hiddenProviders.ts），
+            上游区块原样保留，仅在界面上隐藏；仍可在源码模式下编辑对应 YAML 字段 */}
+        {!isHiddenProvider('devin') && (
+          <Collapsible
+            label={t('config_management.visual.sections.advanced.devin_title')}
+            defaultOpen={false}
+          >
+            <FieldStack>
+              <FieldAnchor fieldId="devinSensitiveWords">
+                <FieldGroup
+                  title={t('config_management.visual.sections.system.devin_sensitive_words')}
+                  description={t(
+                    'config_management.visual.sections.system.devin_sensitive_words_desc'
+                  )}
+                >
+                  <FieldShell
+                    label={t(
+                      'config_management.visual.sections.system.devin_sensitive_words_label'
+                    )}
+                    hint={t('config_management.visual.sections.system.devin_sensitive_words_hint')}
+                  >
+                    <StringListEditor
+                      value={values.devinSensitiveWords}
+                      disabled={disabled}
+                      placeholder={t(
+                        'config_management.visual.sections.system.devin_sensitive_words_placeholder'
+                      )}
+                      inputAriaLabel={t(
+                        'config_management.visual.sections.system.devin_sensitive_words_label'
+                      )}
+                      onChange={handleDevinSensitiveWordsChange}
+                    />
+                  </FieldShell>
+                </FieldGroup>
+              </FieldAnchor>
+            </FieldStack>
+          </Collapsible>
+        )}
 
         <Collapsible
           label={t('config_management.visual.sections.headers.title')}

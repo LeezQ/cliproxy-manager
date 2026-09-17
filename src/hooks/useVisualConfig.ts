@@ -92,11 +92,9 @@ function deleteIfMapEmpty(doc: YamlDocument, path: YamlPath): void {
 }
 
 function setBooleanInDoc(doc: YamlDocument, path: YamlPath, value: boolean): void {
-  if (value) {
-    doc.setIn(path, true);
-    return;
-  }
-  if (docHas(doc, path)) doc.setIn(path, false);
+  // Callers only write dirty fields. Explicit false must override backend defaults
+  // even when the original document omitted the key (for example, ws-auth).
+  doc.setIn(path, value);
 }
 
 function setStringInDoc(doc: YamlDocument, path: YamlPath, value: unknown): void {
@@ -135,7 +133,7 @@ function setIntFromStringInDoc(doc: YamlDocument, path: YamlPath, value: unknown
   }
 
   const parsed = Number(trimmed);
-  if (Number.isFinite(parsed)) {
+  if (Number.isSafeInteger(parsed)) {
     doc.setIn(path, parsed);
     return;
   }
@@ -171,11 +169,15 @@ function hasPayloadDirtyFields(dirtyFields: Set<string>): boolean {
   return PAYLOAD_DIRTY_FIELDS.some((field) => dirtyFields.has(field));
 }
 
-function getNonNegativeIntegerError(value: string): 'non_negative_integer' | undefined {
+function getIntegerError(value: string): 'integer' | undefined {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
-  if (!/^-?\d+$/.test(trimmed)) return 'non_negative_integer';
-  return Number(trimmed) >= 0 ? undefined : 'non_negative_integer';
+  return /^-?\d+$/.test(trimmed) && Number.isSafeInteger(Number(trimmed)) ? undefined : 'integer';
+}
+
+function getNonNegativeIntegerError(value: string): 'non_negative_integer' | undefined {
+  if (getIntegerError(value)) return 'non_negative_integer';
+  return Number(value.trim()) >= 0 ? undefined : 'non_negative_integer';
 }
 
 function getPortError(value: string): 'port_range' | undefined {
@@ -203,12 +205,12 @@ export function getVisualConfigValidationErrors(
     logsMaxTotalSizeMb: getNonNegativeIntegerError(values.logsMaxTotalSizeMb),
     redisUsageQueueRetentionSeconds: getRedisRetentionError(values.redisUsageQueueRetentionSeconds),
     requestRetry: getNonNegativeIntegerError(values.requestRetry),
-    maxRetryCredentials: getNonNegativeIntegerError(values.maxRetryCredentials),
-    maxRetryInterval: getNonNegativeIntegerError(values.maxRetryInterval),
-    authAutoRefreshWorkers: getNonNegativeIntegerError(values.authAutoRefreshWorkers),
-    'streaming.keepaliveSeconds': getNonNegativeIntegerError(values.streaming.keepaliveSeconds),
-    'streaming.bootstrapRetries': getNonNegativeIntegerError(values.streaming.bootstrapRetries),
-    'streaming.nonstreamKeepaliveInterval': getNonNegativeIntegerError(
+    maxRetryCredentials: getIntegerError(values.maxRetryCredentials),
+    maxRetryInterval: getIntegerError(values.maxRetryInterval),
+    authAutoRefreshWorkers: getIntegerError(values.authAutoRefreshWorkers),
+    'streaming.keepaliveSeconds': getIntegerError(values.streaming.keepaliveSeconds),
+    'streaming.bootstrapRetries': getIntegerError(values.streaming.bootstrapRetries),
+    'streaming.nonstreamKeepaliveInterval': getIntegerError(
       values.streaming.nonstreamKeepaliveInterval
     ),
   };
@@ -1134,6 +1136,12 @@ function getNextDirtyFields(
       )
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'devinSensitiveWords')) {
+    updateDirty(
+      'devinSensitiveWords',
+      areStringArraysEqual(nextValues.devinSensitiveWords, baselineValues.devinSensitiveWords)
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'pluginStoreAuth')) {
     updateDirty(
       'pluginStoreAuth',
@@ -1280,6 +1288,7 @@ export function useVisualConfig() {
       const streaming = asRecord(parsed.streaming);
       const plugins = asRecord(parsed.plugins);
       const antigravity = asRecord(parsed.antigravity);
+      const devin = asRecord(parsed.devin);
       const claudeHeaderDefaults = asRecord(parsed['claude-header-defaults']);
       const codexHeaderDefaults = asRecord(parsed['codex-header-defaults']);
 
@@ -1334,8 +1343,9 @@ export function useVisualConfig() {
             ? parsed['gpt-image-2-base-model']
             : '',
         authAutoRefreshWorkers: String(parsed['auth-auto-refresh-workers'] ?? ''),
-        wsAuth: Boolean(parsed['ws-auth']),
+        wsAuth: Boolean(parsed['ws-auth'] ?? DEFAULT_VISUAL_VALUES.wsAuth),
         antigravitySensitiveWords: parseStringList(antigravity?.['sensitive-words']),
+        devinSensitiveWords: parseStringList(devin?.['sensitive-words']),
         antigravitySignatureCacheEnabled: Boolean(
           parsed['antigravity-signature-cache-enabled'] ?? true
         ),
@@ -1370,8 +1380,12 @@ export function useVisualConfig() {
             ? codexHeaderDefaults['beta-features']
             : '',
 
-        quotaSwitchProject: Boolean(quotaExceeded?.['switch-project'] ?? true),
-        quotaSwitchPreviewModel: Boolean(quotaExceeded?.['switch-preview-model'] ?? true),
+        quotaSwitchProject: Boolean(
+          quotaExceeded?.['switch-project'] ?? DEFAULT_VISUAL_VALUES.quotaSwitchProject
+        ),
+        quotaSwitchPreviewModel: Boolean(
+          quotaExceeded?.['switch-preview-model'] ?? DEFAULT_VISUAL_VALUES.quotaSwitchPreviewModel
+        ),
         quotaAntigravityCredits: Boolean(quotaExceeded?.['antigravity-credits'] ?? false),
 
         routingStrategy: parseRoutingStrategy(routing?.strategy),
@@ -1578,6 +1592,20 @@ export function useVisualConfig() {
             values.antigravitySensitiveWords
           );
           deleteIfMapEmpty(doc, ['antigravity']);
+        }
+        if (dirtyFields.has('devinSensitiveWords')) {
+          ensureMapInDoc(doc, ['devin']);
+          const devin = doc.getIn(['devin'], true);
+          if (isMap(devin)) {
+            syncStringSequence(
+              doc,
+              devin,
+              'sensitive-words',
+              baselineValues.devinSensitiveWords,
+              values.devinSensitiveWords
+            );
+          }
+          deleteIfMapEmpty(doc, ['devin']);
         }
         if (dirtyFields.has('antigravitySignatureCacheEnabled')) {
           if (

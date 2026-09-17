@@ -30,6 +30,20 @@
 
 **恢复某个功能**：在 `MainRoutes.tsx` 加回路由，并在 `MainLayout.tsx` 的 `navGroups` 中加回对应导航项（页面搜索会自动包含）。
 
+### 1.1 不展示的上游提供商
+
+`src/features/hiddenProviders.ts` 是唯一的名单（当前：`devin`）。上游的类型、接口、配额逻辑与登录流程原样保留，
+只在三个界面入口按名单过滤：
+
+| 入口 | 过滤位置 |
+|---|---|
+| OAuth 登录卡片 | `src/pages/OAuthPage.tsx` 的 `providerCards` |
+| 配额页提供商 tab | `src/features/quota/QuotaPage.tsx` 的 `TAB_IDS`（`QUOTA_TAB_ORDER` 保持上游原样，分组与缓存逻辑仍覆盖全部提供商） |
+| 配置面板专属配置块 | `src/features/config/components/sections/SectionAdvanced.tsx` |
+
+**恢复某个提供商**：把它的 id 从 `HIDDEN_PROVIDER_IDS` 删掉即可，其余代码无需改动。
+相关的上游测试（`tests/devinOAuthUi.test.ts`、`tests/authFileCard.test.ts`）已改写为断言本 fork 的行为，合并上游时若被改回需要重新调整。
+
 ## 2. 视觉重构（Signal Atlas）
 
 整个管理端的外壳、共享控件与五个页面都按 Stallion-X 主站（`stallion-x/web`）的 shadcn 冷灰工作台风格重做，

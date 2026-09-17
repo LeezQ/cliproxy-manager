@@ -124,6 +124,14 @@
   background: var(--bg-tertiary);
 }
 
+/* 运行期虚拟凭证的角标（上游新增）：靠右的弱化说明文字 */
+.runtimeLabel {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
 /* 状态徽标：靠右，前置状态圆点 */
 .stateBadge {
   margin-left: auto;

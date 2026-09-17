@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { IconAlertTriangle, IconRefreshCw } from '@/components/ui/icons';
 import type { ResolvedTheme } from '@/types';
 import { resolveQuotaErrorMessage } from '@/utils/quota';
+import { getQuotaDisplayName } from '@/utils/quota/identity';
 import {
   getAuthFileIcon,
   getThemeSurfaceIconBackground,
@@ -43,6 +44,7 @@ export function QuotaCard(props: QuotaCardProps) {
   const { t } = useTranslation();
   const adapter = QUOTA_ADAPTERS[entry.type];
   const file = entry.file;
+  const displayName = getQuotaDisplayName(file);
 
   const status = quota?.status ?? 'idle';
   const loading = status === 'loading';
@@ -79,8 +81,8 @@ export function QuotaCard(props: QuotaCardProps) {
         </span>
         {/* 文件名为卡片标题，提供商名作为次级说明，身份一眼可辨 */}
         <span className={styles.headText}>
-          <span className={styles.fileName} title={file.name}>
-            {file.name}
+          <span className={styles.fileName} title={displayName}>
+            {displayName}
           </span>
           <span className={styles.typeLabel}>{typeLabel}</span>
         </span>

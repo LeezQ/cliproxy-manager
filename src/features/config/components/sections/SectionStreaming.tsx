@@ -28,12 +28,6 @@ export function SectionStreaming({
   const nonstreamKeepaliveHintId = `${nonstreamKeepaliveInputId}-hint`;
   const nonstreamKeepaliveErrorId = `${nonstreamKeepaliveInputId}-error`;
 
-  const isKeepaliveDisabled =
-    values.streaming.keepaliveSeconds === '' || values.streaming.keepaliveSeconds === '0';
-  const isNonstreamKeepaliveDisabled =
-    values.streaming.nonstreamKeepaliveInterval === '' ||
-    values.streaming.nonstreamKeepaliveInterval === '0';
-
   const keepaliveError = getValidationMessage(t, validationErrors?.['streaming.keepaliveSeconds']);
   const bootstrapRetriesError = getValidationMessage(
     t,
@@ -43,6 +37,9 @@ export function SectionStreaming({
     t,
     validationErrors?.['streaming.nonstreamKeepaliveInterval']
   );
+  const isKeepaliveDisabled = !keepaliveError && Number(values.streaming.keepaliveSeconds) <= 0;
+  const isNonstreamKeepaliveDisabled =
+    !nonstreamKeepaliveError && Number(values.streaming.nonstreamKeepaliveInterval) <= 0;
 
   return (
     <SectionCard
