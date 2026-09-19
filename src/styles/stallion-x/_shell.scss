@@ -322,7 +322,7 @@
   flex-direction: column;
   gap: 4px;
   flex-shrink: 0;
-  padding: 12px 20px;
+  padding: 12px 16px;
   border-top: 1px solid var(--sidebar-border);
   color: var(--sidebar-muted);
   font-size: 12px;
@@ -331,10 +331,17 @@
 .sidebar-connection {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 
+  /* 状态文字不参与压缩：空间不足时由后面的主机名截断，避免「已连接」被挤成两行 */
+  .sidebar-connection-label {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
   .sidebar-connection-host {
+    flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
     font-family: $font-mono;

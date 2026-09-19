@@ -640,7 +640,7 @@ export function MainLayout() {
           <div className="sidebar-footer">
             <div className="sidebar-connection" title={apiBase}>
               <span className={`status-dot ${connectionStatus}`} aria-hidden="true" />
-              <span>{connectionLabel}</span>
+              <span className="sidebar-connection-label">{connectionLabel}</span>
               {apiHost ? <span className="sidebar-connection-host">{apiHost}</span> : null}
             </div>
             {serverVersion ? (
