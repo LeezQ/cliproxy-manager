@@ -32,7 +32,7 @@
 
 ### 1.1 不展示的上游提供商
 
-`src/features/hiddenProviders.ts` 是唯一的名单（当前：`devin`）。上游的类型、接口、配额逻辑与登录流程原样保留，
+`src/features/hiddenProviders.ts` 是唯一的名单（当前：`devin`、`meta`）。上游的类型、接口、配额逻辑与登录流程原样保留，
 只在三个界面入口按名单过滤：
 
 | 入口 | 过滤位置 |

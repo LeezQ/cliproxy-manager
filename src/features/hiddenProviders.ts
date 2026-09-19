@@ -8,10 +8,10 @@
  *
  * 当前过滤的入口：
  * - `src/pages/OAuthPage.tsx`：OAuth 登录卡片
- * - `src/features/quota/constants.ts`：配额页的提供商 tab
+ * - `src/features/quota/QuotaPage.tsx`：配额页的提供商 tab（QUOTA_TAB_ORDER 保持上游原样）
  * - `src/features/config/components/sections/SectionAdvanced.tsx`：配置面板中的专属配置块
  */
-export const HIDDEN_PROVIDER_IDS: ReadonlySet<string> = new Set(['devin']);
+export const HIDDEN_PROVIDER_IDS: ReadonlySet<string> = new Set(['devin', 'meta']);
 
 /** 判断某个提供商是否在本 fork 中隐藏 */
 export const isHiddenProvider = (providerId: string): boolean =>

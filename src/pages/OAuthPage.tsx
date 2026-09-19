@@ -18,6 +18,7 @@ import { isHiddenProvider } from '@/features/hiddenProviders';
 import { createOAuthAttempts, type OAuthAttempt } from '@/pages/oauthAttempts';
 import { validateDevinCallback } from '@/pages/devinOAuth';
 import styles from '@/pages/OAuthPage.module.scss';
+import iconMeta from '@/assets/icons/meta.svg';
 import iconCodex from '@/assets/icons/codex.svg';
 import iconClaude from '@/assets/icons/claude.svg';
 import iconAntigravity from '@/assets/icons/antigravity.svg';
@@ -31,6 +32,7 @@ import iconDevinDark from '@/assets/icons/devin-dark.svg';
 
 interface ProviderState {
   url?: string;
+  userCode?: string;
   state?: string;
   status?: 'idle' | 'waiting' | 'success' | 'error';
   error?: string;
@@ -81,6 +83,12 @@ function getErrorStatus(error: unknown): number | undefined {
 }
 
 const PROVIDERS: BuiltInOAuthProviderCard[] = [
+  {
+    kind: 'builtin',
+    id: 'meta',
+    titleKey: 'auth_login.meta_oauth_title',
+    icon: iconMeta,
+  },
   {
     kind: 'builtin',
     id: 'kimi',
@@ -464,6 +472,7 @@ export function OAuthPage() {
     const attempt = attempts.current.begin(provider);
     updateProviderState(provider, {
       url: undefined,
+      userCode: undefined,
       state: undefined,
       status: 'waiting',
       polling: true,
@@ -492,6 +501,7 @@ export function OAuthPage() {
       }
       updateProviderState(provider, {
         url: res.url,
+        userCode: res.user_code,
         state: res.state,
         status: 'waiting',
         polling: true,
@@ -702,10 +712,26 @@ export function OAuthPage() {
                   {getProviderText(provider, 'oauth_url_label')}
                 </div>
                 <div className={styles.authUrlValue}>{state.url}</div>
+                {/* 设备码：部分提供商的授权流程要求在页面上输入这串码 */}
+                {state.userCode && (
+                  <>
+                    <div className={styles.fieldLabel}>{t('auth_login.device_code_label')}</div>
+                    <div className={styles.authUrlValue}>{state.userCode}</div>
+                  </>
+                )}
                 <div className={styles.inlineActions}>
                   <Button variant="secondary" size="sm" onClick={() => copyLink(state.url!)}>
                     {getProviderText(provider, 'copy_link')}
                   </Button>
+                  {state.userCode && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => copyLink(state.userCode!)}
+                    >
+                      {t('auth_login.device_code_copy')}
+                    </Button>
+                  )}
                   <Button
                     variant="secondary"
                     size="sm"
