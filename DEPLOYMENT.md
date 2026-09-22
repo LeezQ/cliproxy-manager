@@ -37,7 +37,7 @@ remote-management:
   # disable-auto-update-panel 保持缺省（false），自动更新正是发布链路的最后一环
 ```
 
-当前线上版本：**v1.25.0**。
+当前线上版本：**v1.26.0**。
 
 ## 3. 发布新版本
 
