@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconFilterAll } from '@/components/ui/icons';
 import {
@@ -7,6 +8,7 @@ import {
   isThemeSurfaceIconProvider,
   type ResolvedTheme,
 } from '@/features/authFiles/constants';
+import { scrollProviderTabs } from '@/features/authFiles/components/providerTabsWheel';
 import styles from '@/features/authFiles/components/ProviderTabs.module.scss';
 
 export type ProviderTabsProps = {
@@ -20,7 +22,7 @@ export type ProviderTabsProps = {
 };
 
 /**
- * 提供商过滤 tabs：水平排布、窄屏横向滚动。
+ * 提供商过滤 tabs：水平排布，支持鼠标滚轮与触屏横向滚动。
  * 规范中的下划线式 tab：品牌色只出现在图标上，激活态为主文字色 + 2px 主色下划线。
  * 认证文件页与配额页共用。
  */
@@ -33,9 +35,20 @@ export function ProviderTabs({
   className,
 }: ProviderTabsProps) {
   const { t } = useTranslation();
+  const tabsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const strip = tabsRef.current;
+    if (!strip) return;
+    const onWheel = (event: WheelEvent) => scrollProviderTabs(strip, event);
+    // React 的 wheel 事件是被动监听，无法 preventDefault；这里挂本地非被动监听阻止页面随之滚动。
+    strip.addEventListener('wheel', onWheel, { passive: false });
+    return () => strip.removeEventListener('wheel', onWheel);
+  }, []);
 
   return (
     <div
+      ref={tabsRef}
       className={[styles.tabs, className].filter(Boolean).join(' ')}
       role="group"
       aria-label={t('auth_files.filter_all')}

@@ -97,6 +97,12 @@ const PROVIDERS: BuiltInOAuthProviderCard[] = [
   },
   {
     kind: 'builtin',
+    id: 'kimi-ai',
+    titleKey: 'auth_login.kimi_ai_oauth_title',
+    icon: { light: iconKimiDark, dark: iconKimiLight },
+  },
+  {
+    kind: 'builtin',
     id: 'codex',
     titleKey: 'auth_login.codex_oauth_title',
     icon: iconCodex,
@@ -724,11 +730,7 @@ export function OAuthPage() {
                     {getProviderText(provider, 'copy_link')}
                   </Button>
                   {state.userCode && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => copyLink(state.userCode!)}
-                    >
+                    <Button variant="secondary" size="sm" onClick={() => copyLink(state.userCode!)}>
                       {t('auth_login.device_code_copy')}
                     </Button>
                   )}

@@ -24,11 +24,12 @@
 
 /*
  * 筛选卡片：白底 + 边框，与认证文件页的筛选卡片同构。
- * tabs 占满剩余宽度并横向滚动（自带底部分割线），右端排序区补一条同色分割线，两段首尾相接。
+ * 头部一整行是提供商 tabs（自带底部分割线并可横向滚动），
+ * 下方工具栏放搜索框与排序下拉，两类控件分层，互不争夺视觉焦点。
  */
-.tabsRow {
+.filterCard {
   display: flex;
-  align-items: stretch;
+  flex-direction: column;
   min-width: 0;
   overflow: hidden;
   background: var(--bg-primary);
@@ -36,30 +37,149 @@
   border-radius: $radius-lg;
 }
 
-.tabs {
-  flex: 1 1 auto;
+/* 提供商导航独占一行：tabs 占满宽度，保留原生横向滚动 */
+.tabsRow {
+  display: flex;
+  align-items: stretch;
   min-width: 0;
+
+  > :first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+.tabs {
   padding: 0 16px;
 }
 
-.sort {
+/* 工具栏：搜索框在左、排序在右，窄屏自动换行 */
+.toolbar {
   display: flex;
-  flex: 0 0 auto;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 16px;
+}
+
+/* 搜索框：与全局 .input 同一套边框 / 圆角 / 聚焦环，左侧放图标、右侧放清除按钮 */
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 240px;
+  min-width: 200px;
+  max-width: 360px;
+  height: 36px;
+  border: 1px solid var(--border-primary);
+  border-radius: $radius-md;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  transition:
+    border-color $transition-fast,
+    box-shadow $transition-fast;
+
+  &:hover:not(:focus-within) {
+    border-color: var(--border-hover);
+  }
+
+  &:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 18%, transparent);
+  }
+}
+
+.searchIcon {
+  position: absolute;
+  left: 11px;
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0 36px 0 34px;
+  border: 0;
+  border-radius: inherit;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  appearance: none;
+
+  &::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  /* 去掉浏览器自带的清除按钮，统一用下面的 .clearSearch */
+  &::-webkit-search-cancel-button,
+  &::-webkit-search-decoration {
+    appearance: none;
+  }
+}
+
+.clearSearch {
+  position: absolute;
+  right: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color $transition-fast,
+    color $transition-fast;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
+  }
+}
+
+/* 排序下拉：固定宽度，不随搜索框伸缩 */
+.sort {
+  flex: 0 0 auto;
   min-width: 184px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--border-color);
+  max-width: 100%;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .clearSearch:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search,
+  .clearSearch {
+    transition: none;
+  }
 }
 
 @include mobile {
-  .tabsRow {
-    flex-direction: column;
+  .toolbar {
+    padding: 12px;
+  }
+
+  .search {
+    flex-basis: 100%;
+    max-width: none;
   }
 
   .sort {
     width: 100%;
-    padding: 8px 12px;
-    border-bottom: 0;
   }
 }
 

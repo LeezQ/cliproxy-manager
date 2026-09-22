@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { authFilesApi } from '@/services/api';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { IconSearch, IconX } from '@/components/ui/icons';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
@@ -36,6 +37,7 @@ import {
   canRefreshQuotaAfterList,
   classifyQuotaFiles,
   filterEntriesByTab,
+  filterEntriesBySearch,
   paginate,
   sortQuotaEntries,
   type QuotaFileEntry,
@@ -74,6 +76,8 @@ export function QuotaPage() {
     () => readQuotaUiState()?.sortMode ?? 'default'
   );
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const disableControls = connectionStatus !== 'connected';
 
@@ -159,7 +163,14 @@ export function QuotaPage() {
 
   const entries = useMemo(() => classifyQuotaFiles(files), [files]);
   const tabCounts = useMemo(() => buildTabCounts(entries), [entries]);
-  const filteredEntries = useMemo(() => filterEntriesByTab(entries, tab), [entries, tab]);
+  const filteredEntries = useMemo(
+    () => filterEntriesBySearch(filterEntriesByTab(entries, tab), search),
+    [entries, tab, search]
+  );
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
 
   const resolveNextRecovery = useCallback(
     (entry: QuotaFileEntry) => nextRecoveryMs(entry.type, getQuota(entry), sortNow),
@@ -295,24 +306,56 @@ export function QuotaPage() {
       />
 
       <section className={styles.workbench}>
-        {/* 筛选卡片：与认证文件页同构——左侧提供商 tabs（可横向滚动），右端排序下拉 */}
-        <div className={styles.tabsRow}>
-          <ProviderTabs
-            className={styles.tabs}
-            types={TAB_IDS}
-            counts={tabCounts}
-            active={tab}
-            resolvedTheme={resolvedTheme}
-            onChange={handleTabChange}
-          />
-          <div className={styles.sort}>
-            <Select
-              value={sortMode}
-              options={sortOptions}
-              onChange={handleSortModeChange}
-              ariaLabel={t('quota_management.sort_label')}
-              size="sm"
+        {/* 筛选卡片：与认证文件页同构——头部一整行是提供商 tabs（可横向滚动），
+            下方工具栏放搜索框与排序下拉，两类控件分层，互不争夺视觉焦点 */}
+        <div className={styles.filterCard}>
+          <div className={styles.tabsRow}>
+            <ProviderTabs
+              className={styles.tabs}
+              types={TAB_IDS}
+              counts={tabCounts}
+              active={tab}
+              resolvedTheme={resolvedTheme}
+              onChange={handleTabChange}
             />
+          </div>
+
+          <div className={styles.toolbar}>
+            <div className={styles.search}>
+              <IconSearch size={16} className={styles.searchIcon} aria-hidden="true" />
+              <input
+                ref={searchInputRef}
+                className={styles.searchInput}
+                type="search"
+                value={search}
+                onChange={(event) => handleSearchChange(event.target.value)}
+                placeholder={t('quota_management.search_placeholder')}
+                aria-label={t('quota_management.search_label')}
+              />
+              {search && (
+                <button
+                  type="button"
+                  className={styles.clearSearch}
+                  aria-label={t('quota_management.search_clear')}
+                  title={t('quota_management.search_clear')}
+                  onClick={() => {
+                    handleSearchChange('');
+                    searchInputRef.current?.focus();
+                  }}
+                >
+                  <IconX size={14} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+            <div className={styles.sort}>
+              <Select
+                value={sortMode}
+                options={sortOptions}
+                onChange={handleSortModeChange}
+                ariaLabel={t('quota_management.sort_label')}
+                size="sm"
+              />
+            </div>
           </div>
         </div>
 
@@ -331,17 +374,25 @@ export function QuotaPage() {
         ) : isEmpty ? (
           <EmptyState
             title={
-              tab === 'all'
-                ? t('quota_management.empty_title')
-                : t(`${QUOTA_ADAPTERS[tab].i18nPrefix}.empty_title`)
+              search.trim()
+                ? t('quota_management.search_empty_title')
+                : tab === 'all'
+                  ? t('quota_management.empty_title')
+                  : t(`${QUOTA_ADAPTERS[tab].i18nPrefix}.empty_title`)
             }
             description={
-              tab === 'all'
-                ? t('quota_management.empty_desc')
-                : t(`${QUOTA_ADAPTERS[tab].i18nPrefix}.empty_desc`)
+              search.trim()
+                ? t('quota_management.search_empty_desc')
+                : tab === 'all'
+                  ? t('quota_management.empty_desc')
+                  : t(`${QUOTA_ADAPTERS[tab].i18nPrefix}.empty_desc`)
             }
             action={
-              tab === 'all' ? undefined : (
+              search.trim() ? (
+                <Button variant="secondary" size="sm" onClick={() => handleSearchChange('')}>
+                  {t('quota_management.search_clear')}
+                </Button>
+              ) : tab === 'all' ? undefined : (
                 <Button variant="secondary" size="sm" onClick={() => handleTabChange('all')}>
                   {t('auth_files.filter_all')}
                 </Button>

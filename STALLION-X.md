@@ -42,7 +42,7 @@
 | 配置面板专属配置块 | `src/features/config/components/sections/SectionAdvanced.tsx` |
 
 **恢复某个提供商**：把它的 id 从 `HIDDEN_PROVIDER_IDS` 删掉即可，其余代码无需改动。
-相关的上游测试（`tests/devinOAuthUi.test.ts`、`tests/authFileCard.test.ts`）已改写为断言本 fork 的行为，合并上游时若被改回需要重新调整。
+相关的上游测试（`tests/devinOAuthUi.test.ts`、`tests/authFileCard.test.ts`、`tests/kimiOAuth.test.ts`、`tests/quotaToolbar.test.ts`）已改写为断言本 fork 的行为，合并上游时若被改回需要重新调整。
 
 ## 2. 视觉重构（Signal Atlas）
 
