@@ -1,11 +1,14 @@
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ChangeEvent,
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { IconChevronDown } from '@/components/ui/icons';
 import styles from '@/components/ui/AutocompleteInput.module.scss';
 
@@ -47,6 +50,9 @@ export function AutocompleteInput({
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputWrapRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties | null>(null);
 
   const normalizedOptions = options.map((opt) =>
     typeof opt === 'string'
@@ -60,16 +66,43 @@ export function AutocompleteInput({
       opt.value.toLowerCase().includes(v) || (opt.label && opt.label.toLowerCase().includes(v))
     );
   });
+  const showDropdown = isOpen && filteredOptions.length > 0 && !disabled;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+      const target = event.target as Node;
+      if (containerRef.current?.contains(target) || dropdownRef.current?.contains(target)) return;
+      setIsOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useLayoutEffect(() => {
+    if (!showDropdown || !inputWrapRef.current) return;
+    const updateDropdownStyle = () => {
+      if (!inputWrapRef.current) return;
+      const rect = inputWrapRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - 14;
+      const opensUp = spaceBelow < 200 && rect.top > spaceBelow;
+      setDropdownStyle({
+        position: 'fixed',
+        ...(opensUp ? { bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 6 }),
+        left: rect.left,
+        width: rect.width,
+        maxHeight: Math.max(0, Math.min(200, opensUp ? rect.top - 14 : spaceBelow)),
+        zIndex: 2010,
+      });
+    };
+    updateDropdownStyle();
+    window.addEventListener('resize', updateDropdownStyle);
+    window.addEventListener('scroll', updateDropdownStyle, true);
+
+    return () => {
+      window.removeEventListener('resize', updateDropdownStyle);
+      window.removeEventListener('scroll', updateDropdownStyle, true);
+    };
+  }, [showDropdown]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
@@ -113,7 +146,7 @@ export function AutocompleteInput({
   return (
     <div className={`form-group ${wrapperClassName}`} ref={containerRef} style={wrapperStyle}>
       {label && <label htmlFor={id}>{label}</label>}
-      <div className={styles.field}>
+      <div className={styles.field} ref={inputWrapRef}>
         <input
           id={id}
           className={['input', styles.input, className].filter(Boolean).join(' ')}
@@ -136,28 +169,38 @@ export function AutocompleteInput({
           <IconChevronDown size={16} className={styles.chevron} />
         </div>
 
-        {isOpen && filteredOptions.length > 0 && !disabled && (
-          <div className={['autocomplete-dropdown', styles.dropdown].filter(Boolean).join(' ')}>
-            {filteredOptions.map((opt, index) => (
-              <div
-                key={`${opt.value}-${index}`}
-                className={[
-                  styles.option,
-                  index === highlightedIndex ? styles.optionHighlighted : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                onClick={() => handleSelect(opt.value)}
-                onMouseEnter={() => setHighlightedIndex(index)}
-              >
-                <span className={styles.optionValue}>{opt.value}</span>
-                {opt.label && opt.label !== opt.value && (
-                  <span className={styles.optionLabel}>{opt.label}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        {showDropdown &&
+          dropdownStyle &&
+          typeof document !== 'undefined' &&
+          createPortal(
+            <div
+              ref={dropdownRef}
+              className={['autocomplete-dropdown', styles.dropdown].filter(Boolean).join(' ')}
+              style={{
+                ...dropdownStyle,
+              }}
+            >
+              {filteredOptions.map((opt, index) => (
+                <div
+                  key={`${opt.value}-${index}`}
+                  className={[
+                    styles.option,
+                    index === highlightedIndex ? styles.optionHighlighted : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={() => handleSelect(opt.value)}
+                  onMouseEnter={() => setHighlightedIndex(index)}
+                >
+                  <span className={styles.optionValue}>{opt.value}</span>
+                  {opt.label && opt.label !== opt.value && (
+                    <span className={styles.optionLabel}>{opt.label}</span>
+                  )}
+                </div>
+              ))}
+            </div>,
+            document.body
+          )}
       </div>
       {hint && <div className="hint">{hint}</div>}
       {error && <div className="error-box">{error}</div>}
