@@ -4,9 +4,18 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
-import { IconSearch, IconSlidersHorizontal } from '@/components/ui/icons';
+import {
+  IconLayoutGrid,
+  IconLayoutRows,
+  IconSearch,
+  IconSlidersHorizontal,
+} from '@/components/ui/icons';
 import { MAX_CARD_PAGE_SIZE, MIN_CARD_PAGE_SIZE } from '@/features/authFiles/constants';
-import type { AuthFilesSortMode, AuthFilesStatusFilterMode } from '@/features/authFiles/uiState';
+import type {
+  AuthFilesLayoutMode,
+  AuthFilesSortMode,
+  AuthFilesStatusFilterMode,
+} from '@/features/authFiles/uiState';
 import styles from '@/features/authFiles/components/AuthFilesToolbar.module.scss';
 
 export type AuthFilesToolbarProps = {
@@ -23,6 +32,8 @@ export type AuthFilesToolbarProps = {
   onPageSizeCommit: (rawValue: string) => void;
   compactMode: boolean;
   onCompactModeChange: (value: boolean) => void;
+  layoutMode: AuthFilesLayoutMode;
+  onLayoutModeChange: (mode: AuthFilesLayoutMode) => void;
 };
 
 /**
@@ -45,6 +56,8 @@ export function AuthFilesToolbar(props: AuthFilesToolbarProps) {
     onPageSizeCommit,
     compactMode,
     onCompactModeChange,
+    layoutMode,
+    onLayoutModeChange,
   } = props;
   const { t } = useTranslation();
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
@@ -117,6 +130,36 @@ export function AuthFilesToolbar(props: AuthFilesToolbarProps) {
         />
       </div>
 
+      <div
+        className={`${styles.segmented} ${styles.layoutToggle}`}
+        role="group"
+        aria-label={t('auth_files.layout_label')}
+      >
+        {(
+          [
+            { mode: 'card', label: t('auth_files.layout_card'), Icon: IconLayoutGrid },
+            { mode: 'list', label: t('auth_files.layout_list'), Icon: IconLayoutRows },
+          ] as const
+        ).map(({ mode, label, Icon }) => {
+          const isActive = layoutMode === mode;
+          return (
+            <button
+              key={mode}
+              type="button"
+              className={`${styles.segment} ${styles.segmentIcon} ${
+                isActive ? styles.segmentActive : ''
+              }`}
+              aria-pressed={isActive}
+              title={label}
+              aria-label={label}
+              onClick={() => onLayoutModeChange(mode)}
+            >
+              <Icon size={15} />
+            </button>
+          );
+        })}
+      </div>
+
       <div className={styles.display} ref={displaySettingsRef}>
         <Button
           type="button"
@@ -152,14 +195,17 @@ export function AuthFilesToolbar(props: AuthFilesToolbarProps) {
                 }}
               />
             </div>
-            <div className={styles.popoverRow}>
-              <span>{t('auth_files.compact_mode_label')}</span>
-              <ToggleSwitch
-                checked={compactMode}
-                onChange={onCompactModeChange}
-                ariaLabel={t('auth_files.compact_mode_label')}
-              />
-            </div>
+            {/* 紧凑模式只作用于卡片布局；列表布局本身已是紧凑排列，这里不再展示 */}
+            {layoutMode === 'card' && (
+              <div className={styles.popoverRow}>
+                <span>{t('auth_files.compact_mode_label')}</span>
+                <ToggleSwitch
+                  checked={compactMode}
+                  onChange={onCompactModeChange}
+                  ariaLabel={t('auth_files.compact_mode_label')}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

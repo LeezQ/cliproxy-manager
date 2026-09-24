@@ -273,6 +273,7 @@
     "health_status_label": "Health",
     "health_status_healthy": "Healthy",
     "health_status_warning": "Warning",
+    "stale_error_prefix": "Last error (recovered): ",
     "health_status_disabled": "Disabled",
     "download_button": "Download",
     "manual_refresh_button": "Refresh OAuth credential",
@@ -407,7 +408,16 @@
     "quota_refresh_single": "Refresh quota",
     "quota_refresh_hint": "Refresh quota only for this credential",
     "quota_refresh_success": "Quota refreshed for \"{{name}}\"",
-    "quota_refresh_failed": "Failed to refresh quota for \"{{name}}\": {{message}}"
+    "quota_refresh_failed": "Failed to refresh quota for \"{{name}}\": {{message}}",
+    "layout_label": "Layout",
+    "layout_card": "Cards",
+    "layout_list": "List",
+    "row_quota_load": "Load quota",
+    "row_quota_unavailable": "Quota isn't available for this credential",
+    "row_weight": "Weight {{value}}",
+    "row_priority": "Priority {{value}}",
+    "list_load_page_quota": "Load quota for this page ({{count}})",
+    "list_load_page_quota_hint": "Query quota for every eligible credential on this page"
   },
   "antigravity_subscription": {
     "plan_unknown": "Unknown",

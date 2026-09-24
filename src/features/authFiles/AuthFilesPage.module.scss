@@ -92,6 +92,71 @@
   align-items: stretch;
 }
 
+/* ---------- 列表布局 ----------
+ * 按提供商分组，每组一个带边框的容器，行之间只用细分隔线（见 AuthFileRow）。
+ * 容器不设 overflow: hidden，否则请求方块条的悬停提示会被裁掉；
+ * 首末行的圆角改为直接给子元素，让悬停底色不溢出外框。
+ */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.listToolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -8px;
+}
+
+.listGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.listGroupHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.listGroupCount {
+  font-weight: 500;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.listRows {
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-primary);
+
+  > :first-child {
+    border-top-left-radius: calc(#{$radius-md} - 1px);
+    border-top-right-radius: calc(#{$radius-md} - 1px);
+  }
+
+  > :last-child {
+    border-bottom-left-radius: calc(#{$radius-md} - 1px);
+    border-bottom-right-radius: calc(#{$radius-md} - 1px);
+  }
+}
+
+.listSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .gridCompact {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
 }

@@ -19,6 +19,7 @@ import {
   formatModified,
   getAuthFileStatusMessage,
   hasAuthFileStatusWarning,
+  isStaleAuthFileError,
   getAuthFileIcon,
   getThemeSurfaceIconBackground,
   getTypeLabel,
@@ -106,6 +107,8 @@ export function AuthFileCard(props: AuthFileCardProps) {
 
   const rawStatusMessage = getAuthFileStatusMessage(file);
   const hasStatusWarning = hasAuthFileStatusWarning(file);
+  // 仍在正常工作、只是残留历史错误：不亮告警，旧错误降级为一行弱化说明
+  const isStaleError = isStaleAuthFileError(file);
 
   const priorityValue = Number.isSafeInteger(file.priority) ? file.priority : undefined;
   const weightValue = Number.isSafeInteger(file.weight) ? file.weight : undefined;
@@ -204,6 +207,13 @@ export function AuthFileCard(props: AuthFileCardProps) {
           <IconInfo className={styles.warningIcon} size={14} />
           <span>{rawStatusMessage}</span>
         </div>
+      )}
+
+      {rawStatusMessage && isStaleError && (
+        <p className={styles.staleError} title={rawStatusMessage}>
+          {t('auth_files.stale_error_prefix')}
+          {rawStatusMessage}
+        </p>
       )}
 
       <AuthFileCooldownSection snapshot={file.cooldownSnapshot} />

@@ -239,6 +239,17 @@
   margin-top: 2px;
 }
 
+/* 已恢复的历史错误：不占告警色，只作弱化的备查信息 */
+.staleError {
+  margin: 0;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+  overflow-wrap: anywhere;
+  @include text-ellipsis-multiline(1);
+}
+
 /* ---------- 健康区：分组小标签 + 计数 + 状态方块条 ---------- */
 
 .health {

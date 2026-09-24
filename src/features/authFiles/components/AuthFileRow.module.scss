@@ -1,0 +1,385 @@
+@use '../../../styles/mixins' as *;
+
+/* ============================================================
+ * 认证文件列表行（列表视图）
+ *
+ * 目标是账号多时一屏看得更多：一行一个凭证，同类数据纵向对齐成列。
+ * 视觉沿用卡片的 token（配色、字号、状态色），不加阴影与入场动画；
+ * 行之间只用一条细分隔线，分组与外框由页面（AuthFilesPage）负责。
+ *
+ * 列：勾选 | 账号 | 状态 | 请求健康度 | 额度 | 操作
+ * ============================================================ */
+
+.row {
+  display: grid;
+  /* 账号是主识别信息，给足宽度少截断邮箱；额度列按两个窗口并排估算 */
+  grid-template-columns:
+    20px
+    minmax(240px, 1.6fr)
+    64px
+    minmax(170px, 0.9fr)
+    minmax(280px, 1.8fr)
+    auto;
+  grid-template-areas: 'select identity state health quota actions';
+  column-gap: 18px;
+  row-gap: 6px;
+  align-items: center;
+  padding: 11px 14px;
+  background: var(--bg-primary);
+
+  & + & {
+    border-top: 1px solid var(--border-color);
+  }
+}
+
+/* 只有带告警 / 历史错误 / 冷却说明的行才追加第二行，普通行不多占行间距 */
+.rowWithNotice {
+  grid-template-areas:
+    'select identity state health quota actions'
+    'select notice notice notice notice notice';
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .row:hover {
+    background: var(--bg-quinary, var(--bg-secondary));
+  }
+}
+
+.rowSelected,
+.rowSelected:hover {
+  background: color-mix(in srgb, var(--primary-color) 6%, var(--bg-primary));
+  box-shadow: inset 2px 0 0 var(--primary-color);
+}
+
+/* 停用只减弱信息区，操作区保持原色，方便直接重新启用 */
+.rowDisabled {
+  .cellIdentity,
+  .cellState,
+  .cellHealth,
+  .cellQuota {
+    opacity: 0.55;
+  }
+}
+
+/* ---------- 各列 ---------- */
+
+.cellSelect {
+  grid-area: select;
+  align-self: start;
+  padding-top: 4px;
+}
+
+.cellIdentity {
+  grid-area: identity;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cellState {
+  grid-area: state;
+  min-width: 0;
+}
+
+.cellHealth {
+  grid-area: health;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.cellQuota {
+  grid-area: quota;
+  min-width: 0;
+}
+
+.cellActions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.notice {
+  grid-area: notice;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* ---------- 账号列 ---------- */
+
+.avatar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-quinary, var(--bg-tertiary));
+  color: var(--text-secondary);
+}
+
+.avatarImage {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.avatarFallback {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.identityText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.account {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-primary);
+  @include text-ellipsis;
+}
+
+.accountMono {
+  font-family: $font-mono;
+  font-size: 12.5px;
+}
+
+.identityMeta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* 套餐是这一列最要紧的区分信息，用正文色加粗；付费档再用主色强调 */
+.plan {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.planPremium {
+  color: var(--primary-color);
+}
+
+.note {
+  min-width: 0;
+  @include text-ellipsis;
+}
+
+/* ---------- 状态列：圆点 + 文字，不用带框徽标 ---------- */
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.stateDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.toneOk {
+  color: var(--success-badge-text);
+
+  .stateDot {
+    background: var(--success-color);
+  }
+}
+
+.toneWarning {
+  color: var(--amber-text);
+
+  .stateDot {
+    background: var(--amber-color);
+  }
+}
+
+.toneMuted {
+  color: var(--text-tertiary);
+
+  .stateDot {
+    background: var(--text-quaternary);
+  }
+}
+
+/* ---------- 请求健康度列 ---------- */
+
+.counts {
+  display: flex;
+  gap: 10px;
+  font-family: $font-mono;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.countOk {
+  color: var(--success-color);
+}
+
+.countFail {
+  color: var(--error-color);
+}
+
+/* 覆盖卡片方块条的尺寸：两级选择器，优先级高于卡片的单类规则 */
+.statusBar {
+  gap: 6px;
+}
+
+.statusBar .statusBlock {
+  height: 8px;
+  border-radius: 1.5px;
+}
+
+.statusBar .statusRate {
+  font-size: 11.5px;
+  min-width: 36px;
+}
+
+/* ---------- 额度列 ---------- */
+
+.empty {
+  font-size: 12px;
+  color: var(--text-quaternary);
+}
+
+/* ---------- 操作列 ---------- */
+
+.row .cellActions .iconButton {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  color: var(--text-secondary);
+}
+
+.row .cellActions .iconButtonDanger {
+  color: var(--error-color);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .row .cellActions .iconButton:hover:not(:disabled) {
+    color: var(--text-primary);
+  }
+
+  .row .cellActions .iconButtonDanger:hover:not(:disabled) {
+    color: var(--error-color);
+    border-color: color-mix(in srgb, var(--error-color) 40%, var(--border-primary));
+    background-color: color-mix(in srgb, var(--error-color) 8%, var(--bg-primary));
+  }
+}
+
+.cellActions > :last-child {
+  margin-left: 6px;
+}
+
+/* ---------- 告警 / 历史错误说明 ---------- */
+
+.noticeWarning,
+.noticeStale {
+  margin: 0;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  @include text-ellipsis;
+}
+
+.noticeWarning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--amber-text);
+
+  span {
+    min-width: 0;
+    @include text-ellipsis;
+  }
+}
+
+.noticeIcon {
+  flex-shrink: 0;
+}
+
+.noticeStale {
+  color: var(--text-tertiary);
+}
+
+/* ---------- 响应式 ---------- */
+
+/* 中等宽度：信息拆成两行——账号 / 状态 / 操作在上，健康度与额度在下 */
+/*
+ * 第一行：账号横跨两个弹性列吃掉剩余宽度，状态与操作只占自身宽度；
+ * 第二行：健康度占一列，额度横跨其余三列，给两个额度窗口留足空间。
+ */
+@media (max-width: 1180px) {
+  .row {
+    grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'select identity identity state actions'
+      'select health quota quota quota';
+    row-gap: 10px;
+  }
+
+  .rowWithNotice {
+    grid-template-areas:
+      'select identity identity state actions'
+      'select health quota quota quota'
+      'select notice notice notice notice';
+  }
+}
+
+/* 手机：单列堆叠 */
+@media (max-width: #{$breakpoint-mobile}) {
+  .row {
+    grid-template-columns: 20px minmax(0, 1fr);
+    grid-template-areas:
+      'select identity'
+      'select state'
+      'select health'
+      'select quota'
+      'select actions';
+    row-gap: 8px;
+  }
+
+  .rowWithNotice {
+    grid-template-areas:
+      'select identity'
+      'select state'
+      'select health'
+      'select quota'
+      'select actions'
+      'select notice';
+  }
+
+  .cellActions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}

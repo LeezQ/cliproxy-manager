@@ -1,0 +1,109 @@
+@use '../../../styles/mixins' as *;
+
+$quota-font-size: 11.5px;
+
+/* ============================================================
+ * 列表视图的额度外衣。
+ *
+ * 这里只放「覆盖项」：AuthFileQuotaSection 会把本模块与卡片额度样式
+ * （AuthFileQuota.module.scss）合并，本模块同名类优先。进度条、百分比
+ * 配色等视觉仍用卡片样式，这里只把布局从纵向改成横向。
+ * ============================================================ */
+
+/* 各额度窗口横向排成等宽的列，像表格里的同类数据一样上下对齐 */
+.quotaSection {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  column-gap: 18px;
+  align-items: start;
+  min-width: 0;
+  font-size: $quota-font-size;
+}
+
+/*
+ * 套餐 chip 与重置积分明细在行内不展示：套餐已显示在账号列，
+ * 重置积分属于低频信息，留给卡片视图和额度页。
+ */
+.codexPlan,
+.codexResetCredits,
+.codexResetCreditsError {
+  display: none;
+}
+
+.quotaMessage {
+  font-family: $font-mono;
+  font-size: $quota-font-size;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  text-align: left;
+  padding: 0;
+}
+
+button.quotaMessageAction {
+  justify-self: start;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-decoration-color: var(--border-color);
+  text-underline-offset: 3px;
+  transition: color $transition-fast;
+
+  &:hover:not(:disabled) {
+    color: var(--primary-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    color: var(--text-quaternary);
+  }
+}
+
+.quotaError {
+  min-width: 0;
+  font-size: $quota-font-size;
+  line-height: 1.5;
+  color: var(--danger-color);
+  @include text-ellipsis;
+}
+
+/* ---------- 额度窗口的标题行 ----------
+ * 两个窗口并排时每列只有约 200px。卡片样式把「标签 + 百分比 + 绝对时间 + 倒计时」
+ * 挤在一行，标签会被压成零宽，看不出哪根条是 5 小时、哪根是周额度。
+ * 行内做两处取舍：标签不再收缩；有倒计时就省掉绝对日期（完整时间在卡片视图和额度页）。
+ */
+
+.quotaModel {
+  flex-shrink: 0;
+  font-size: $quota-font-size;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.quotaReset {
+  color: var(--text-quaternary);
+
+  /* 后面紧跟倒计时时，绝对日期让位 */
+  &:has(+ .quotaResetRelative) {
+    display: none;
+  }
+}
+
+/* 绝对日期隐藏后倒计时直接跟在百分比后面，不再需要中点分隔 */
+.quotaResetRelative {
+  color: var(--text-tertiary);
+}
+
+.quotaResetRelativeSoon {
+  color: var(--warning-text);
+  font-weight: 600;
+}

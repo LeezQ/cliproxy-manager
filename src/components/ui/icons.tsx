@@ -35,6 +35,28 @@ export function IconSlidersHorizontal({ size = 20, ...props }: IconProps) {
   );
 }
 
+/** 卡片布局（2×2 网格），用于认证文件视图切换。 */
+export function IconLayoutGrid({ size = 20, ...props }: IconProps) {
+  return (
+    <svg {...baseSvgProps} width={size} height={size} {...props}>
+      <rect width="7" height="7" x="3" y="3" rx="1" />
+      <rect width="7" height="7" x="14" y="3" rx="1" />
+      <rect width="7" height="7" x="14" y="14" rx="1" />
+      <rect width="7" height="7" x="3" y="14" rx="1" />
+    </svg>
+  );
+}
+
+/** 列表布局（按行排列），用于认证文件视图切换。 */
+export function IconLayoutRows({ size = 20, ...props }: IconProps) {
+  return (
+    <svg {...baseSvgProps} width={size} height={size} {...props}>
+      <rect width="18" height="7" x="3" y="3" rx="1" />
+      <rect width="18" height="7" x="3" y="14" rx="1" />
+    </svg>
+  );
+}
+
 export function IconKey({ size = 20, ...props }: IconProps) {
   return (
     <svg {...baseSvgProps} width={size} height={size} {...props}>

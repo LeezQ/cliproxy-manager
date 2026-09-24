@@ -14,10 +14,20 @@ import { Button } from '@/components/ui/Button';
 import { IconRefreshCw } from '@/components/ui/icons';
 import { bindQuotaClasses } from '@/features/quota/types';
 import { QUOTA_ADAPTERS, type QuotaCardState } from '@/features/quota/providers';
-import styles from '@/features/authFiles/components/AuthFileQuota.module.scss';
+import cardStyles from '@/features/authFiles/components/AuthFileQuota.module.scss';
+import rowOverrides from '@/features/authFiles/components/AuthFileQuotaRow.module.scss';
 
 /** 认证文件卡片外衣：紧凑额度样式绑定成类型化契约（缺键在模块初始化即抛）。 */
-const compactQuotaClasses = bindQuotaClasses(styles, 'AuthFileQuota.module.scss');
+const compactQuotaClasses = bindQuotaClasses(cardStyles, 'AuthFileQuota.module.scss');
+
+/**
+ * 列表视图的额度样式：以卡片样式为底，只覆盖布局相关的类——
+ * 各额度窗口横向排成列，套餐 chip 与重置积分明细隐藏（套餐已显示在账号列）。
+ */
+const rowStyles: Record<string, string> = { ...cardStyles, ...rowOverrides };
+const rowQuotaClasses = bindQuotaClasses(rowStyles, 'AuthFileQuotaRow.module.scss');
+
+export type AuthFileQuotaVariant = 'card' | 'row';
 
 const assertNever = (value: never): never => {
   throw new Error(`Unsupported quota type: ${value}`);
@@ -31,10 +41,15 @@ export type AuthFileQuotaSectionProps = {
   file: AuthFileItem;
   quotaType: QuotaProviderType;
   disableControls: boolean;
+  /** 展示外衣：card 为卡片内的纵向排列（默认），row 为列表行内的横向排列。 */
+  variant?: AuthFileQuotaVariant;
 };
 
 export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
-  const { file, quotaType, disableControls } = props;
+  const { file, quotaType, disableControls, variant = 'card' } = props;
+  const isRow = variant === 'row';
+  const styles = isRow ? rowStyles : cardStyles;
+  const quotaClasses = isRow ? rowQuotaClasses : compactQuotaClasses;
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
   const showConfirmation = useNotificationStore((state) => state.showConfirmation);
@@ -194,7 +209,8 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
           onClick={() => void refreshQuotaForFile()}
           disabled={!canRefreshQuota}
         >
-          {t(`${adapter.i18nPrefix}.idle`)}
+          {/* 行内空间有限，用更短的动作文案 */}
+          {isRow ? t('auth_files.row_quota_load') : t(`${adapter.i18nPrefix}.idle`)}
         </button>
       ) : quotaStatus === 'error' ? (
         <div className={styles.quotaError}>
@@ -203,11 +219,11 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
           })}
         </div>
       ) : quota ? (
-        <adapter.Body quota={quota} classes={compactQuotaClasses} />
+        <adapter.Body quota={quota} classes={quotaClasses} />
       ) : (
         <div className={styles.quotaMessage}>{t(`${adapter.i18nPrefix}.idle`)}</div>
       )}
-      {quotaStatus !== 'idle' && (resetQuotaAction || quotaType === 'devin') && (
+      {!isRow && quotaStatus !== 'idle' && (resetQuotaAction || quotaType === 'devin') && (
         <div className={styles.quotaCardActions}>
           {resetQuotaAction}
           {quotaType === 'devin' && (

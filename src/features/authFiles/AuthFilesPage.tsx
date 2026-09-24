@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { copyToClipboard } from '@/utils/clipboard';
 import { getQuotaCacheKey } from '@/utils/quota/identity';
 import {
+  MAX_CARD_PAGE_SIZE,
   QUOTA_PROVIDER_TYPES,
   clampCardPageSize,
   getTypeLabel,
@@ -24,6 +25,7 @@ import {
   type ResolvedTheme,
 } from '@/features/authFiles/constants';
 import { AuthFileCard } from '@/features/authFiles/components/AuthFileCard';
+import { AuthFileRow } from '@/features/authFiles/components/AuthFileRow';
 import { AuthFileDetailsSheet } from '@/features/authFiles/components/AuthFileDetailsSheet';
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { AuthFilesToolbar } from '@/features/authFiles/components/AuthFilesToolbar';
@@ -35,20 +37,26 @@ import { invalidateAuthFileDerivedCaches } from '@/features/authFiles/cacheInval
 import {
   buildWildcardSearch,
   matchesAuthFileSearch,
+  resolveAuthFileQuotaType,
   sortAuthFiles,
 } from '@/features/authFiles/logic';
+import { groupAuthFilesByProvider } from '@/features/authFiles/listView';
+import { useQuotaBatchLoader } from '@/features/quota/hooks/useQuotaBatchLoader';
+import type { QuotaFileEntry } from '@/features/quota/logic';
 import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
 import { useAuthFilesModels } from '@/features/authFiles/hooks/useAuthFilesModels';
 import { useAuthFilesOauth } from '@/features/authFiles/hooks/useAuthFilesOauth';
 import { useAuthFilesPrefixProxyEditor } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
 import { useAuthFilesStatusBarCache } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
 import {
+  isAuthFilesLayoutMode,
   isAuthFilesStatusFilterMode,
   isAuthFilesSortMode,
   readAuthFilesUiState,
   readPersistedAuthFilesCompactMode,
   writeAuthFilesUiState,
   writePersistedAuthFilesCompactMode,
+  type AuthFilesLayoutMode,
   type AuthFilesStatusFilterMode,
   type AuthFilesSortMode,
 } from '@/features/authFiles/uiState';
@@ -57,6 +65,9 @@ import styles from '@/features/authFiles/AuthFilesPage.module.scss';
 
 const DEFAULT_REGULAR_PAGE_SIZE = 9;
 const DEFAULT_COMPACT_PAGE_SIZE = 12;
+/** 列表布局一行一个凭证，默认直接放满单页上限，账号多时少翻页。 */
+const DEFAULT_LIST_PAGE_SIZE = MAX_CARD_PAGE_SIZE;
+const SKELETON_ROW_COUNT = 6;
 const SKELETON_CARD_COUNT = 6;
 
 const resolveStatusFilterMode = (
@@ -85,11 +96,13 @@ export function AuthFilesPage() {
   const [filter, setFilter] = useState<'all' | string>('all');
   const [statusFilterMode, setStatusFilterMode] = useState<AuthFilesStatusFilterMode>('all');
   const [compactMode, setCompactMode] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<AuthFilesLayoutMode>('card');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSizeByMode, setPageSizeByMode] = useState({
     regular: DEFAULT_REGULAR_PAGE_SIZE,
     compact: DEFAULT_COMPACT_PAGE_SIZE,
+    list: DEFAULT_LIST_PAGE_SIZE,
   });
   const [pageSizeInput, setPageSizeInput] = useState('9');
   const [viewMode, setViewMode] = useState<'diagram' | 'list'>('list');
@@ -185,7 +198,10 @@ export function AuthFilesPage() {
     : null;
   const activeQuotaFilter: AuthFileQuotaFilter =
     normalizedFilter === 'all' ? 'all' : quotaFilterType;
-  const pageSize = compactMode ? pageSizeByMode.compact : pageSizeByMode.regular;
+  // 三档分页各自记忆：列表布局 / 紧凑卡片 / 普通卡片，切换布局不会互相覆盖
+  const pageSizeKey: keyof typeof pageSizeByMode =
+    layoutMode === 'list' ? 'list' : compactMode ? 'compact' : 'regular';
+  const pageSize = pageSizeByMode[pageSizeKey];
   const problemOnly = statusFilterMode === 'problem';
   const disabledOnly = statusFilterMode === 'disabled';
   const enabledOnly = statusFilterMode === 'enabled';
@@ -237,12 +253,20 @@ export function AuthFilesPage() {
         typeof persisted.compactPageSize === 'number' && Number.isFinite(persisted.compactPageSize)
           ? clampCardPageSize(persisted.compactPageSize)
           : (legacyPageSize ?? DEFAULT_COMPACT_PAGE_SIZE);
+      const listPageSize =
+        typeof persisted.listPageSize === 'number' && Number.isFinite(persisted.listPageSize)
+          ? clampCardPageSize(persisted.listPageSize)
+          : DEFAULT_LIST_PAGE_SIZE;
       setPageSizeByMode({
         regular: regularPageSize,
         compact: compactPageSize,
+        list: listPageSize,
       });
       if (isAuthFilesSortMode(persisted.sortMode)) {
         setSortMode(persisted.sortMode);
+      }
+      if (isAuthFilesLayoutMode(persisted.layoutMode)) {
+        setLayoutMode(persisted.layoutMode);
       }
     }
 
@@ -263,13 +287,16 @@ export function AuthFilesPage() {
       pageSize,
       regularPageSize: pageSizeByMode.regular,
       compactPageSize: pageSizeByMode.compact,
+      listPageSize: pageSizeByMode.list,
       sortMode,
+      layoutMode,
     });
     writePersistedAuthFilesCompactMode(compactMode);
   }, [
     compactMode,
     disabledOnly,
     filter,
+    layoutMode,
     page,
     pageSize,
     pageSizeByMode,
@@ -286,11 +313,9 @@ export function AuthFilesPage() {
 
   const setCurrentModePageSize = useCallback(
     (next: number) => {
-      setPageSizeByMode((current) =>
-        compactMode ? { ...current, compact: next } : { ...current, regular: next }
-      );
+      setPageSizeByMode((current) => ({ ...current, [pageSizeKey]: next }));
     },
-    [compactMode]
+    [pageSizeKey]
   );
 
   const commitPageSizeInput = useCallback(
@@ -446,6 +471,29 @@ export function AuthFilesPage() {
   const currentPage = Math.min(page, totalPages);
   const start = (currentPage - 1) * pageSize;
   const pageItems = useMemo(() => sorted.slice(start, start + pageSize), [pageSize, sorted, start]);
+
+  /* ---------- 列表布局：分组与批量额度 ---------- */
+
+  const pageGroups = useMemo(() => groupAuthFilesByProvider(pageItems), [pageItems]);
+
+  // 本页可查询额度的凭证：与行内展示额度的条件一致（非虚拟、未停用、提供商支持额度）
+  const pageQuotaTargets = useMemo<QuotaFileEntry[]>(
+    () =>
+      pageItems.flatMap((file) => {
+        if (isRuntimeOnlyAuthFile(file) || file.disabled) return [];
+        const type = resolveAuthFileQuotaType(file, activeQuotaFilter);
+        return type ? [{ file, type }] : [];
+      }),
+    [activeQuotaFilter, pageItems]
+  );
+
+  const { batchLoading: pageQuotaLoading, loadQuota } = useQuotaBatchLoader();
+
+  // 账号多时逐行点「加载额度」太慢，这里一次拉取本页全部
+  const handleLoadPageQuota = useCallback(() => {
+    if (disableControls || pageQuotaTargets.length === 0) return;
+    void loadQuota(pageQuotaTargets);
+  }, [disableControls, loadQuota, pageQuotaTargets]);
   const selectablePageItems = useMemo(
     () => pageItems.filter((file) => !isRuntimeOnlyAuthFile(file)),
     [pageItems]
@@ -540,6 +588,24 @@ export function AuthFilesPage() {
 
   const isFirstRunEmpty = !loading && files.length === 0 && !error;
   const isNoResults = !loading && files.length > 0 && pageItems.length === 0;
+
+  const sharedItemProps = {
+    resolvedTheme,
+    disableControls,
+    deleting,
+    statusUpdating,
+    manualRefreshing,
+    quotaFilterType: activeQuotaFilter,
+    statusBarCache,
+    onShowModels: showModels,
+    onDownload: handleDownload,
+    onManualRefresh: handleManualRefresh,
+    onOpenPrefixProxyEditor: openPrefixProxyEditor,
+    onDelete: handleDelete,
+    onToggleStatus: handleStatusToggle,
+    onToggleSelect: toggleSelect,
+  };
+  const isListLayout = layoutMode === 'list';
 
   const gridClasses = [
     styles.grid,
@@ -659,6 +725,8 @@ export function AuthFilesPage() {
             onPageSizeCommit={commitPageSizeInput}
             compactMode={compactMode}
             onCompactModeChange={setCompactMode}
+            layoutMode={layoutMode}
+            onLayoutModeChange={setLayoutMode}
           />
         </div>
 
@@ -669,11 +737,19 @@ export function AuthFilesPage() {
         )}
 
         {loading ? (
-          <div className={gridClasses} aria-hidden="true">
-            {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
-              <Skeleton key={index} height={206} rounded={8} />
-            ))}
-          </div>
+          isListLayout ? (
+            <div className={styles.listSkeleton} aria-hidden="true">
+              {Array.from({ length: SKELETON_ROW_COUNT }, (_, index) => (
+                <Skeleton key={index} height={52} rounded={6} />
+              ))}
+            </div>
+          ) : (
+            <div className={gridClasses} aria-hidden="true">
+              {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
+                <Skeleton key={index} height={206} rounded={8} />
+              ))}
+            </div>
+          )
         ) : isFirstRunEmpty ? (
           <EmptyState
             title={t('auth_files.empty_title')}
@@ -703,6 +779,42 @@ export function AuthFilesPage() {
               </Button>
             }
           />
+        ) : isListLayout ? (
+          <div className={styles.list}>
+            {pageQuotaTargets.length > 0 && (
+              <div className={styles.listToolbar}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleLoadPageQuota}
+                  loading={pageQuotaLoading}
+                  disabled={disableControls || pageQuotaLoading}
+                  title={t('auth_files.list_load_page_quota_hint')}
+                >
+                  {!pageQuotaLoading && <IconRefreshCw size={14} />}
+                  {t('auth_files.list_load_page_quota', { count: pageQuotaTargets.length })}
+                </Button>
+              </div>
+            )}
+            {pageGroups.map((group) => (
+              <section key={group.provider} className={styles.listGroup}>
+                <h3 className={styles.listGroupHeader}>
+                  {getTypeLabel(t, group.provider)}
+                  <span className={styles.listGroupCount}>{group.files.length}</span>
+                </h3>
+                <div className={styles.listRows} role="table">
+                  {group.files.map((file) => (
+                    <AuthFileRow
+                      key={getQuotaCacheKey(file)}
+                      file={file}
+                      selected={selectedFiles.has(file.name)}
+                      {...sharedItemProps}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         ) : (
           <div className={gridClasses}>
             {pageItems.map((file) => (
@@ -711,20 +823,7 @@ export function AuthFilesPage() {
                 file={file}
                 compact={compactMode}
                 selected={selectedFiles.has(file.name)}
-                resolvedTheme={resolvedTheme}
-                disableControls={disableControls}
-                deleting={deleting}
-                statusUpdating={statusUpdating}
-                manualRefreshing={manualRefreshing}
-                quotaFilterType={activeQuotaFilter}
-                statusBarCache={statusBarCache}
-                onShowModels={showModels}
-                onDownload={handleDownload}
-                onManualRefresh={handleManualRefresh}
-                onOpenPrefixProxyEditor={openPrefixProxyEditor}
-                onDelete={handleDelete}
-                onToggleStatus={handleStatusToggle}
-                onToggleSelect={toggleSelect}
+                {...sharedItemProps}
               />
             ))}
           </div>

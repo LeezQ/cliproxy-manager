@@ -6,7 +6,14 @@ export const AUTH_FILES_STATUS_FILTER_MODES = [
   'problem',
 ] as const;
 
+/**
+ * 认证文件的展示布局：card 为原有卡片网格；list 为一行一个凭证的紧凑列表，
+ * 账号较多时一屏能看到更多行。
+ */
+export const AUTH_FILES_LAYOUT_MODES = ['card', 'list'] as const;
+
 export type AuthFilesSortMode = (typeof AUTH_FILES_SORT_MODES)[number];
+export type AuthFilesLayoutMode = (typeof AUTH_FILES_LAYOUT_MODES)[number];
 export type AuthFilesStatusFilterMode = (typeof AUTH_FILES_STATUS_FILTER_MODES)[number];
 
 export type AuthFilesUiState = {
@@ -20,7 +27,9 @@ export type AuthFilesUiState = {
   pageSize?: number;
   regularPageSize?: number;
   compactPageSize?: number;
+  listPageSize?: number;
   sortMode?: AuthFilesSortMode;
+  layoutMode?: AuthFilesLayoutMode;
 };
 
 const AUTH_FILES_UI_STATE_KEY = 'authFilesPage.uiState';
@@ -32,6 +41,11 @@ const AUTH_FILES_STATUS_FILTER_MODE_SET = new Set<AuthFilesStatusFilterMode>(
 
 export const isAuthFilesSortMode = (value: unknown): value is AuthFilesSortMode =>
   typeof value === 'string' && AUTH_FILES_SORT_MODE_SET.has(value as AuthFilesSortMode);
+
+const AUTH_FILES_LAYOUT_MODE_SET = new Set<AuthFilesLayoutMode>(AUTH_FILES_LAYOUT_MODES);
+
+export const isAuthFilesLayoutMode = (value: unknown): value is AuthFilesLayoutMode =>
+  typeof value === 'string' && AUTH_FILES_LAYOUT_MODE_SET.has(value as AuthFilesLayoutMode);
 
 export const isAuthFilesStatusFilterMode = (value: unknown): value is AuthFilesStatusFilterMode =>
   typeof value === 'string' &&

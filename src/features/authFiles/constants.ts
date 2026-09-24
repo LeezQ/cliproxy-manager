@@ -15,6 +15,7 @@ import iconQwen from '@/assets/icons/qwen.svg';
 import iconVertex from '@/assets/icons/vertex.svg';
 import type { AuthFileItem, ResolvedTheme, ThemeColors } from '@/types';
 import { normalizeOAuthProviderKey } from '@/utils/providerKeys';
+import { normalizeRecentRequestBuckets } from '@/utils/recentRequests';
 import { parseTimestamp } from '@/utils/timestamp';
 import { TYPE_COLORS } from '@/utils/quota';
 
@@ -132,20 +133,59 @@ export const HEALTHY_AUTH_FILE_STATUS_MESSAGES = new Set([
   'available',
 ]);
 
-/** 是否存在非健康的 status_message（卡片告警态 / 谱条琥珀色共用判定）。 */
-export const hasAuthFileStatusWarning = (file: AuthFileItem): boolean => {
+/** status_message 是否为非健康内容（不区分是当前故障还是历史残留）。 */
+const hasNonHealthyStatusMessage = (file: AuthFileItem): boolean => {
   const message = getAuthFileStatusMessage(file);
   return Boolean(message) && !HEALTHY_AUTH_FILE_STATUS_MESSAGES.has(message.toLowerCase());
 };
 
+const normalizedAuthFileStatus = (file: AuthFileItem): string =>
+  typeof file.status === 'string' ? file.status.trim().toLowerCase() : '';
+
+/**
+ * 判定「最近仍在成功出请求」所看的分桶数。
+ * 后端 recent_requests 每桶 10 分钟、按时间从旧到新排列，取末尾 3 桶即最近 30 分钟。
+ */
+const RECENT_SUCCESS_BUCKETS = 3;
+
+/** 凭证最近 30 分钟内是否有过成功请求。 */
+export const hasRecentAuthFileSuccess = (file: AuthFileItem): boolean =>
+  normalizeRecentRequestBuckets(file.recent_requests ?? file.recentRequests)
+    .slice(-RECENT_SUCCESS_BUCKETS)
+    .some((bucket) => bucket.success > 0);
+
+/**
+ * 错误状态是否只是历史残留，而非当前故障。
+ *
+ * 背景：CPA 按模型记录错误、却按账号汇总状态。某个冷门模型撞上一次临时错误（如
+ * server_is_overloaded）后若再没有请求分到它，该模型的 LastError 不会清除，账号的
+ * status 就一直停在 error、status_message 停在那条旧错误——即便其他模型持续成功。
+ *
+ * 判定：没有被后端标记 unavailable（令牌失效等硬故障会设它），且最近仍有成功请求。
+ * 没有近期流量时无法区分，保守地仍按故障处理。
+ */
+export const isStaleAuthFileError = (file: AuthFileItem): boolean => {
+  if (file.unavailable === true) return false;
+  const hasErrorSignal =
+    normalizedAuthFileStatus(file) === 'error' || hasNonHealthyStatusMessage(file);
+  return hasErrorSignal && hasRecentAuthFileSuccess(file);
+};
+
+/** 是否需要以告警态展示 status_message（卡片告警态 / 谱条琥珀色共用判定）。 */
+export const hasAuthFileStatusWarning = (file: AuthFileItem): boolean =>
+  hasNonHealthyStatusMessage(file) && !isStaleAuthFileError(file);
+
 /**
  * 是否为需要用户处理的问题凭证。
- * 主动停用是独立状态，不应进入“问题”筛选或“删除问题凭证”的批量操作。
+ * 主动停用是独立状态，不应进入“问题”筛选或“删除问题凭证”的批量操作；
+ * 仅残留历史错误、实际仍在正常工作的凭证也不算问题。
  */
 export const isProblemAuthFile = (file: AuthFileItem): boolean => {
-  const status = typeof file.status === 'string' ? file.status.trim().toLowerCase() : '';
+  const status = normalizedAuthFileStatus(file);
   if (file.disabled === true || status === 'disabled') return false;
-  return file.unavailable === true || status === 'error' || hasAuthFileStatusWarning(file);
+  if (file.unavailable === true) return true;
+  if (isStaleAuthFileError(file)) return false;
+  return status === 'error' || hasNonHealthyStatusMessage(file);
 };
 
 export const getTypeLabel = (t: TFunction, type: string): string => {

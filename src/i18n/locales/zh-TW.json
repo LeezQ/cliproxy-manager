@@ -271,6 +271,7 @@
     "health_status_label": "健康狀態",
     "health_status_healthy": "健康",
     "health_status_warning": "警告",
+    "stale_error_prefix": "最近一次錯誤（已恢復）：",
     "health_status_disabled": "已停用",
     "download_button": "下載",
     "manual_refresh_button": "重新整理 OAuth 憑證",
@@ -405,7 +406,16 @@
     "quota_refresh_single": "重新整理配額",
     "quota_refresh_hint": "僅重新整理該驗證檔案的配額",
     "quota_refresh_success": "已重新整理「{{name}}」的配額",
-    "quota_refresh_failed": "重新整理「{{name}}」的配額失敗：{{message}}"
+    "quota_refresh_failed": "重新整理「{{name}}」的配額失敗：{{message}}",
+    "layout_label": "佈局",
+    "layout_card": "卡片",
+    "layout_list": "列表",
+    "row_quota_load": "載入額度",
+    "row_quota_unavailable": "此憑證不支援額度查詢",
+    "row_weight": "權重 {{value}}",
+    "row_priority": "優先級 {{value}}",
+    "list_load_page_quota": "載入本頁額度（{{count}}）",
+    "list_load_page_quota_hint": "一次查詢本頁所有支援額度的憑證"
   },
   "antigravity_subscription": {
     "plan_unknown": "未知",

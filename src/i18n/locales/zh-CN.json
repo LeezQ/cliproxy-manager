@@ -271,6 +271,7 @@
     "health_status_label": "健康状态",
     "health_status_healthy": "健康",
     "health_status_warning": "警告",
+    "stale_error_prefix": "最近一次错误（已恢复）：",
     "health_status_disabled": "已停用",
     "download_button": "下载",
     "manual_refresh_button": "刷新 OAuth 凭证",
@@ -405,7 +406,16 @@
     "quota_refresh_single": "刷新额度",
     "quota_refresh_hint": "仅刷新该认证文件的额度",
     "quota_refresh_success": "已刷新 \"{{name}}\" 的额度",
-    "quota_refresh_failed": "刷新 \"{{name}}\" 的额度失败：{{message}}"
+    "quota_refresh_failed": "刷新 \"{{name}}\" 的额度失败：{{message}}",
+    "layout_label": "布局",
+    "layout_card": "卡片",
+    "layout_list": "列表",
+    "row_quota_load": "加载额度",
+    "row_quota_unavailable": "该凭证不支持额度查询",
+    "row_weight": "权重 {{value}}",
+    "row_priority": "优先级 {{value}}",
+    "list_load_page_quota": "加载本页额度（{{count}}）",
+    "list_load_page_quota_hint": "一次查询本页所有支持额度的凭证"
   },
   "antigravity_subscription": {
     "plan_unknown": "未知",
