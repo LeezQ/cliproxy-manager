@@ -7,18 +7,22 @@
  * 视觉沿用卡片的 token（配色、字号、状态色），不加阴影与入场动画；
  * 行之间只用一条细分隔线，分组与外框由页面（AuthFilesPage）负责。
  *
- * 列：勾选 | 账号 | 状态 | 请求健康度 | 额度 | 操作
+ * 列：勾选 | 账号 | 状态 + 出口 | 请求健康度 | 额度 | 操作
+ *
+ * 断点用容器查询（列表容器 .listRows 声明了 container-type），不用视口宽度：
+ * 侧边栏展开时会占掉约 250px，按视口判断会在列表实际很窄时仍用单行布局而溢出。
  * ============================================================ */
 
 .row {
   display: grid;
   /* 账号是主识别信息，给足宽度少截断邮箱；额度列按两个窗口并排估算 */
+  /* 各列最小宽度之和约 1080px，列表容器窄于 1100px 时切到两行布局（见下方容器查询） */
   grid-template-columns:
     20px
-    minmax(240px, 1.6fr)
-    64px
-    minmax(170px, 0.9fr)
-    minmax(280px, 1.8fr)
+    minmax(220px, 1.4fr)
+    124px
+    minmax(160px, 0.9fr)
+    minmax(260px, 1.7fr)
     auto;
   grid-template-areas: 'select identity state health quota actions';
   column-gap: 18px;
@@ -79,6 +83,9 @@
 
 .cellState {
   grid-area: state;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   min-width: 0;
 }
 
@@ -262,6 +269,29 @@
   min-width: 36px;
 }
 
+/* ---------- 出口（状态列第二行）---------- */
+
+.exitIp {
+  font-family: $font-mono;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  @include text-ellipsis;
+}
+
+/* 没有代理、用服务器自身 IP 出网：告警色 */
+.exitDirect {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--amber-text);
+}
+
+.exitMuted {
+  font-size: 12px;
+  color: var(--text-quaternary);
+}
+
 /* ---------- 额度列 ---------- */
 
 .empty {
@@ -331,16 +361,13 @@
   color: var(--text-tertiary);
 }
 
-/* ---------- 响应式 ---------- */
+/* ---------- 响应式（容器查询） ---------- */
 
-/* 中等宽度：信息拆成两行——账号 / 状态 / 操作在上，健康度与额度在下 */
-/*
- * 第一行：账号横跨两个弹性列吃掉剩余宽度，状态与操作只占自身宽度；
- * 第二行：健康度占一列，额度横跨其余三列，给两个额度窗口留足空间。
- */
-@media (max-width: 1180px) {
+/* 列表较窄：拆成两行——账号 / 状态 / 操作在上，健康度与额度在下 */
+@container auth-file-list (max-width: 1100px) {
   .row {
-    grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) auto auto;
+    /* 状态列定宽：每行是独立的 grid，auto 会随出口 IP 长短变化，导致各行错位 */
+    grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) 124px auto;
     grid-template-areas:
       'select identity identity state actions'
       'select health quota quota quota';
@@ -355,8 +382,8 @@
   }
 }
 
-/* 手机：单列堆叠 */
-@media (max-width: #{$breakpoint-mobile}) {
+/* 很窄（手机）：单列堆叠 */
+@container auth-file-list (max-width: 640px) {
   .row {
     grid-template-columns: 20px minmax(0, 1fr);
     grid-template-areas:

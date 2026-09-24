@@ -48,6 +48,12 @@ import { useAuthFilesModels } from '@/features/authFiles/hooks/useAuthFilesModel
 import { useAuthFilesOauth } from '@/features/authFiles/hooks/useAuthFilesOauth';
 import { useAuthFilesPrefixProxyEditor } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
 import { useAuthFilesStatusBarCache } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
+import { useAuthFileProxies } from '@/features/authFiles/hooks/useAuthFileProxies';
+import {
+  authFileProxyCacheKey,
+  resolveAuthFileProxy,
+  type AuthFileProxyInfo,
+} from '@/features/authFiles/proxyInfo';
 import {
   isAuthFilesLayoutMode,
   isAuthFilesStatusFilterMode,
@@ -60,7 +66,8 @@ import {
   type AuthFilesStatusFilterMode,
   type AuthFilesSortMode,
 } from '@/features/authFiles/uiState';
-import { useAuthStore, useNotificationStore, useThemeStore } from '@/stores';
+import { useAuthStore, useConfigStore, useNotificationStore, useThemeStore } from '@/stores';
+import type { AuthFileItem } from '@/types';
 import styles from '@/features/authFiles/AuthFilesPage.module.scss';
 
 const DEFAULT_REGULAR_PAGE_SIZE = 9;
@@ -477,6 +484,20 @@ export function AuthFilesPage() {
 
   const pageGroups = useMemo(() => groupAuthFilesByProvider(pageItems), [pageItems]);
 
+  // 出口列：只在列表布局下读取当前页的凭证文件（列表接口不返回 proxy_url）
+  const credentialProxies = useAuthFileProxies(pageItems, layoutMode === 'list');
+  const globalProxyUrl = useConfigStore((state) => state.config?.proxyUrl);
+  const proxyInfoFor = useCallback(
+    (file: AuthFileItem): AuthFileProxyInfo | 'loading' => {
+      if (isRuntimeOnlyAuthFile(file)) return { kind: 'unknown' };
+      const credential = credentialProxies.get(authFileProxyCacheKey(file));
+      if (credential === undefined) return 'loading';
+      if (credential === 'error') return { kind: 'unknown' };
+      return resolveAuthFileProxy(credential, globalProxyUrl);
+    },
+    [credentialProxies, globalProxyUrl]
+  );
+
   // 本页可查询额度的凭证：与行内展示额度的条件一致（非虚拟、未停用、提供商支持额度）
   const pageQuotaTargets = useMemo<QuotaFileEntry[]>(
     () =>
@@ -810,6 +831,7 @@ export function AuthFilesPage() {
                       key={getQuotaCacheKey(file)}
                       file={file}
                       selected={selectedFiles.has(file.name)}
+                      proxy={proxyInfoFor(file)}
                       {...sharedItemProps}
                     />
                   ))}

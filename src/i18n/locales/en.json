@@ -417,7 +417,12 @@
     "row_weight": "Weight {{value}}",
     "row_priority": "Priority {{value}}",
     "list_load_page_quota": "Load quota for this page ({{count}})",
-    "list_load_page_quota_hint": "Query quota for every eligible credential on this page"
+    "list_load_page_quota_hint": "Query quota for every eligible credential on this page",
+    "row_exit_direct": "Direct",
+    "row_exit_no_proxy": "No proxy",
+    "row_exit_direct_hint": "No proxy configured: requests leave from the server's own IP",
+    "row_exit_global": "Global · {{gateway}}",
+    "row_exit_unknown": "Couldn't read this credential's egress"
   },
   "antigravity_subscription": {
     "plan_unknown": "Unknown",

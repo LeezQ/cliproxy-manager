@@ -140,6 +140,8 @@
 }
 
 .listRows {
+  /* 行内布局按列表的实际宽度切换（AuthFileRow 的容器查询），而不是按视口 */
+  container: auth-file-list / inline-size;
   border: 1px solid var(--border-color);
   border-radius: $radius-md;
   background: var(--bg-primary);

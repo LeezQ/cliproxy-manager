@@ -415,7 +415,12 @@
     "row_weight": "權重 {{value}}",
     "row_priority": "優先級 {{value}}",
     "list_load_page_quota": "載入本頁額度（{{count}}）",
-    "list_load_page_quota_hint": "一次查詢本頁所有支援額度的憑證"
+    "list_load_page_quota_hint": "一次查詢本頁所有支援額度的憑證",
+    "row_exit_direct": "直連",
+    "row_exit_no_proxy": "未設定代理",
+    "row_exit_direct_hint": "未設定代理：請求從伺服器自身 IP 直連上游",
+    "row_exit_global": "全域 · {{gateway}}",
+    "row_exit_unknown": "無法讀取此憑證的出口資訊"
   },
   "antigravity_subscription": {
     "plan_unknown": "未知",

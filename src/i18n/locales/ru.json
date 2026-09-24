@@ -420,7 +420,12 @@
     "row_weight": "Вес {{value}}",
     "row_priority": "Приоритет {{value}}",
     "list_load_page_quota": "Загрузить квоты страницы ({{count}})",
-    "list_load_page_quota_hint": "Запросить квоты всех подходящих учётных данных на странице"
+    "list_load_page_quota_hint": "Запросить квоты всех подходящих учётных данных на странице",
+    "row_exit_direct": "Напрямую",
+    "row_exit_no_proxy": "Без прокси",
+    "row_exit_direct_hint": "Прокси не настроен: запросы идут с IP самого сервера",
+    "row_exit_global": "Глобальный · {{gateway}}",
+    "row_exit_unknown": "Не удалось прочитать выход для этих учётных данных"
   },
   "antigravity_subscription": {
     "plan_unknown": "Неизвестно",

@@ -415,7 +415,12 @@
     "row_weight": "权重 {{value}}",
     "row_priority": "优先级 {{value}}",
     "list_load_page_quota": "加载本页额度（{{count}}）",
-    "list_load_page_quota_hint": "一次查询本页所有支持额度的凭证"
+    "list_load_page_quota_hint": "一次查询本页所有支持额度的凭证",
+    "row_exit_direct": "直连",
+    "row_exit_no_proxy": "未配置代理",
+    "row_exit_direct_hint": "未配置代理：请求从服务器自身 IP 直连上游",
+    "row_exit_global": "全局 · {{gateway}}",
+    "row_exit_unknown": "无法读取该凭证的出口信息"
   },
   "antigravity_subscription": {
     "plan_unknown": "未知",

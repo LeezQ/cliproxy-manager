@@ -33,6 +33,7 @@ import {
   isPremiumAuthFilePlan,
 } from '@/features/authFiles/listView';
 import type { AuthFileCardProps } from '@/features/authFiles/components/AuthFileCard';
+import type { AuthFileProxyInfo } from '@/features/authFiles/proxyInfo';
 import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
 import { AuthFileCooldownSection } from '@/features/authFiles/components/AuthFileCooldownSection';
 import cardStyles from '@/features/authFiles/components/AuthFileCard.module.scss';
@@ -50,13 +51,16 @@ const statusBarStyles: Record<string, string> = {
   statusRate: `${cardStyles.statusRate} ${styles.statusRate}`,
 };
 
-/** 列表行与卡片共用同一套 props，页面按布局模式二选一渲染。 */
-export type AuthFileRowProps = Omit<AuthFileCardProps, 'compact'>;
+/** 列表行与卡片共用同一套 props，页面按布局模式二选一渲染；另外多一份出口信息。 */
+export type AuthFileRowProps = Omit<AuthFileCardProps, 'compact'> & {
+  /** 出口（代理）信息；'loading' 表示凭证文件还在读取。 */
+  proxy?: AuthFileProxyInfo | 'loading';
+};
 
 /**
  * 认证文件的列表行：一行一个凭证，关键数据横向摊开，账号多时一屏能看到更多。
  *
- * 列：勾选 | 账号（邮箱 + 套餐 + 权重）| 状态 | 请求健康度 | 额度 | 操作
+ * 列：勾选 | 账号（邮箱 + 套餐 + 权重）| 状态 + 出口 | 请求健康度 | 额度 | 操作
  * 仅当有告警、历史错误或冷却时，行下方才多出一条说明，其余行保持同一高度。
  */
 export function AuthFileRow(props: AuthFileRowProps) {
@@ -78,6 +82,7 @@ export function AuthFileRow(props: AuthFileRowProps) {
     onDelete,
     onToggleStatus,
     onToggleSelect,
+    proxy,
   } = props;
 
   const isRuntimeOnly = isRuntimeOnlyAuthFile(file);
@@ -199,11 +204,13 @@ export function AuthFileRow(props: AuthFileRowProps) {
         </div>
       </div>
 
+      {/* 状态与出口合为一列：几乎每行都是「启用」，单独占一列不划算；出口 IP 放第二行 */}
       <div className={styles.cellState} role="cell">
         <span className={`${styles.state} ${state.tone}`}>
           <span className={styles.stateDot} aria-hidden="true" />
           {state.label}
         </span>
+        <AuthFileExitLine proxy={proxy} />
       </div>
 
       <div className={styles.cellHealth} role="cell">
@@ -323,5 +330,42 @@ export function AuthFileRow(props: AuthFileRowProps) {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * 出口：实际出网 IP；网关（用来区分代理供应商）放在悬停提示里以节省宽度。
+ * 直连用告警色——凭证在面板上删掉重加会丢失 proxy_url，悄悄退回服务器自身 IP 出网，
+ * 这是最需要一眼看出来的情况。
+ */
+function AuthFileExitLine({ proxy }: { proxy: AuthFileRowProps['proxy'] }) {
+  const { t } = useTranslation();
+
+  if (proxy === undefined || proxy === 'loading') {
+    return <span className={styles.exitMuted}>{proxy === 'loading' ? '…' : '—'}</span>;
+  }
+  if (proxy.kind === 'unknown') {
+    return (
+      <span className={styles.exitMuted} title={t('auth_files.row_exit_unknown')}>
+        —
+      </span>
+    );
+  }
+  if (proxy.kind === 'direct') {
+    return (
+      <span className={styles.exitDirect} title={t('auth_files.row_exit_direct_hint')}>
+        {t('auth_files.row_exit_direct')}
+      </span>
+    );
+  }
+
+  const via =
+    proxy.kind === 'global'
+      ? t('auth_files.row_exit_global', { gateway: proxy.gateway })
+      : `${proxy.scheme}://${proxy.gateway}`;
+  return (
+    <span className={styles.exitIp} title={via}>
+      {proxy.exit}
+    </span>
   );
 }
