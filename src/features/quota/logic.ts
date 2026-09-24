@@ -61,6 +61,24 @@ export function classifyQuotaFiles(files: AuthFileItem[]): QuotaFileEntry[] {
   return QUOTA_TAB_ORDER.flatMap((type) => groups.get(type) ?? []);
 }
 
+export type QuotaEntryGroup = { type: QuotaProviderType; entries: QuotaFileEntry[] };
+
+/**
+ * 列表布局按提供商分组：组按首次出现的位置排列，组内保持传入顺序（即当前排序结果）。
+ */
+export function groupQuotaEntriesByType(entries: QuotaFileEntry[]): QuotaEntryGroup[] {
+  const groups = new Map<QuotaProviderType, QuotaFileEntry[]>();
+  for (const entry of entries) {
+    const bucket = groups.get(entry.type);
+    if (bucket) {
+      bucket.push(entry);
+    } else {
+      groups.set(entry.type, [entry]);
+    }
+  }
+  return Array.from(groups, ([type, grouped]) => ({ type, entries: grouped }));
+}
+
 export function filterEntriesByTab(entries: QuotaFileEntry[], tab: QuotaTabId): QuotaFileEntry[] {
   if (tab === 'all') return entries;
   return entries.filter((entry) => entry.type === tab);

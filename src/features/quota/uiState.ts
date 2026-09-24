@@ -1,3 +1,4 @@
+import { isLayoutMode, type LayoutMode } from '@/components/common/layoutMode';
 import {
   QUOTA_SORT_MODES,
   QUOTA_TAB_ORDER,
@@ -9,6 +10,8 @@ import {
 export type QuotaUiState = {
   tab?: QuotaTabId;
   sortMode?: QuotaSortMode;
+  /** 卡片网格或列表，默认列表（见 QuotaPage）。 */
+  layoutMode?: LayoutMode;
 };
 
 const QUOTA_UI_STATE_KEY = 'quotaPage.uiState';
@@ -32,6 +35,7 @@ export const readQuotaUiState = (): QuotaUiState | null => {
     return {
       tab: isQuotaTabId(parsed.tab) ? parsed.tab : undefined,
       sortMode: isQuotaSortMode(parsed.sortMode) ? parsed.sortMode : undefined,
+      layoutMode: isLayoutMode(parsed.layoutMode) ? parsed.layoutMode : undefined,
     };
   } catch {
     return null;

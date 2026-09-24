@@ -96,7 +96,8 @@ export function AuthFilesPage() {
   const [filter, setFilter] = useState<'all' | string>('all');
   const [statusFilterMode, setStatusFilterMode] = useState<AuthFilesStatusFilterMode>('all');
   const [compactMode, setCompactMode] = useState(false);
-  const [layoutMode, setLayoutMode] = useState<AuthFilesLayoutMode>('card');
+  // 默认列表布局：账号多时一屏能看更多；用户切换过的选择会从 uiState 恢复
+  const [layoutMode, setLayoutMode] = useState<AuthFilesLayoutMode>('list');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSizeByMode, setPageSizeByMode] = useState({
@@ -781,27 +782,28 @@ export function AuthFilesPage() {
           />
         ) : isListLayout ? (
           <div className={styles.list}>
-            {pageQuotaTargets.length > 0 && (
-              <div className={styles.listToolbar}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleLoadPageQuota}
-                  loading={pageQuotaLoading}
-                  disabled={disableControls || pageQuotaLoading}
-                  title={t('auth_files.list_load_page_quota_hint')}
-                >
-                  {!pageQuotaLoading && <IconRefreshCw size={14} />}
-                  {t('auth_files.list_load_page_quota', { count: pageQuotaTargets.length })}
-                </Button>
-              </div>
-            )}
-            {pageGroups.map((group) => (
+            {pageGroups.map((group, index) => (
               <section key={group.provider} className={styles.listGroup}>
-                <h3 className={styles.listGroupHeader}>
-                  {getTypeLabel(t, group.provider)}
-                  <span className={styles.listGroupCount}>{group.files.length}</span>
-                </h3>
+                {/* 「加载本页额度」作用于整页，放在第一个分组标题的同一行右侧，不单独占一行 */}
+                <div className={styles.listGroupHeader}>
+                  <h3 className={styles.listGroupTitle}>
+                    {getTypeLabel(t, group.provider)}
+                    <span className={styles.listGroupCount}>{group.files.length}</span>
+                  </h3>
+                  {index === 0 && pageQuotaTargets.length > 0 && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleLoadPageQuota}
+                      loading={pageQuotaLoading}
+                      disabled={disableControls || pageQuotaLoading}
+                      title={t('auth_files.list_load_page_quota_hint')}
+                    >
+                      {!pageQuotaLoading && <IconRefreshCw size={14} />}
+                      {t('auth_files.list_load_page_quota', { count: pageQuotaTargets.length })}
+                    </Button>
+                  )}
+                </div>
                 <div className={styles.listRows} role="table">
                   {group.files.map((file) => (
                     <AuthFileRow

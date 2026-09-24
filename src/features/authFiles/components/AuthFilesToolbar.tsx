@@ -4,12 +4,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
-import {
-  IconLayoutGrid,
-  IconLayoutRows,
-  IconSearch,
-  IconSlidersHorizontal,
-} from '@/components/ui/icons';
+import { IconSearch, IconSlidersHorizontal } from '@/components/ui/icons';
+import { LayoutToggle } from '@/components/common/LayoutToggle';
 import { MAX_CARD_PAGE_SIZE, MIN_CARD_PAGE_SIZE } from '@/features/authFiles/constants';
 import type {
   AuthFilesLayoutMode,
@@ -130,35 +126,8 @@ export function AuthFilesToolbar(props: AuthFilesToolbarProps) {
         />
       </div>
 
-      <div
-        className={`${styles.segmented} ${styles.layoutToggle}`}
-        role="group"
-        aria-label={t('auth_files.layout_label')}
-      >
-        {(
-          [
-            { mode: 'card', label: t('auth_files.layout_card'), Icon: IconLayoutGrid },
-            { mode: 'list', label: t('auth_files.layout_list'), Icon: IconLayoutRows },
-          ] as const
-        ).map(({ mode, label, Icon }) => {
-          const isActive = layoutMode === mode;
-          return (
-            <button
-              key={mode}
-              type="button"
-              className={`${styles.segment} ${styles.segmentIcon} ${
-                isActive ? styles.segmentActive : ''
-              }`}
-              aria-pressed={isActive}
-              title={label}
-              aria-label={label}
-              onClick={() => onLayoutModeChange(mode)}
-            >
-              <Icon size={15} />
-            </button>
-          );
-        })}
-      </div>
+      {/* 切换布局是高频操作，放在工具栏上而不是藏进「显示选项」弹层 */}
+      <LayoutToggle value={layoutMode} onChange={onLayoutModeChange} />
 
       <div className={styles.display} ref={displaySettingsRef}>
         <Button

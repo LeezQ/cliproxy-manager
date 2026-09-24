@@ -141,10 +141,10 @@ grep -o -i -E "aff=|keyword=|utm_|sponsored|apimart|apikey\.fan|bestproxy" dist/
 
 **合并上游时注意**：`hasAuthFileStatusWarning` 与 `isProblemAuthFile` 若在上游被改动，保留本 fork 对历史残留的排除逻辑。
 
-## 5. 认证文件的列表布局
+## 5. 认证文件与配额页的列表布局
 
 上游只有卡片网格，每张卡片要占半屏高度，账号一多就得一直往下翻。
-本 fork 增加「卡片 / 列表」切换（工具栏「显示选项」左侧的两个图标），选择会记住。
+本 fork 增加「卡片 / 列表」切换（工具栏「显示选项」左侧的两个图标），**默认列表**，切换后的选择会记住。
 
 列表布局一行一个凭证，按提供商分组，组头带数量：
 
@@ -158,7 +158,7 @@ grep -o -i -E "aff=|keyword=|utm_|sponsored|apimart|apikey\.fan|bestproxy" dist/
 
 只有存在告警、历史残留错误或冷却信息时，行下方才多出一行说明，普通行保持同一高度。
 
-- **加载本页额度**：列表上方的按钮一次查询本页所有支持额度的凭证，复用额度页的批量加载（`useQuotaBatchLoader`）；结果写入共享缓存，切回卡片视图不必重新拉取
+- **加载本页额度**：位于第一个分组标题同一行的右侧，一次查询本页所有支持额度的凭证，复用额度页的批量加载（`useQuotaBatchLoader`）；结果写入共享缓存，切回卡片视图不必重新拉取
 - **分页**：列表、紧凑卡片、普通卡片三档各自记忆页大小，列表默认 30（单页上限）
 - **套餐来源**：取凭证文件名后缀（`-pro.json` / `-plus.json` …），只作展示。新账号刚入库时后端可能先命名为 free，跑过请求后会改名
 - **响应式**：≤1180px 拆成两行（账号 / 状态 / 操作在上，健康度与额度在下）；≤768px 单列堆叠
@@ -166,6 +166,22 @@ grep -o -i -E "aff=|keyword=|utm_|sponsored|apimart|apikey\.fan|bestproxy" dist/
 
 实现：`AuthFileRow`、`AuthFileRow.module.scss`、`AuthFileQuotaRow.module.scss`（只放覆盖项，与卡片额度样式合并后使用）、
 `listView.ts`（套餐识别与分组，测试见 `tests/authFilesListView.test.ts`）。
+
+### 5.1 配额页
+
+同样默认列表、可切回卡片（排序下拉右侧），选择在本会话内记住（`quotaPage.uiState`，sessionStorage）。
+每行：账号（邮箱 + 提供商）| 套餐信息一列（套餐、续期时间、主动重置次数，固定 230px 宽）+ 各额度窗口横向并排 | 重置 / 刷新额度。
+
+- **操作列定宽 264px**：每行是独立的 grid，`auto` 列会随按钮个数变化（没有重置次数的号不显示「重置额度」），
+  导致各行的套餐与额度列错位
+- 重置积分的逐条到期明细只在卡片视图展示
+- 实现：`QuotaRow`、`QuotaRow.module.scss`、`QuotaBodyRow.module.scss`（只放覆盖项，与 `QuotaBody.module.scss` 合并）、
+  `groupQuotaEntriesByType`（`features/quota/logic.ts`）
+
+### 5.2 共用的布局切换
+
+`src/components/common/LayoutToggle.tsx` 为两个页面共用的「卡片 / 列表」切换，取值与守卫在同目录的 `layoutMode.ts`
+（与组件分开是为了不破坏 React Fast Refresh）。文案在 `common.layout_*`。
 
 ## 同步上游
 

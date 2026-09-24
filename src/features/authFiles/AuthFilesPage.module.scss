@@ -104,12 +104,6 @@
   gap: 20px;
 }
 
-.listToolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: -8px;
-}
-
 .listGroup {
   display: flex;
   flex-direction: column;
@@ -117,12 +111,22 @@
   min-width: 0;
 }
 
+/* 分组标题行：左侧提供商与数量，右侧是整页操作（仅第一组有），同一行两端对齐 */
 .listGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-height: 32px;
+  padding: 0 2px;
+}
+
+.listGroupTitle {
   display: flex;
   align-items: baseline;
   gap: 8px;
   margin: 0;
-  padding: 0 2px;
   font-size: 13px;
   font-weight: 600;
   line-height: 1.4;

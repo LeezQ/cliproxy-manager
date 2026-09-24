@@ -22,8 +22,12 @@ import { useAuthStore, useQuotaStore, useThemeStore } from '@/stores';
 import type { AuthFileItem, ResolvedTheme } from '@/types';
 import { getQuotaCacheKey } from '@/utils/quota/identity';
 import { ProviderTabs } from '@/features/authFiles/components/ProviderTabs';
+import { getTypeLabel } from '@/features/authFiles/constants';
 import { QuotaHeader } from '@/features/quota/components/QuotaHeader';
 import { QuotaCard } from '@/features/quota/components/QuotaCard';
+import { QuotaRow } from '@/features/quota/components/QuotaRow';
+import { LayoutToggle } from '@/components/common/LayoutToggle';
+import type { LayoutMode } from '@/components/common/layoutMode';
 import { QuotaTimeline } from '@/features/quota/components/QuotaTimeline';
 import {
   QUOTA_PAGE_SIZE,
@@ -38,6 +42,7 @@ import {
   classifyQuotaFiles,
   filterEntriesByTab,
   filterEntriesBySearch,
+  groupQuotaEntriesByType,
   paginate,
   sortQuotaEntries,
   type QuotaFileEntry,
@@ -56,6 +61,7 @@ import styles from '@/features/quota/QuotaPage.module.scss';
 // 分组顺序与统计仍使用完整的 QUOTA_TAB_ORDER，隐藏提供商的缓存与恢复逻辑不受影响
 const TAB_IDS: string[] = ['all', ...QUOTA_TAB_ORDER.filter((type) => !isHiddenProvider(type))];
 const SKELETON_CARD_COUNT = 6;
+const SKELETON_ROW_COUNT = 6;
 
 /**
  * Existing providers display filenames; Devin's card and timeline share an
@@ -74,6 +80,10 @@ export function QuotaPage() {
   const [tab, setTab] = useState<QuotaTabId>(() => readQuotaUiState()?.tab ?? 'all');
   const [sortMode, setSortMode] = useState<QuotaSortMode>(
     () => readQuotaUiState()?.sortMode ?? 'default'
+  );
+  // 默认列表布局：账号多时一屏能看更多；切换过的选择在本会话内记住
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(
+    () => readQuotaUiState()?.layoutMode ?? 'list'
   );
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -193,6 +203,11 @@ export function QuotaPage() {
     writeQuotaUiState({ tab: next as QuotaTabId });
   }, []);
 
+  const handleLayoutModeChange = useCallback((next: LayoutMode) => {
+    setLayoutMode(next);
+    writeQuotaUiState({ layoutMode: next });
+  }, []);
+
   const handleSortModeChange = useCallback((next: string) => {
     setSortMode(next as QuotaSortMode);
     setPage(1);
@@ -294,6 +309,17 @@ export function QuotaPage() {
 
   const isEmpty = !loading && filteredEntries.length === 0;
 
+  // 卡片与列表行共用同一套 props，避免两处各写一遍、日后改漏
+  const itemProps = (entry: QuotaFileEntry) => ({
+    entry,
+    quota: getQuota(entry),
+    resolvedTheme,
+    canRefresh: canUseActions && !entry.file.disabled,
+    resetting: resettingQuotaName === getQuotaCacheKey(entry.file),
+    onRefresh: () => void refreshQuota(entry.file, QUOTA_ADAPTERS[entry.type]),
+    onReset: () => resetQuota(entry.file, QUOTA_ADAPTERS[entry.type]),
+  });
+
   return (
     <div className={styles.page}>
       <QuotaHeader
@@ -347,14 +373,17 @@ export function QuotaPage() {
                 </button>
               )}
             </div>
-            <div className={styles.sort}>
-              <Select
-                value={sortMode}
-                options={sortOptions}
-                onChange={handleSortModeChange}
-                ariaLabel={t('quota_management.sort_label')}
-                size="sm"
-              />
+            <div className={styles.toolbarEnd}>
+              <div className={styles.sort}>
+                <Select
+                  value={sortMode}
+                  options={sortOptions}
+                  onChange={handleSortModeChange}
+                  ariaLabel={t('quota_management.sort_label')}
+                  size="sm"
+                />
+              </div>
+              <LayoutToggle value={layoutMode} onChange={handleLayoutModeChange} />
             </div>
           </div>
         </div>
@@ -366,11 +395,19 @@ export function QuotaPage() {
         )}
 
         {loading ? (
-          <div className={styles.grid} aria-hidden="true">
-            {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
-              <Skeleton key={index} height={168} rounded={8} />
-            ))}
-          </div>
+          layoutMode === 'list' ? (
+            <div className={styles.listSkeleton} aria-hidden="true">
+              {Array.from({ length: SKELETON_ROW_COUNT }, (_, index) => (
+                <Skeleton key={index} height={56} rounded={6} />
+              ))}
+            </div>
+          ) : (
+            <div className={styles.grid} aria-hidden="true">
+              {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
+                <Skeleton key={index} height={168} rounded={8} />
+              ))}
+            </div>
+          )
         ) : isEmpty ? (
           <EmptyState
             title={
@@ -399,19 +436,26 @@ export function QuotaPage() {
               )
             }
           />
+        ) : layoutMode === 'list' ? (
+          <div className={styles.list}>
+            {groupQuotaEntriesByType(pageItems).map((group) => (
+              <section key={group.type} className={styles.listGroup}>
+                <h3 className={styles.listGroupTitle}>
+                  {getTypeLabel(t, group.type)}
+                  <span className={styles.listGroupCount}>{group.entries.length}</span>
+                </h3>
+                <div className={styles.listRows} role="table">
+                  {group.entries.map((entry) => (
+                    <QuotaRow key={`${entry.type}:${getQuotaCacheKey(entry.file)}`} {...itemProps(entry)} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         ) : (
           <div className={styles.grid}>
             {pageItems.map((entry) => (
-              <QuotaCard
-                key={`${entry.type}:${getQuotaCacheKey(entry.file)}`}
-                entry={entry}
-                quota={getQuota(entry)}
-                resolvedTheme={resolvedTheme}
-                canRefresh={canUseActions && !entry.file.disabled}
-                resetting={resettingQuotaName === getQuotaCacheKey(entry.file)}
-                onRefresh={() => void refreshQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
-                onReset={() => resetQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
-              />
+              <QuotaCard key={`${entry.type}:${getQuotaCacheKey(entry.file)}`} {...itemProps(entry)} />
             ))}
           </div>
         )}

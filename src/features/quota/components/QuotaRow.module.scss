@@ -1,0 +1,231 @@
+@use '../../../styles/mixins' as *;
+
+/* ============================================================
+ * 配额页列表行
+ *
+ * 与认证文件页的列表行同一套语言：一行一个凭证、行间细分隔线、无阴影；
+ * 分组与外框由页面负责（QuotaPage.module.scss）。
+ *
+ * 列：账号 | 额度（套餐信息一列 + 各窗口横向并排）| 操作
+ * ============================================================ */
+
+.row {
+  display: grid;
+  /*
+   * 操作列定宽：每行是独立的 grid，auto 列会随按钮个数变宽变窄
+   * （没有重置次数的号不显示「重置额度」），导致各行的套餐与额度列错位。
+   * 264px 按「重置额度」+「刷新额度」两个按钮估算。
+   */
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 3fr) 264px;
+  grid-template-areas: 'identity quota actions';
+  column-gap: 24px;
+  row-gap: 10px;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--bg-primary);
+
+  & + & {
+    border-top: 1px solid var(--border-color);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .row:hover {
+    background: var(--bg-quinary, var(--bg-secondary));
+  }
+}
+
+.rowDisabled .cellIdentity,
+.rowDisabled .cellQuota {
+  opacity: 0.55;
+}
+
+/* ---------- 账号列 ---------- */
+
+.cellIdentity {
+  grid-area: identity;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.avatar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-quinary, var(--bg-tertiary));
+  color: var(--text-secondary);
+}
+
+.avatarImage {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.avatarFallback {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.identityText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.account {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-primary);
+  @include text-ellipsis;
+}
+
+.accountMono {
+  font-family: $font-mono;
+  font-size: 12.5px;
+}
+
+.typeLabel {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* ---------- 额度列 ---------- */
+
+.cellQuota {
+  grid-area: quota;
+  min-width: 0;
+}
+
+.quotaBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  min-width: 0;
+}
+
+.loadButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-decoration-color: var(--border-color);
+  text-underline-offset: 3px;
+  transition: color $transition-fast;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    color: var(--text-quaternary);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .loadButton:hover:not(:disabled) {
+    color: var(--primary-hover);
+  }
+}
+
+.message {
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--error-color);
+
+  span {
+    min-width: 0;
+    @include text-ellipsis;
+  }
+}
+
+.errorIcon {
+  flex-shrink: 0;
+}
+
+/* ---------- 操作列 ---------- */
+
+.cellActions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.spinning {
+  animation: quota-row-spin 0.8s linear infinite;
+}
+
+@keyframes quota-row-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinning {
+    animation: none;
+  }
+}
+
+/* ---------- 响应式 ---------- */
+
+/* 中等宽度：账号与操作在上，额度占满第二行 */
+@media (max-width: 1180px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'identity actions'
+      'quota quota';
+  }
+}
+
+/* 手机：套餐信息与各窗口改为纵向堆叠 */
+@media (max-width: #{$breakpoint-mobile}) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'identity'
+      'quota'
+      'actions';
+  }
+
+  .quotaBody {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* 两级选择器压过 QuotaBodyRow 里 .codexPlan 的固定宽度（单类，来自另一个模块） */
+  .cellQuota .quotaBody > * {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .cellActions {
+    justify-content: flex-start;
+  }
+}

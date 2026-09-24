@@ -70,3 +70,35 @@ describe('layout mode persistence guard', () => {
     expect(isAuthFilesLayoutMode(undefined)).toBe(false);
   });
 });
+
+describe('quota page list view', () => {
+  test('groups quota entries by provider in first-appearance order', async () => {
+    const { groupQuotaEntriesByType } = await import('../src/features/quota/logic');
+    const groups = groupQuotaEntriesByType([
+      { file: file('a.json'), type: 'codex' },
+      { file: file('b.json', 'claude'), type: 'claude' },
+      { file: file('c.json'), type: 'codex' },
+    ]);
+    expect(groups.map((group) => group.type)).toEqual(['codex', 'claude']);
+    expect(groups[0].entries.map((entry) => entry.file.name)).toEqual(['a.json', 'c.json']);
+  });
+
+  test('restores a valid layout from session state and drops unknown values', async () => {
+    const { readQuotaUiState, writeQuotaUiState } = await import('../src/features/quota/uiState');
+    const store = new Map<string, string>();
+    const sessionStorage = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => void store.set(key, value),
+    };
+    const previous = (globalThis as { window?: unknown }).window;
+    (globalThis as { window?: unknown }).window = { sessionStorage };
+    try {
+      writeQuotaUiState({ layoutMode: 'card' });
+      expect(readQuotaUiState()?.layoutMode).toBe('card');
+      store.set('quotaPage.uiState', JSON.stringify({ layoutMode: 'table' }));
+      expect(readQuotaUiState()?.layoutMode).toBeUndefined();
+    } finally {
+      (globalThis as { window?: unknown }).window = previous;
+    }
+  });
+});

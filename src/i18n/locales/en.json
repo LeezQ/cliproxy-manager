@@ -54,7 +54,10 @@
     "model_alias_placeholder": "Model alias (optional)",
     "invalid_provider_index": "Invalid provider index.",
     "unsaved_changes_title": "Unsaved changes",
-    "unsaved_changes_message": "You have unsaved changes. Leaving now will discard them. Do you want to leave?"
+    "unsaved_changes_message": "You have unsaved changes. Leaving now will discard them. Do you want to leave?",
+    "layout_label": "Layout",
+    "layout_card": "Cards",
+    "layout_list": "List"
   },
   "title": {
     "login": "CLI Proxy API Management Center",
@@ -409,9 +412,6 @@
     "quota_refresh_hint": "Refresh quota only for this credential",
     "quota_refresh_success": "Quota refreshed for \"{{name}}\"",
     "quota_refresh_failed": "Failed to refresh quota for \"{{name}}\": {{message}}",
-    "layout_label": "Layout",
-    "layout_card": "Cards",
-    "layout_list": "List",
     "row_quota_load": "Load quota",
     "row_quota_unavailable": "Quota isn't available for this credential",
     "row_weight": "Weight {{value}}",

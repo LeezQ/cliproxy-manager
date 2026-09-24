@@ -1,0 +1,48 @@
+@use '../../styles/mixins' as *;
+
+/* 与认证文件工具栏的分段控件同规格：36px 高、3px 内边距、浅灰底，选中项白底描边 */
+.toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  height: 36px;
+  padding: 3px;
+  box-sizing: border-box;
+  border-radius: $radius-md;
+  background: var(--bg-tertiary);
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition:
+    color $transition-fast,
+    background-color $transition-fast,
+    border-color $transition-fast;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -1px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .option:hover:not(.optionActive) {
+    color: var(--text-primary);
+  }
+}
+
+.optionActive {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border-color: var(--border-color);
+}

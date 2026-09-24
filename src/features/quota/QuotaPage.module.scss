@@ -148,6 +148,15 @@
 }
 
 /* 排序下拉：固定宽度，不随搜索框伸缩 */
+/* 工具栏右端：排序下拉与布局切换并排 */
+.toolbarEnd {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+
 .sort {
   flex: 0 0 auto;
   min-width: 184px;
@@ -198,6 +207,64 @@
 /* ---------- 卡片网格 ----------
  * 列宽由 CSS 决定（不再用 JS 测量）：额度卡承载水位条，取 340px 下限，
  * 与认证文件页配额模式（.gridQuota）同一档。 */
+
+/* ---------- 列表布局 ----------
+ * 与认证文件页同构：按提供商分组，每组一个带边框的容器，行间细分隔线（见 QuotaRow）。
+ * 不设 overflow: hidden，首末行圆角直接给子元素，悬停底色不溢出外框。
+ */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.listGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.listGroupTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.listGroupCount {
+  font-weight: 500;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.listRows {
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-primary);
+
+  > :first-child {
+    border-top-left-radius: calc(#{$radius-md} - 1px);
+    border-top-right-radius: calc(#{$radius-md} - 1px);
+  }
+
+  > :last-child {
+    border-bottom-left-radius: calc(#{$radius-md} - 1px);
+    border-bottom-right-radius: calc(#{$radius-md} - 1px);
+  }
+}
+
+.listSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
 .grid {
   display: grid;

@@ -54,7 +54,10 @@
     "model_alias_placeholder": "Псевдоним модели (необязательно)",
     "invalid_provider_index": "Неверный индекс провайдера.",
     "unsaved_changes_title": "Несохранённые изменения",
-    "unsaved_changes_message": "У вас есть несохранённые изменения. Если вы уйдёте, они будут потеряны. Выйти?"
+    "unsaved_changes_message": "У вас есть несохранённые изменения. Если вы уйдёте, они будут потеряны. Выйти?",
+    "layout_label": "Вид",
+    "layout_card": "Карточки",
+    "layout_list": "Список"
   },
   "title": {
     "login": "Центр управления CLI Proxy API",
@@ -412,9 +415,6 @@
     "quota_refresh_hint": "Обновить квоту только для этих учётных данных",
     "quota_refresh_success": "Квота для \"{{name}}\" обновлена",
     "quota_refresh_failed": "Не удалось обновить квоту для \"{{name}}\": {{message}}",
-    "layout_label": "Вид",
-    "layout_card": "Карточки",
-    "layout_list": "Список",
     "row_quota_load": "Загрузить квоту",
     "row_quota_unavailable": "Квота для этих учётных данных недоступна",
     "row_weight": "Вес {{value}}",

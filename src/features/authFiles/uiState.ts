@@ -6,14 +6,16 @@ export const AUTH_FILES_STATUS_FILTER_MODES = [
   'problem',
 ] as const;
 
+import { LAYOUT_MODES, type LayoutMode } from '@/components/common/layoutMode';
+
 /**
  * 认证文件的展示布局：card 为原有卡片网格；list 为一行一个凭证的紧凑列表，
- * 账号较多时一屏能看到更多行。
+ * 账号较多时一屏能看到更多行。取值与配额页共用（见 LayoutToggle）。
  */
-export const AUTH_FILES_LAYOUT_MODES = ['card', 'list'] as const;
+export const AUTH_FILES_LAYOUT_MODES = LAYOUT_MODES;
 
 export type AuthFilesSortMode = (typeof AUTH_FILES_SORT_MODES)[number];
-export type AuthFilesLayoutMode = (typeof AUTH_FILES_LAYOUT_MODES)[number];
+export type AuthFilesLayoutMode = LayoutMode;
 export type AuthFilesStatusFilterMode = (typeof AUTH_FILES_STATUS_FILTER_MODES)[number];
 
 export type AuthFilesUiState = {

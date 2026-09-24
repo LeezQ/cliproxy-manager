@@ -1,0 +1,76 @@
+@use '../../../styles/mixins' as *;
+
+/* ============================================================
+ * 配额页列表行的额度外衣——只放「覆盖项」。
+ *
+ * QuotaRow 会把本模块与卡片外衣（QuotaBody.module.scss）合并，同名类以本模块为准，
+ * 其余视觉（进度条、百分比、套餐徽标配色）仍沿用卡片。这里只改布局：
+ * 套餐信息收进左侧固定宽度的一列，各额度窗口在右侧横向并排。
+ * ============================================================ */
+
+/* 套餐 / 续期 / 重置次数竖排成一列，宽度固定，便于各行的额度窗口上下对齐 */
+.codexPlan {
+  display: flex;
+  flex: 0 0 230px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+/* 重置积分逐条到期明细属于低频信息，留在卡片视图 */
+.codexResetCredits,
+.codexResetCreditsError {
+  display: none;
+}
+
+.quotaRow {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* 窗口标签不收缩：并排时列宽有限，标签被压没就分不清哪根条是哪个窗口 */
+.quotaModel {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* 有倒计时就省掉绝对日期，完整时间在卡片视图 */
+.quotaReset {
+  color: var(--text-quaternary);
+
+  &:has(+ .quotaResetRelative) {
+    display: none;
+  }
+}
+
+.quotaResetRelative {
+  color: var(--text-tertiary);
+}
+
+.quotaResetRelativeSoon {
+  color: var(--amber-text);
+  font-weight: 600;
+}
+
+.antigravityQuotaGroup {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.quotaMessage {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
