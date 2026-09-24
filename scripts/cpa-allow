@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+#
+# cpa-allow —— 管理面 IP 白名单的增删查
+#
+# 背景：/management.html 和 /v0/management/* 在 Caddy 层做了来源限制，
+#       出口 IP 一变就会被 403 挡在外面（响应体里会回显当前来源 IP）。
+#       这个脚本省掉手工改 Caddyfile 再 reload 的过程。
+#
+# 用法：
+#   cpa-allow                列出当前白名单
+#   cpa-allow add <IP|CIDR>  加一条
+#   cpa-allow del <IP|CIDR>  删一条
+#
+set -euo pipefail
+
+CADDYFILE=/etc/caddy/Caddyfile
+MARKER='not remote_ip '
+
+usage() {
+  cat <<'USAGE'
+用法: cpa-allow [list|add <IP|CIDR>|del <IP|CIDR>]
+
+  list            列出当前允许访问管理面的来源（默认）
+  add 1.2.3.4     放行一个地址；支持 CIDR，如 1.2.3.0/24
+  del 1.2.3.4     移除一个地址
+
+被挡时 403 的响应体会写明当前来源 IP，直接拿那个地址 add 即可。
+USAGE
+}
+
+current_line() {
+  grep -nE "^[[:space:]]*not remote_ip " "$CADDYFILE" | head -1
+}
+
+cmd_list() {
+  local line
+  line=$(current_line) || { echo "错误：Caddyfile 里没找到白名单规则" >&2; exit 1; }
+  echo "当前允许访问管理面的来源："
+  echo "${line#*:}" | sed -E "s|^[[:space:]]*not remote_ip ||" | tr ' ' '\n' | grep -v '^$' | sed 's/^/  /'
+}
+
+# 改完先 validate 再 reload；校验不过就回滚，避免把 Caddy 配崩导致整站不可用
+apply() {
+  local new_list=$1 backup
+  backup="${CADDYFILE}.bak-$(date +%Y%m%d-%H%M%S)"
+  cp "$CADDYFILE" "$backup"
+
+  python3 - "$CADDYFILE" "$new_list" <<'PY'
+import io, sys
+path, new_list = sys.argv[1], sys.argv[2]
+lines = io.open(path, encoding='utf-8').read().split('\n')
+for i, ln in enumerate(lines):
+    stripped = ln.lstrip()
+    if stripped.startswith('not remote_ip '):
+        indent = ln[:len(ln) - len(stripped)]   # 原样保留缩进，Caddyfile 对此敏感
+        lines[i] = indent + 'not remote_ip ' + new_list
+        break
+else:
+    print('[错误] 没找到 not remote_ip 行', file=sys.stderr)
+    sys.exit(1)
+io.open(path, 'w', encoding='utf-8').write('\n'.join(lines))
+PY
+
+  if ! caddy validate --config "$CADDYFILE" --adapter caddyfile >/dev/null 2>&1; then
+    echo "错误：配置校验不通过，已回滚" >&2
+    cp "$backup" "$CADDYFILE"
+    exit 1
+  fi
+  systemctl reload caddy
+  echo "已生效。"
+  cmd_list
+}
+
+cmd_add() {
+  local ip=$1 line list
+  line=$(current_line) || { echo "错误：Caddyfile 里没找到白名单规则" >&2; exit 1; }
+  list=$(echo "${line#*:}" | sed -E "s|^[[:space:]]*not remote_ip ||")
+  if grep -qw -- "$ip" <<<"$list"; then
+    echo "$ip 已经在白名单里"; exit 0
+  fi
+  apply "$list $ip"
+}
+
+cmd_del() {
+  local ip=$1 line list new
+  line=$(current_line) || { echo "错误：Caddyfile 里没找到白名单规则" >&2; exit 1; }
+  list=$(echo "${line#*:}" | sed -E "s|^[[:space:]]*not remote_ip ||")
+  new=$(tr ' ' '\n' <<<"$list" | grep -vx -- "$ip" | grep -v '^$' | tr '\n' ' ' | sed 's/ $//')
+  if [ "$new" = "$list" ]; then
+    echo "$ip 不在白名单里"; exit 0
+  fi
+  if [ -z "$new" ]; then
+    echo "错误：不能清空白名单，那样谁都进不去了" >&2; exit 1
+  fi
+  apply "$new"
+}
+
+case "${1:-list}" in
+  list)       cmd_list ;;
+  add)        [ $# -ge 2 ] || { usage; exit 1; }; cmd_add "$2" ;;
+  del|remove) [ $# -ge 2 ] || { usage; exit 1; }; cmd_del "$2" ;;
+  -h|--help|help) usage ;;
+  *) echo "未知命令: $1" >&2; echo; usage; exit 1 ;;
+esac
