@@ -25,16 +25,29 @@ cpa-account —— CLIProxyAPI 单实例账号管理工具
 
 其中 DECODO_* 与 EXIT_* 若缺失，会自动从现有凭证的 proxy_url 里反推，
 所以正常情况下只需要填 MGMT_KEY 一项。
+
+质量检测（probe / quality）另有两个可选项：
+
+    QUALITY_MODEL=gpt-5.6-sol     测试用的模型
+    QUALITY_EFFORT=high           推理强度 low / medium / high / xhigh
 """
 
 import json
 import os
+import re
 import sys
 import glob
 import time
+import uuid
+import tempfile
+import threading
+import statistics
+import subprocess
 import urllib.parse
 import urllib.request
 import urllib.error
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 
 # ---------------------------------------------------------------- 常量
 
@@ -43,9 +56,14 @@ AUTH_DIR = "/opt/cliproxy/auths"
 API_BASE = "http://127.0.0.1:8317/v0/management"
 PROXY_GATEWAY = "isp.decodo.com"
 
-C_RESET, C_DIM, C_RED, C_GREEN, C_YELLOW, C_BOLD = (
-    "\033[0m", "\033[2m", "\033[31m", "\033[32m", "\033[33m", "\033[1m"
-)
+# 输出不是终端（定时任务写 journal、管道重定向）或设置了 NO_COLOR 时不上色，
+# 否则日志里会混入 ANSI 转义序列
+if sys.stdout.isatty() and not os.environ.get("NO_COLOR"):
+    C_RESET, C_DIM, C_RED, C_GREEN, C_YELLOW, C_BOLD = (
+        "\033[0m", "\033[2m", "\033[31m", "\033[32m", "\033[33m", "\033[1m"
+    )
+else:
+    C_RESET = C_DIM = C_RED = C_GREEN = C_YELLOW = C_BOLD = ""
 
 
 def log_error(msg, exc=None):
@@ -826,6 +844,410 @@ def cmd_import(args):
     cmd_list([])
 
 
+# ---------------------------------------------------------------- 质量检测（降智）
+#
+# 目的：把「哪个号、什么时候被降智」变成可查的记录，而不是凭手感。
+#
+# 做法：给每个账号单独发一道固定的逻辑题（社区通用的糖果题，正确答案 21），
+# 记录答对与否和推理 token 数，追加写入 QUALITY_LOG。未降智的模型只要开思考
+# 就能答对；降智时推理 token 会被卡在 516 左右，答案多为 29。
+# 参考：router-for-me/CLIProxyAPI#3936、ranxi2001/sub2api 的「降智运维」。
+#
+# 为什么不走 CPA 的 /v0/management/api-call：
+#   该接口把单次请求写死为 60 秒超时，高推理强度下未降智的回答常常超过 60 秒，
+#   反而会被误记为失败。这里直接用 curl 请求上游，超时由 PROBE_TIMEOUT 决定。
+#
+# 安全边界：
+#   - 只读取凭证文件里的 access_token，绝不刷新令牌。刷新仍然只有 CPA 一处在做，
+#     不会出现两处同时刷新导致 refresh token 被吊销。
+#   - 请求走该账号自己的 proxy_url，出口与 CPA 实际转发时一致。
+#   - 令牌和代理密码通过 stdin 传给 curl，不出现在进程列表里。
+
+QUALITY_LOG = "/var/lib/cliproxy/quality.jsonl"
+CODEX_RESPONSES_URL = "https://chatgpt.com/backend-api/codex/responses"
+# 单次测试的超时（秒）。高推理强度的正常回答可能要几分钟，给足余量。
+PROBE_TIMEOUT = 900
+DEFAULT_QUALITY_MODEL = "gpt-5.6-sol"
+DEFAULT_QUALITY_EFFORT = "high"
+# 与 CPA 转发 Codex 请求时伪装的客户端标识一致，测到的才是账号在 CPA 路径上的真实表现
+PROBE_USER_AGENT = "codex-tui/0.154.0 (Mac OS 26.5.2; arm64) iTerm.app/3.6.11 (codex-tui; 0.154.0)"
+PROBE_ORIGINATOR = "codex-tui"
+# 社区观察到的降智特征值：被限制时 reasoning_tokens 恰好停在 516
+DEGRADED_REASONING_MARK = 516
+
+CANDY_PROMPT = """在一个黑色的袋子里放有三种口味的糖果，每种糖果有两种不同的形状（圆形和五角星形，不同的形状靠手感可以分辨）。现已知不同口味的糖和不同形状的数量统计如下表。参赛者需要在活动前决定摸出的糖果数目，那么，最少取出多少个糖果才能保证手中同时拥有不同形状的苹果味和桃子味的糖？（同时手中有圆形苹果味匹配五角星桃子味糖果，或者有圆形桃子味匹配五角星苹果味糖果都满足要求）
+苹果味 桃子味 西瓜味
+圆形 7 9 8
+五角星形 7 6 4"""
+CANDY_ANSWER = 21
+
+# 写日志的锁：多个账号并发测试，同一文件追加时逐行写
+_quality_log_lock = threading.Lock()
+
+
+def read_credential(path):
+    """从凭证文件取出测试需要的三样东西；缺任何一样返回 None。"""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            d = json.load(fh) or {}
+    except Exception as e:
+        log_error(f"读取凭证失败: {os.path.basename(path)}", e)
+        return None
+    cred = {
+        "access_token": d.get("access_token") or "",
+        "account_id": d.get("account_id") or "",
+        "proxy_url": d.get("proxy_url") or "",
+        "expired": d.get("expired") or "",
+    }
+    if not cred["access_token"] or not cred["account_id"]:
+        return None
+    return cred
+
+
+def token_expiring(expired, margin_seconds=120):
+    """access_token 是否已过期或即将过期。解析不了时按未过期处理，交给上游判断。"""
+    if not expired:
+        return False
+    try:
+        at = datetime.fromisoformat(expired.replace("Z", "+00:00"))
+    except ValueError as e:
+        log_error(f"无法解析令牌过期时间: {expired}", e)
+        return False
+    return at <= datetime.now(timezone.utc) + timedelta(seconds=margin_seconds)
+
+
+def extract_answer(text):
+    """
+    从回答里取出最终数字。优先取最后一个 \\boxed{...}（模型习惯把结论框起来），
+    其中若是算式如 28+1=29，取最后一个数；没有框就取结尾一段里的最后一个数。
+    """
+    boxed = re.findall(r"\\boxed\{([^{}]*)\}", text)
+    source = boxed[-1] if boxed else text[-200:]
+    nums = re.findall(r"\d+", source)
+    return int(nums[-1]) if nums else None
+
+
+def curl_config_quote(value):
+    """curl -K 配置文件里的双引号字符串：反斜杠和双引号需要转义。"""
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def parse_probe_stream(raw):
+    """
+    解析上游 SSE。返回 (回答文本, 完成事件里的 response 对象, 错误信息)。
+    回答文本由 output_text.delta 拼出：store=false 时完成事件里不一定带完整 output。
+    """
+    text_parts, completed, error = [], None, ""
+    for line in raw.splitlines():
+        if not line.startswith("data:"):
+            continue
+        payload = line[5:].strip()
+        if not payload or payload == "[DONE]":
+            continue
+        try:
+            ev = json.loads(payload)
+        except json.JSONDecodeError:
+            continue
+        et = ev.get("type")
+        if et == "response.output_text.delta":
+            text_parts.append(ev.get("delta") or "")
+        elif et == "response.completed":
+            completed = ev.get("response") or {}
+        elif et in ("response.failed", "error"):
+            err = (ev.get("response") or {}).get("error") or ev.get("error") or ev
+            error = (err.get("code") or err.get("type") or "") + ": " + (err.get("message") or "")
+    return "".join(text_parts), completed, error.strip(": ")
+
+
+def run_probe(f, model, effort):
+    """
+    对单个账号做一次测试，返回一条可直接写日志的记录。
+    不抛异常：任何失败都记为 verdict=失败 并带上原因，便于事后区分「降智」和「没测成」。
+    """
+    record = {
+        "ts": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "email": f.get("email") or "",
+        "name": f.get("name") or "",
+        "plan": plan_of(f) or "",
+        "exit": exit_ip_of(f.get("proxy_url")),
+        "model": model,
+        "effort": effort,
+        "verdict": "失败",
+        "answer": None,
+        "reasoning_tokens": None,
+        "output_tokens": None,
+        "elapsed": None,
+        "error": "",
+        "answer_tail": "",
+    }
+
+    cred = read_credential(f.get("path") or "")
+    if not cred:
+        record["error"] = "凭证缺少 access_token 或 account_id"
+        return record
+    if token_expiring(cred["expired"]):
+        # 不在这里刷新：刷新只能由 CPA 做。等 CPA 刷新后下一轮再测
+        record["error"] = "access_token 即将过期，等 CPA 自动刷新后再测"
+        return record
+
+    session_id = str(uuid.uuid4())
+    body = {
+        "model": model,
+        "instructions": "You are a helpful assistant.",
+        "input": [{"type": "message", "role": "user",
+                   "content": [{"type": "input_text", "text": CANDY_PROMPT}]}],
+        "tools": [],
+        "tool_choice": "auto",
+        "parallel_tool_calls": False,
+        "reasoning": {"effort": effort, "summary": "auto"},
+        "store": False,
+        "stream": True,
+        "include": ["reasoning.encrypted_content"],
+        # 每次用新的缓存键，避免命中上一次的缓存影响结果
+        "prompt_cache_key": session_id,
+    }
+
+    # 敏感项（令牌、代理密码）写进 curl 配置走 stdin；请求体不含敏感信息，走临时文件
+    config_lines = [
+        f"url = {curl_config_quote(CODEX_RESPONSES_URL)}",
+        f"header = {curl_config_quote('Authorization: Bearer ' + cred['access_token'])}",
+        f"header = {curl_config_quote('Chatgpt-Account-Id: ' + cred['account_id'])}",
+        f"header = {curl_config_quote('Session-Id: ' + session_id)}",
+        f"header = {curl_config_quote('Originator: ' + PROBE_ORIGINATOR)}",
+        f"user-agent = {curl_config_quote(PROBE_USER_AGENT)}",
+        f"header = {curl_config_quote('Accept: text/event-stream')}",
+        f"header = {curl_config_quote('Content-Type: application/json')}",
+    ]
+    if cred["proxy_url"]:
+        config_lines.append(f"proxy = {curl_config_quote(cred['proxy_url'])}")
+
+    body_path = None
+    started = time.time()
+    try:
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as tmp:
+            json.dump(body, tmp, ensure_ascii=False)
+            body_path = tmp.name
+        proc = subprocess.run(
+            ["curl", "-sS", "-N", "--max-time", str(PROBE_TIMEOUT),
+             "--data-binary", f"@{body_path}",
+             "-w", "\n__HTTP_STATUS__:%{http_code}", "-K", "-"],
+            input="\n".join(config_lines) + "\n",
+            capture_output=True, text=True, timeout=PROBE_TIMEOUT + 30,
+        )
+    except subprocess.TimeoutExpired as e:
+        log_error(f"测试超时: {record['email']}", e)
+        record["error"] = f"超过 {PROBE_TIMEOUT} 秒未完成"
+        return record
+    except Exception as e:
+        log_error(f"测试请求执行失败: {record['email']}", e)
+        record["error"] = f"{type(e).__name__}: {e}"
+        return record
+    finally:
+        record["elapsed"] = round(time.time() - started, 1)
+        if body_path:
+            try:
+                os.unlink(body_path)
+            except OSError as e:
+                log_error("清理临时请求体失败", e)
+
+    out = proc.stdout or ""
+    status = ""
+    if "__HTTP_STATUS__:" in out:
+        out, status = out.rsplit("__HTTP_STATUS__:", 1)
+        status = status.strip()
+    if proc.returncode != 0 or status != "200":
+        detail = (proc.stderr or "").strip() or out.strip()
+        record["error"] = f"HTTP {status or '-'} curl={proc.returncode} {detail[:200]}"
+        log_error(f"测试请求失败: {record['email']} {record['error']}")
+        return record
+
+    text, completed, stream_error = parse_probe_stream(out)
+    if completed is None:
+        record["error"] = stream_error or "上游未返回完成事件"
+        return record
+
+    usage = completed.get("usage") or {}
+    record["reasoning_tokens"] = (usage.get("output_tokens_details") or {}).get("reasoning_tokens")
+    record["output_tokens"] = usage.get("output_tokens")
+    record["model"] = completed.get("model") or model
+    record["answer"] = extract_answer(text)
+    record["answer_tail"] = text.strip().replace("\n", " ")[-160:]
+    record["verdict"] = "正常" if record["answer"] == CANDY_ANSWER else "降智"
+    return record
+
+
+def append_quality_log(record):
+    """追加一条记录。日志只含结论与统计数字，不含令牌或代理密码。"""
+    try:
+        os.makedirs(os.path.dirname(QUALITY_LOG), mode=0o700, exist_ok=True)
+        with _quality_log_lock, open(QUALITY_LOG, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception as e:
+        log_error(f"写入质量日志失败: {QUALITY_LOG}", e)
+
+
+def verdict_color(verdict):
+    return {"正常": C_GREEN, "降智": C_RED}.get(verdict, C_YELLOW)
+
+
+def print_probe_record(r):
+    reasoning = r.get("reasoning_tokens")
+    mark = ""
+    if reasoning == DEGRADED_REASONING_MARK:
+        mark = f" {C_DIM}(516 封顶特征){C_RESET}"
+    detail = (
+        f"答案 {r.get('answer')}  推理 {reasoning}{mark}  用时 {r.get('elapsed')}s"
+        if r.get("verdict") != "失败" else f"{C_DIM}{r.get('error')}{C_RESET}"
+    )
+    print(
+        f"  {verdict_color(r['verdict'])}{pad(r['verdict'], 5)}{C_RESET} "
+        f"{pad(r['email'][:34], 35)} {pad(r.get('plan') or '?', 5)} {detail}"
+    )
+
+
+def cmd_probe(args):
+    """
+    probe [账号|all] [--effort E] [--model M] [--times N] [--quiet]
+    给账号出一道固定逻辑题，判断是否降智，结果追加写入 QUALITY_LOG。
+    多个账号并发测试；同一账号的多次测试串行，避免互相抢并发。
+    """
+    target, times, quiet = "all", 1, False
+    model = CONFIG.get("QUALITY_MODEL") or DEFAULT_QUALITY_MODEL
+    effort = CONFIG.get("QUALITY_EFFORT") or DEFAULT_QUALITY_EFFORT
+    it = iter(args)
+    for a in it:
+        try:
+            if a == "--effort":
+                effort = next(it)
+            elif a == "--model":
+                model = next(it)
+            elif a == "--times":
+                times = max(1, int(next(it)))
+            elif a == "--quiet":
+                quiet = True
+            elif a.startswith("-"):
+                die(f"未知参数: {a}")
+            else:
+                target = a
+        except (StopIteration, ValueError) as e:
+            die(f"参数 {a} 缺少取值或取值不合法", e)
+
+    if target == "all":
+        files = [f for f in list_files()
+                 if not f.get("disabled") and (f.get("provider") or f.get("type")) == "codex"]
+    else:
+        files = [resolve(target)]
+    if not files:
+        print("（没有可测试的启用中 Codex 账号）")
+        return
+
+    if not quiet:
+        print(f"测试 {len(files)} 个账号 × {times} 次  模型 {model}  推理强度 {effort}")
+        print(f"{C_DIM}正确答案 {CANDY_ANSWER}；高推理强度下正常回答可能要几分钟{C_RESET}")
+        print()
+
+    def probe_account(f):
+        results = []
+        for _ in range(times):
+            r = run_probe(f, model, effort)
+            append_quality_log(r)
+            print_probe_record(r)
+            results.append(r)
+        return results
+
+    with ThreadPoolExecutor(max_workers=len(files)) as pool:
+        all_results = [r for rs in pool.map(probe_account, files) for r in rs]
+
+    degraded = [r for r in all_results if r["verdict"] == "降智"]
+    failed = [r for r in all_results if r["verdict"] == "失败"]
+    print()
+    print(f"共 {len(all_results)} 次：正常 {len(all_results) - len(degraded) - len(failed)}，"
+          f"降智 {len(degraded)}，失败 {len(failed)}。记录已写入 {QUALITY_LOG}")
+
+
+def load_quality_log(days):
+    """读取最近 days 天的记录；坏行跳过并提示。"""
+    if not os.path.exists(QUALITY_LOG):
+        return []
+    since = datetime.now().astimezone() - timedelta(days=days)
+    rows = []
+    with open(QUALITY_LOG, encoding="utf-8") as fh:
+        for n, line in enumerate(fh, 1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                r = json.loads(line)
+                if datetime.fromisoformat(r["ts"]) >= since:
+                    rows.append(r)
+            except (json.JSONDecodeError, KeyError, ValueError) as e:
+                log_error(f"质量日志第 {n} 行格式异常，已跳过", e)
+    return rows
+
+
+def cmd_quality(args):
+    """
+    quality [--days N]      按账号汇总：正确率、推理 token 中位数、最近几次的走势
+    quality log [条数]       按时间列出最近的原始记录，看「什么时候」开始降智
+    """
+    days = 7
+    if args and args[0] == "log":
+        limit = int(args[1]) if len(args) > 1 and args[1].isdigit() else 30
+        rows = load_quality_log(3650)[-limit:]
+        if not rows:
+            print(f"（还没有记录，先跑 `cpa-account probe`）")
+            return
+        for r in rows:
+            ts = r["ts"][5:16].replace("T", " ")
+            print(f"{C_DIM}{ts}{C_RESET}", end="")
+            print_probe_record(r)
+        return
+    if len(args) >= 2 and args[0] == "--days":
+        try:
+            days = max(1, int(args[1]))
+        except ValueError as e:
+            die("--days 需要整数", e)
+
+    rows = load_quality_log(days)
+    if not rows:
+        print(f"（最近 {days} 天没有记录，先跑 `cpa-account probe`）")
+        return
+
+    by_email = {}
+    for r in rows:
+        by_email.setdefault(r["email"], []).append(r)
+
+    cols = [("邮箱", 36), ("套餐", 6), ("有效", 6), ("正确率", 8),
+            ("推理中位", 9), ("最近一次", 13), ("走势（旧→新）", 16)]
+    header = " ".join(pad(t, w) for t, w in cols)
+    print(f"最近 {days} 天  题目：糖果题（正确答案 {CANDY_ANSWER}）")
+    print(f"{C_BOLD}{header}{C_RESET}")
+    print("-" * width(header))
+    for email, rs in sorted(by_email.items()):
+        valid = [r for r in rs if r["verdict"] != "失败"]
+        ok = [r for r in valid if r["verdict"] == "正常"]
+        rate = f"{len(ok) * 100 // len(valid)}%" if valid else "-"
+        reasoning = [r["reasoning_tokens"] for r in valid if isinstance(r.get("reasoning_tokens"), int)]
+        med = str(int(statistics.median(reasoning))) if reasoning else "-"
+        last = rs[-1]
+        last_cell = f"{last['ts'][5:16].replace('T', ' ')}"
+        # 走势：✓ 正常 ✗ 降智 · 失败，最多看最近 12 次
+        trend = "".join({"正常": "✓", "降智": "✗"}.get(r["verdict"], "·") for r in rs[-12:])
+        rate_color = C_GREEN if valid and len(ok) == len(valid) else (C_RED if valid and not ok else C_YELLOW)
+        print(
+            f"{pad(email[:34], cols[0][1])} "
+            f"{pad(last.get('plan') or '?', cols[1][1])} "
+            f"{pad(len(valid), cols[2][1])} "
+            f"{rate_color}{pad(rate, cols[3][1])}{C_RESET} "
+            f"{pad(med, cols[4][1])} "
+            f"{pad(last_cell, cols[5][1])} "
+            f"{trend}"
+        )
+    print()
+    print(f"{C_DIM}✓ 答对  ✗ 答错（降智）  · 没测成（超时、网络、令牌）。"
+          f"原始记录：cpa-account quality log{C_RESET}")
+
+
 def owner_of(path):
     st = os.stat(path)
     return st.st_uid, st.st_gid
@@ -840,6 +1262,8 @@ USAGE = f"""{C_BOLD}cpa-account{C_RESET} —— CLIProxyAPI 单实例账号管�
   show <账号>                   单个账号的完整信息
   doctor [--fix]                体检；--fix 自动补上缺失的代理
   quota                         各账号配额窗口占用，并反推每周容量
+  quality [--days N]            降智检测汇总：各账号正确率与走势
+  quality log [条数]            降智检测的原始记录，按时间排列
 
 {C_BOLD}添加{C_RESET}
   login                         Codex OAuth 登录，{C_GREEN}完成后自动配代理并启用{C_RESET}
@@ -849,7 +1273,9 @@ USAGE = f"""{C_BOLD}cpa-account{C_RESET} —— CLIProxyAPI 单实例账号管�
   proxy <账号|all> [IP] [端口]   下发 Decodo 代理，省略 IP/端口则用默认出口
   proxy-url <账号|all> <URL>    下发任意代理地址（Decodo 以外的供应商用这个）
   weight <账号> <权重>          手动设权重（需 routing.strategy=weighted-round-robin）
-  rebalance                     按套餐重算所有账号的权重（pro 2 / plus 1）
+  rebalance                     按套餐重算所有账号的权重（pro 20 / plus 10）
+  probe [账号|all] [--times N] [--effort E] [--model M]
+                                给账号出糖果题测是否降智，结果记入日志
   refresh <账号>                手动刷新令牌
   enable <账号> / disable <账号>
   delete <账号>                 删除（需输入 yes 确认）
@@ -873,6 +1299,8 @@ COMMANDS = {
     "weight": cmd_weight,
     "rebalance": cmd_rebalance,
     "quota": cmd_quota,
+    "probe": cmd_probe,
+    "quality": cmd_quality,
     "proxy": cmd_proxy,
     "proxy-url": cmd_proxy_url,
     "refresh": cmd_refresh,

@@ -340,6 +340,8 @@ EXIT_PORT=10001
 | `login` | Codex OAuth 登录，**完成后自动配代理并启用** |
 | `import <文件.json>…` | 导入已有凭证，**同样自动配代理** |
 | `quota` | 各账号配额窗口占用，并反推每周容量 |
+| `probe [账号\|all] [--times N] [--effort E] [--model M]` | 降智检测：给账号出糖果题，结果记入日志（见 7.6） |
+| `quality [--days N]` / `quality log [条数]` | 降智检测汇总（正确率、推理 token、走势）／按时间列原始记录 |
 | `proxy <账号\|all> [IP] [端口]` | 下发 Decodo 代理 |
 | `proxy-url <账号\|all> <URL>` | 下发任意代理地址（Decodo 以外的供应商） |
 | `weight <账号> <权重>` | 手动设加权轮询权重 |
@@ -402,10 +404,11 @@ routing:
 | B | plus | ≈ 9,251 次 |
 | C | plus | ≈ 8,170 次 |
 
-比值约 **2.3 : 1**，所以默认权重是 `pro 2 / plus 1`。
+比值约 **2.3 : 1**，所以默认权重是 `pro 20 / plus 10`（整体放大 10 倍，
+好让 `free` 能取 1，表达「远低于 plus」；权重必须是正整数）。
 两个 Plus 独立算出 9,251 和 8,170，相差 10% 以内，互相印证。
 
-> 注意别把 Pro 的权重拍得过高（例如 20）。那会把 Pro 一周内打爆、Plus 闲置，
+> 注意别把 Pro 相对 Plus 的比例拍得过高（例如 20 : 1）。那会把 Pro 一周内打爆、Plus 闲置，
 > 问题只是换了个受害者，而且换成更贵的那个。
 
 新账号通过 `login` / `import` 加入时会**自动按套餐定权重**。
@@ -415,13 +418,70 @@ routing:
 需要覆盖默认值时，在 `/etc/cliproxy/cpa-account.env` 里加：
 
 ```
-WEIGHT_PRO=3
-WEIGHT_PLUS=1
+WEIGHT_PRO=30
+WEIGHT_PLUS=10
 ```
 
 另外注意两种套餐的**瓶颈窗口不同**：Plus 卡在 5 小时窗口（这是它频繁冷却的直接原因），
 Pro 的主窗口是 168 小时。加权只能摊匀负载，**创造不出额度**——
 总需求超过三号容量之和时，怎么配都会限流。
+
+### 7.6 降智检测 `probe` / `quality`
+
+目的是把「哪个号、什么时候被降智」变成可查的记录。做法沿用社区的测法
+（[CLIProxyAPI#3936](https://github.com/router-for-me/CLIProxyAPI/issues/3936)）：
+给每个账号单独发一道固定的糖果逻辑题，正确答案是 **21**。没被降智的模型只要开了思考就能答对；
+降智时推理 token 被卡在 **516**（或它的整数倍），答案通常是 29。
+
+```bash
+cpa-account probe                 # 所有启用中的 Codex 账号各测一次（并发）
+cpa-account probe <账号> --times 3 # 单个账号连测 3 次
+cpa-account quality               # 最近 7 天：正确率、推理 token 中位数、最近 12 次走势
+cpa-account quality log 50        # 最近 50 条原始记录，按时间排列
+```
+
+默认模型 `gpt-5.6-sol`、推理强度 `high`，可在 `cpa-account.env` 里用
+`QUALITY_MODEL` / `QUALITY_EFFORT` 改。结果按行追加到 `/var/lib/cliproxy/quality.jsonl`，
+每行只有结论和统计数字（答案、推理 token、耗时、出口 IP），不含令牌和代理密码。
+
+判定只有三种：**正常**（答 21）、**降智**（答错）、**失败**（超时、网络、令牌问题，没测成）。
+「失败」不计入正确率。
+
+#### 定时任务
+
+`scripts/systemd/` 下的 `cpa-quality.service` + `cpa-quality.timer` 装在服务器
+`/etc/systemd/system/`，每 3 小时（整点后 10 分，再加最多 15 分钟随机延迟）测一轮，
+每轮每号一次，约消耗 1–3k 输出 token。
+
+```bash
+systemctl list-timers cpa-quality.timer   # 下次运行时间
+systemctl start cpa-quality.service       # 立即跑一轮
+journalctl -u cpa-quality.service -n 20   # 看最近一轮的输出
+```
+
+#### 为什么绕过 CPA 的 `/v0/management/api-call`
+
+最初的原型走这个接口（它会自动用账号的令牌和代理），但 CPA 把它的单次超时写死成 60 秒
+（源码常量 `defaultAPICallTimeout`，不可配置）。高推理强度下，**没被降智的回答恰恰更慢**，
+会被 60 秒截断成 502，结果反而偏向「降智」。所以现在由脚本直接调 curl 请求
+`chatgpt.com/backend-api/codex/responses`，单次超时 900 秒。
+
+这样做的安全边界：
+
+- **只读凭证文件里的 `access_token`，从不刷新。** 刷新仍然只有 CPA 一处在做，
+  不会出现两处同时刷新、refresh token 被吊销的问题。令牌离过期不到 2 分钟时直接跳过本轮，
+  记为「失败」，等 CPA 刷新后下一轮再测。
+- **走账号自己的 `proxy_url`**，出口和 CPA 实际转发时一致。
+- 请求头里的 `User-Agent` / `Originator` 与 CPA 转发时伪装的 `codex-tui` 一致，
+  测到的是账号在 **CPA 这条路径上**的表现。它不代表同一账号在官方 Codex CLI 里的表现，
+  社区的对照结果是官方客户端不降智。
+- 令牌和代理密码通过 stdin 交给 curl（`-K -`），不会出现在 `ps` 里。
+
+#### 首次结果（2026-09-25）
+
+4 个账号（2 Pro、2 Plus，出口分别在 IIJ 和两个 Decodo IP）在 low / medium / high
+三档强度下**全部答成 29**，推理 token 全是 516（有一次是 1034）。说明降智和套餐、出口 IP
+都无关，是 CPA 这条路径整体被限。之后的定时记录用来观察它是否随时间变化、会不会有账号恢复。
 
 ## 8. 本机 FlClash 套住宅出口 `flclash-decodo.py`
 

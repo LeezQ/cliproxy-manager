@@ -1,0 +1,14 @@
+# cpa-account 降智检测：给每个启用中的 Codex 账号出一道糖果题，结果追加到
+# /var/lib/cliproxy/quality.jsonl。由 cpa-quality.timer 定时触发，也可手动：
+#   systemctl start cpa-quality.service
+[Unit]
+Description=CPA account quality probe (degradation check)
+After=network-online.target cliproxy.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/cpa-account probe all --quiet
+# 高推理强度下单次测试可能要几分钟，脚本内单次上限 900 秒，这里再留余量
+TimeoutStartSec=1200
+Environment=NO_COLOR=1

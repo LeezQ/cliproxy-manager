@@ -1,0 +1,12 @@
+# 每 3 小时测一轮（每轮每个账号一次，约消耗 1–3k 输出 token/号）。
+# 加随机延迟，避免每次都在整点、与其它定时任务挤在一起。
+[Unit]
+Description=Run CPA account quality probe every 3 hours
+
+[Timer]
+OnCalendar=*-*-* 00/3:10:00
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
