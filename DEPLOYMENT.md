@@ -118,6 +118,18 @@ gh release create vX.Y.Z /tmp/management.html -R LeezQ/cliproxy-manager \
   --title "vX.Y.Z" --notes-file /tmp/notes.md
 ```
 
+**发布前确认标签已经推上去**，再执行 `gh release create`：
+
+```bash
+git ls-remote --tags origin vX.Y.Z    # 必须有输出，且指向刚提交的那个 commit
+```
+
+`gh release create` 遇到远端不存在的标签时**不会报错**，而是在默认分支当前 HEAD 上自动建一个。
+2026-09-25 发 v1.31.0 时 `git push` 因网络偶发失败，标签没推上去，结果 release 挂到了上一个版本的 commit 上：
+线上文件是对的（本地构建），但仓库里的标签和 release 指向了错误的提交，事后只能强推标签修正
+（`git tag -f vX.Y.Z <正确commit> && git push --force origin refs/tags/vX.Y.Z`）。
+脚本里别把推送和发布用 `&&` 串一半、再接独立语句——前面失败时后面照样执行。
+
 必须显式传 `VERSION`。否则 `getVersion()` 会退到 `git describe`，
 产物里写进的是类似 `v1.22.16-2-gbd6edde` 的字符串，就失去版本判断的意义了。
 
