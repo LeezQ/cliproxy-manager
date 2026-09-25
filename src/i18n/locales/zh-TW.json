@@ -1398,7 +1398,11 @@
     "weekday_sat": "六",
     "stat_credentials": "憑證",
     "stat_loaded": "已載入",
-    "stat_attention": "需關注"
+    "stat_attention": "需關注",
+    "row_renews": "續期 {{when}}",
+    "row_resets": "可重置 {{count}} 次",
+    "row_reset": "重置",
+    "row_refresh": "重新整理"
   },
   "plugin_management": {
     "title": "插件管理",

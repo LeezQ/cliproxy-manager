@@ -37,7 +37,7 @@ remote-management:
   # disable-auto-update-panel 保持缺省（false），自动更新正是发布链路的最后一环
 ```
 
-当前线上版本：**v1.29.0**。
+当前线上版本：**v1.30.0**。
 
 ### 2.1 Caddy 侧的管理面保护
 

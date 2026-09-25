@@ -1377,7 +1377,11 @@
     "weekday_sat": "Сб",
     "stat_credentials": "Учётные данные",
     "stat_loaded": "Загружено",
-    "stat_attention": "Требуют внимания"
+    "stat_attention": "Требуют внимания",
+    "row_renews": "Продление {{when}}",
+    "row_resets": "Сбросов: {{count}}",
+    "row_reset": "Сброс",
+    "row_refresh": "Обновить"
   },
   "plugin_management": {
     "title": "Управление плагинами",

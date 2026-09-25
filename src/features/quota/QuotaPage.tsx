@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { authFilesApi } from '@/services/api';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { IconSearch, IconX } from '@/components/ui/icons';
+import { IconRefreshCw, IconSearch, IconX } from '@/components/ui/icons';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
@@ -23,7 +23,6 @@ import type { AuthFileItem, ResolvedTheme } from '@/types';
 import { getQuotaCacheKey } from '@/utils/quota/identity';
 import { ProviderTabs } from '@/features/authFiles/components/ProviderTabs';
 import { getTypeLabel } from '@/features/authFiles/constants';
-import { QuotaHeader } from '@/features/quota/components/QuotaHeader';
 import { QuotaCard } from '@/features/quota/components/QuotaCard';
 import { QuotaRow } from '@/features/quota/components/QuotaRow';
 import { LayoutToggle } from '@/components/common/LayoutToggle';
@@ -220,17 +219,6 @@ export function QuotaPage() {
     [t]
   );
 
-  const { loadedCount, attentionCount } = useMemo(() => {
-    let loaded = 0;
-    let attention = 0;
-    entries.forEach((entry) => {
-      const status = quotaByType[entry.type][getQuotaCacheKey(entry.file)]?.status;
-      if (status === 'success') loaded += 1;
-      else if (status === 'error') attention += 1;
-    });
-    return { loadedCount: loaded, attentionCount: attention };
-  }, [entries, quotaByType]);
-
   // 剪枝：文件列表落定后，各 provider 缓存只保留仍存在的凭证
   useEffect(() => {
     if (loading || error || filesGeneration !== sessionGeneration) return;
@@ -322,14 +310,11 @@ export function QuotaPage() {
 
   return (
     <div className={styles.page}>
-      <QuotaHeader
-        totalCount={entries.length}
-        loadedCount={loadedCount}
-        attentionCount={attentionCount}
-        refreshing={loading || batchLoading}
-        disableControls={disableControls}
-        onRefreshAll={handleRefreshAll}
-      />
+      {/*
+        标题区已去掉（大块标题 + 统计卡占高度又重复 tabs 上的数量）。
+        保留一个视觉隐藏的 h1，屏幕阅读器与页面大纲仍能识别这是「配额管理」页。
+      */}
+      <h1 className={styles.srOnly}>{t('quota_management.title')}</h1>
 
       <section className={styles.workbench}>
         {/* 筛选卡片：与认证文件页同构——头部一整行是提供商 tabs（可横向滚动），
@@ -344,6 +329,21 @@ export function QuotaPage() {
               resolvedTheme={resolvedTheme}
               onChange={handleTabChange}
             />
+            {/* 页面主操作放在 tabs 行右端，与认证文件页「删除全部」的位置一致 */}
+            <div className={styles.tabsAction}>
+              <Button
+                size="sm"
+                onClick={handleRefreshAll}
+                disabled={disableControls || loading || batchLoading}
+              >
+                <IconRefreshCw
+                  size={14}
+                  aria-hidden="true"
+                  className={loading || batchLoading ? styles.spinning : undefined}
+                />
+                {t('quota_management.refresh_all_credentials')}
+              </Button>
+            </div>
           </div>
 
           <div className={styles.toolbar}>

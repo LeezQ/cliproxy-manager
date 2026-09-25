@@ -102,3 +102,33 @@ describe('quota page list view', () => {
     }
   });
 });
+
+describe('quota row plan summary', () => {
+  const t = ((key: string) => key) as unknown as import('i18next').TFunction;
+
+  test('summarizes a loaded Codex quota into plan, renewal and resets', async () => {
+    const { summarizeQuotaPlan } = await import('../src/features/quota/rowSummary');
+    const summary = summarizeQuotaPlan(
+      'codex',
+      {
+        status: 'success',
+        windows: [],
+        planType: 'pro',
+        subscriptionActiveUntil: '2026-10-24T05:40:00Z',
+        rateLimitResetCreditsAvailableCount: 2,
+      } as never,
+      t
+    );
+    expect(summary?.plan).toBe('codex_quota.plan_pro');
+    expect(summary?.tier).toBe('elite');
+    expect(summary?.renewsAtMs).toBe(Date.parse('2026-10-24T05:40:00Z'));
+    expect(summary?.resets).toBe(2);
+  });
+
+  test('returns nothing until the quota has loaded, and for other providers', async () => {
+    const { summarizeQuotaPlan } = await import('../src/features/quota/rowSummary');
+    expect(summarizeQuotaPlan('codex', undefined, t)).toBeNull();
+    expect(summarizeQuotaPlan('codex', { status: 'loading', windows: [] } as never, t)).toBeNull();
+    expect(summarizeQuotaPlan('claude', { status: 'success' } as never, t)).toBeNull();
+  });
+});

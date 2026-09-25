@@ -4,23 +4,14 @@
  * 配额页列表行的额度外衣——只放「覆盖项」。
  *
  * QuotaRow 会把本模块与卡片外衣（QuotaBody.module.scss）合并，同名类以本模块为准，
- * 其余视觉（进度条、百分比、套餐徽标配色）仍沿用卡片。这里只改布局：
- * 套餐信息收进左侧固定宽度的一列，各额度窗口在右侧横向并排。
+ * 其余视觉（进度条、百分比）仍沿用卡片。这里只改布局：各额度窗口横向并排。
  * ============================================================ */
 
-/* 套餐 / 续期 / 重置次数竖排成一列，宽度固定，便于各行的额度窗口上下对齐 */
-.codexPlan {
-  display: flex;
-  flex: 0 0 230px;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  min-width: 0;
-  font-size: 12.5px;
-  color: var(--text-secondary);
-}
-
-/* 重置积分逐条到期明细属于低频信息，留在卡片视图 */
+/*
+ * 套餐 chip 在行内不展示：套餐、续期、剩余重置次数已压成账号下方的一行摘要
+ * （见 QuotaRow 与 rowSummary.ts）；重置积分逐条到期明细留在卡片视图。
+ */
+.codexPlan,
 .codexResetCredits,
 .codexResetCreditsError {
   display: none;

@@ -1374,7 +1374,11 @@
     "weekday_sat": "Sat",
     "stat_credentials": "Credentials",
     "stat_loaded": "Loaded",
-    "stat_attention": "Needs attention"
+    "stat_attention": "Needs attention",
+    "row_renews": "Renews {{when}}",
+    "row_resets": "{{count}} resets left",
+    "row_reset": "Reset",
+    "row_refresh": "Refresh"
   },
   "plugin_management": {
     "title": "Plugin Management",

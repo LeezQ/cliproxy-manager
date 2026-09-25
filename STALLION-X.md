@@ -179,13 +179,17 @@ grep -o -i -E "aff=|keyword=|utm_|sponsored|apimart|apikey\.fan|bestproxy" dist/
 ### 5.1 配额页
 
 同样默认列表、可切回卡片（排序下拉右侧），选择在本会话内记住（`quotaPage.uiState`，sessionStorage）。
-每行：账号（邮箱 + 提供商）| 套餐信息一列（套餐、续期时间、主动重置次数，固定 230px 宽）+ 各额度窗口横向并排 | 重置 / 刷新额度。
 
-- **操作列定宽 264px**：每行是独立的 grid，`auto` 列会随按钮个数变化（没有重置次数的号不显示「重置额度」），
-  导致各行的套餐与额度列错位
-- 重置积分的逐条到期明细只在卡片视图展示
+- **去掉了页面标题区**（大标题 + 说明 + 凭证/已加载/需关注统计卡）：占高度又与 tabs 上的数量重复。
+  保留一个视觉隐藏的 `<h1>` 供屏幕阅读器与页面大纲使用；「刷新全部凭证」移到 tabs 行右端，与认证文件页「删除全部」同位置
+- **每行两行高**：账号 + 下方一行摘要「Pro 20x · 续期 29天后 · 可重置 2 次」（`rowSummary.ts`）| 各额度窗口横向并排 | 重置 / 刷新。
+  卡片里纵向三行的套餐 chip 在行内隐藏；续期的绝对时间在悬停提示里，重置积分逐条到期明细留在卡片视图。
+  目前只有 Codex 有这些字段，其它提供商退回显示提供商名
+- 套餐名与卡片共用 `getCodexPlanLabel`（`providers/codex/planLabel.ts`），两种视图叫法一致
+- **操作列定宽 150px**：每行是独立的 grid，`auto` 列会随按钮个数变化（没有重置次数的号不显示「重置」），导致各行错位
+- **断点用容器查询**（`.listRows` 声明 `container: quota-list`）：列表宽度 ≤880px 时额度换到第二行，≤560px 各窗口纵向堆叠
 - 实现：`QuotaRow`、`QuotaRow.module.scss`、`QuotaBodyRow.module.scss`（只放覆盖项，与 `QuotaBody.module.scss` 合并）、
-  `groupQuotaEntriesByType`（`features/quota/logic.ts`）
+  `groupQuotaEntriesByType`（`features/quota/logic.ts`）；原 `QuotaHeader` 组件已删除
 
 ### 5.2 共用的布局切换
 

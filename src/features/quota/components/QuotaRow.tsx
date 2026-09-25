@@ -1,14 +1,17 @@
 /**
  * 配额页的列表行：一行一个凭证，账号多时一屏能看到更多。
  *
- * 列：账号（邮箱 + 提供商）| 额度（套餐信息一列 + 各窗口横向并排）| 操作（重置 / 刷新）
+ * 列：账号（邮箱 + 一行套餐摘要）| 额度（各窗口横向并排）| 操作（重置 / 刷新）
+ * 每行只有两行高：卡片里纵向三行的套餐 chip 在这里压成账号下方的一行摘要。
  * 与 QuotaCard 共用同一套 props 与状态判定，页面按布局模式二选一渲染。
  */
 
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { IconAlertTriangle, IconRefreshCw } from '@/components/ui/icons';
-import { resolveQuotaErrorMessage } from '@/utils/quota';
+import { buildResetDisplay, resolveQuotaErrorMessage } from '@/utils/quota';
+import { useNow } from '@/hooks/useNow';
+import { summarizeQuotaPlan } from '@/features/quota/rowSummary';
 import {
   getAuthFileIcon,
   getThemeSurfaceIconBackground,
@@ -34,7 +37,8 @@ export type QuotaRowProps = QuotaCardProps;
 
 export function QuotaRow(props: QuotaRowProps) {
   const { entry, quota, resolvedTheme, canRefresh, resetting, onRefresh, onReset } = props;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const now = useNow();
   const adapter = QUOTA_ADAPTERS[entry.type];
   const file = entry.file;
   // 账号列优先显示邮箱，比卡片标题用的完整文件名短得多，也和认证文件页一致
@@ -49,6 +53,19 @@ export function QuotaRow(props: QuotaRowProps) {
     quota?.errorStatus,
     quota?.error || t('common.unknown_error')
   );
+  // 账号下方的一行摘要：套餐 · 续期 · 剩余重置次数；拿不到时退回显示提供商名
+  const summary = summarizeQuotaPlan(entry.type, quota, t);
+  const renewal =
+    summary?.renewsAtMs != null
+      ? buildResetDisplay(null, summary.renewsAtMs, now, i18n.resolvedLanguage)
+      : null;
+  const planToneClass =
+    summary?.tier === 'elite'
+      ? styles.planElite
+      : summary?.tier === 'premium'
+        ? styles.planPremium
+        : styles.plan;
+
   const showReset =
     status === 'success' &&
     Boolean(adapter.resetQuota) &&
@@ -80,7 +97,25 @@ export function QuotaRow(props: QuotaRowProps) {
           >
             {identity.primary}
           </span>
-          <span className={styles.typeLabel}>{typeLabel}</span>
+          {summary ? (
+            <span className={styles.summary}>
+              {summary.plan && <span className={planToneClass}>{summary.plan}</span>}
+              {renewal && (
+                <span title={renewal.absolute}>
+                  {t('quota_management.row_renews', {
+                    when: renewal.relative ?? renewal.absolute,
+                  })}
+                </span>
+              )}
+              {summary.resets !== null && (
+                <span className={summary.resets === 0 ? styles.summaryMuted : undefined}>
+                  {t('quota_management.row_resets', { count: summary.resets })}
+                </span>
+              )}
+            </span>
+          ) : (
+            <span className={styles.typeLabel}>{typeLabel}</span>
+          )}
         </span>
       </div>
 
@@ -120,13 +155,14 @@ export function QuotaRow(props: QuotaRowProps) {
             onClick={onReset}
             disabled={!canRefresh || loading || resetting}
             title={t('codex_quota.reset_button')}
+            aria-label={t('codex_quota.reset_button')}
           >
             <IconRefreshCw
               size={14}
               aria-hidden="true"
               className={resetting ? styles.spinning : undefined}
             />
-            {t('codex_quota.reset_button')}
+            {t('quota_management.row_reset')}
           </Button>
         )}
         {status !== 'idle' && (
@@ -136,13 +172,14 @@ export function QuotaRow(props: QuotaRowProps) {
             onClick={onRefresh}
             disabled={isQuotaRefreshDisabled(canRefresh, loading, resetting)}
             title={t('auth_files.quota_refresh_hint')}
+            aria-label={t('auth_files.quota_refresh_single')}
           >
             <IconRefreshCw
               size={14}
               aria-hidden="true"
               className={loading ? styles.spinning : undefined}
             />
-            {t('auth_files.quota_refresh_single')}
+            {t('quota_management.row_refresh')}
           </Button>
         )}
       </div>
