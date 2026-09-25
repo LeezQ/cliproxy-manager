@@ -21,6 +21,7 @@ import {
   IconSidebarConfig,
   IconSidebarLogs,
   IconSidebarOauth,
+  IconSidebarQualityProbe,
   IconSidebarQuota,
 } from '@/components/ui/icons';
 import { NavSearchDialog, type NavSearchItem } from '@/components/layout/NavSearchDialog';
@@ -407,6 +408,13 @@ export function MainLayout() {
           metaKey: 'nav_meta.quota_management',
           keywords: 'quota usage limit 配额 额度 用量',
           icon: <IconSidebarQuota size={17} />,
+        },
+        {
+          path: '/quality-probe',
+          labelKey: 'nav.quality_probe',
+          metaKey: 'nav_meta.quality_probe',
+          keywords: 'quality degrade probe reasoning 降智 检测 质量 推理',
+          icon: <IconSidebarQualityProbe size={17} />,
         },
         {
           path: '/logs',

@@ -116,7 +116,8 @@
     "plugin_store": "Магазин плагинов",
     "config_management": "Панель конфигурации",
     "logs": "Просмотр логов",
-    "system_info": "Информация системы"
+    "system_info": "Информация системы",
+    "quality_probe": "Проверка качества"
   },
   "nav_groups": {
     "operate": "Работа",
@@ -135,7 +136,8 @@
     "plugin_store": "Поиск и установка плагинов",
     "logs": "Трассировка запросов",
     "config_management": "Базовая конфигурация шлюза",
-    "system_info": "Состояние и диагностика"
+    "system_info": "Состояние и диагностика",
+    "quality_probe": "Тестовая задача для каждого аккаунта по расписанию"
   },
   "dashboard": {
     "hero_verdict_good": "Всё стабильно",
@@ -1911,5 +1913,49 @@
     "gateway": "Учётные данные",
     "observe": "Использование и отладка",
     "control": "Шлюз"
+  },
+  "quality_probe": {
+    "title": "Проверка качества",
+    "intro": "Задача про конфеты, правильный ответ {{answer}} · {{model}} · усилие {{effort}} · последние {{days}} дн. · автозапуск каждые 3 часа",
+    "refresh": "Обновить",
+    "run_all": "Проверить все",
+    "run_one": "Проверить",
+    "running": "Идёт проверка: готово {{done}} из {{total}}",
+    "running_hint": "При высоком усилии один аккаунт может проверяться несколько минут; проверка идёт на сервере, страницу можно закрыть",
+    "started": "Проверка запущена, результаты появятся автоматически",
+    "start_failed": "Не удалось запустить проверку: {{message}}",
+    "testing": "Проверяется",
+    "accounts_title": "Аккаунты",
+    "records_title": "История проверок",
+    "records_all": "Все аккаунты",
+    "records_filter": "Фильтр по аккаунту",
+    "records_empty": "Проверок ещё не было",
+    "col_account": "Аккаунт",
+    "col_last": "Последняя",
+    "col_rate": "Доля верных",
+    "col_trend": "Динамика (старые → новые)",
+    "col_actions": "Действия",
+    "col_time": "Время",
+    "col_verdict": "Итог",
+    "col_answer": "Ответ",
+    "col_reasoning": "Рассуждение",
+    "col_elapsed": "Длительность",
+    "col_detail": "Конец ответа / причина сбоя",
+    "verdict_pass": "Норма",
+    "verdict_degraded": "Деградация",
+    "verdict_failed": "Нет результата",
+    "answer": "Ответ {{value}}",
+    "reasoning": "Рассуждение {{value}}",
+    "reasoning_median": "Медиана рассуждения {{value}}",
+    "reasoning_mark_hint": "Токенов рассуждения ровно {{mark}}: при деградации рассуждение обрезается на этом значении",
+    "rate_value": "{{passed}}/{{valid}} верно",
+    "trend_label": "Последние {{count}} результатов, старые слева",
+    "never_tested": "Ещё не проверялся",
+    "empty_title": "Нет включённых аккаунтов Codex",
+    "unavailable_title": "Сервис проверки качества не запущен",
+    "unavailable_desc": "На сервере должен работать cpa-account serve, а Caddy — перенаправлять /v0/management/quality-probe/. См. DEPLOYMENT.md 7.6.",
+    "load_failed": "Ошибка загрузки: {{message}}",
+    "row_badge_title": "Проверка {{time}}: {{verdict}}, ответ {{answer}}, рассуждение {{reasoning}}. Верно {{passed}}/{{valid}} за {{days}} дн.",
+    "row_badge_failed_title": "Проверка {{time}}: нет результата ({{error}})"
   }
 }

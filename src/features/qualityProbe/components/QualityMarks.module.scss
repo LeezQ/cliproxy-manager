@@ -1,0 +1,61 @@
+/* ============================================================
+ * 降智检测的结论徽标与走势方块。
+ *
+ * 配色沿用认证文件列表的状态语言：正常 = 成功绿，降智 = 错误红，
+ * 没测成 = 弱化灰（它不代表账号好坏，只是这次没拿到结论）。
+ * ============================================================ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.tonePass {
+  color: var(--success-color);
+}
+
+.toneDegraded {
+  color: var(--error-color);
+}
+
+.toneFailed {
+  color: var(--text-tertiary);
+}
+
+/* ---------- 走势 ---------- */
+
+.trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* 方块用背景色而不是文字色：currentColor 取自上面的 tone 类 */
+.cell {
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  background: currentColor;
+
+  &.toneFailed {
+    opacity: 0.45;
+  }
+}
+
+.trendEmpty {
+  font-size: 12px;
+  color: var(--text-quaternary);
+}

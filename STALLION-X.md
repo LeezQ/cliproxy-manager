@@ -7,13 +7,14 @@
 
 ## 1. 功能裁剪
 
-只保留五个入口：
+只保留六个入口：
 
 | 入口 | 路由 | 源码 |
 |---|---|---|
 | 认证文件 | `/auth-files` | `src/features/authFiles` |
 | OAuth 登录 | `/oauth` | `src/pages/OAuthPage.tsx` |
 | 配额管理 | `/quota` | `src/features/quota` |
+| 降智检测 | `/quality-probe` | `src/features/qualityProbe`（数据来自服务器脚本，见第 6 节） |
 | 日志查看 | `/logs` | `src/pages/LogsPage.tsx` |
 | 配置面板 | `/config` | `src/features/config` |
 
@@ -26,7 +27,7 @@
 涉及文件：
 
 - `src/router/MainRoutes.tsx`：重写路由表，根路径与未知路径重定向到 `/auth-files`。
-- `src/components/layout/MainLayout.tsx`：外壳已按 Stallion-X 主站重写（见第 2 节），导航分组 `navGroups` 只列出这五个入口。
+- `src/components/layout/MainLayout.tsx`：外壳已按 Stallion-X 主站重写（见第 2 节），导航分组 `navGroups` 只列出这六个入口。
 
 **恢复某个功能**：在 `MainRoutes.tsx` 加回路由，并在 `MainLayout.tsx` 的 `navGroups` 中加回对应导航项（页面搜索会自动包含）。
 
@@ -198,6 +199,34 @@ grep -o -i -E "aff=|keyword=|utm_|sponsored|apimart|apikey\.fan|bestproxy" dist/
 
 `src/components/common/LayoutToggle.tsx` 为两个页面共用的「卡片 / 列表」切换，取值与守卫在同目录的 `layoutMode.ts`
 （与组件分开是为了不破坏 React Fast Refresh）。文案在 `common.layout_*`。
+
+## 6. 降智检测
+
+服务器上的 `cpa-account` 每 3 小时给每个账号出一道固定逻辑题（糖果题，正确答案 21），
+记录答案和推理 token，用来回答「哪个号、什么时候被降智」。原理、命令行用法和安全边界见
+`DEPLOYMENT.md` 7.6；这里只记面板这一侧。
+
+**数据来源不是 CPA。** 接口由服务器上常驻的 `cpa-account serve`（127.0.0.1:8318）提供，
+Caddy 把 `/v0/management/quality-probe/*` 转发过去。挂在 `/v0/management` 下，
+面板就能直接用 `apiClient`（自动带管理密钥），也沿用 Caddy 的管理面 IP 白名单。
+服务没部署时接口是 404/502：降智检测页显示「服务未启用」的说明，认证文件列表静默不显示徽标，其它功能不受影响。
+
+**鉴权返回 403 而不是 401**：面板收到 401 会自动登出，脚本里的密钥与面板登录用的不一致时，
+不该把人踢下线，只让这个功能不可用。
+
+- **认证文件列表**：账号列「套餐 · 权重」之后加一个结论徽标（正常 / 降智 / 没测成），
+  点击跳到降智检测页，悬停看答案、推理 token 和近 7 天正确次数。
+  徽标优先显示**最近一次有效结论**（`last_valid`）：偶发的上游过载只记成「没测成」，不该盖住账号的真实状态。
+  只在列表布局下读取，一页一次请求。
+- **降智检测页**：工具卡片（题目、模型、推理强度、统计窗口 + 刷新 / 立即检测全部）→ 账号汇总
+  （最近一次、正确率与推理中位、走势方块、测一次）→ 检测记录（可按账号筛选，最多 100 条）。
+  触发后检测在服务器后台跑，页面每 5 秒轮询 `/job`，结束后自动刷新汇总与记录；离开页面不影响检测。
+  同一时刻只允许一个任务，重复触发返回 409 并接管显示正在进行的任务。
+- 推理 token **恰好**等于 516（社区观察到的降智截断值）时标红加虚线下划线，悬停有解释；1034 这类近似倍数不标，证据不足。
+- 实现：`services/api/qualityProbe.ts`（类型与 normalize，后端的中文结论在这里映射成 `pass / degraded / failed`）、
+  `features/qualityProbe/`（`logic.ts` 纯函数、`hooks/useQualityProbe.ts`、`components/QualityMarks.tsx` 共用徽标与走势、
+  `QualityProbePage.tsx`）、`AuthFileRow` 的 `AuthFileQualityMark`；测试在 `tests/qualityProbe.test.ts`。
+- 断点用容器查询 `quality-list`：≤900px 正确率和走势换到第二行，≤560px 各列纵向堆叠、按钮固定在账号名右侧。
 
 ## 同步上游
 

@@ -116,7 +116,8 @@
     "plugin_store": "Plugin Store",
     "config_management": "Config Panel",
     "logs": "Logs Viewer",
-    "system_info": "Management Center Info"
+    "system_info": "Management Center Info",
+    "quality_probe": "Quality Probe"
   },
   "nav_groups": {
     "operate": "Operate",
@@ -136,7 +137,8 @@
     "plugin_store": "Discover & install plugins",
     "logs": "Request tracing",
     "config_management": "Gateway configuration",
-    "system_info": "Runtime & diagnostics"
+    "system_info": "Runtime & diagnostics",
+    "quality_probe": "Scheduled test question per account"
   },
   "dashboard": {
     "hero_verdict_good": "All systems steady",
@@ -1917,5 +1919,49 @@
     "gateway": "Credentials",
     "observe": "Usage & debugging",
     "control": "Gateway"
+  },
+  "quality_probe": {
+    "title": "Quality Probe",
+    "intro": "Candy puzzle, correct answer {{answer}} · {{model}} · effort {{effort}} · last {{days}} days · auto-run every 3 hours",
+    "refresh": "Refresh",
+    "run_all": "Test all now",
+    "run_one": "Test",
+    "running": "Testing: {{done}} / {{total}} done",
+    "running_hint": "A single account can take several minutes at high effort; the test runs on the server, so you can leave this page",
+    "started": "Test started; results will appear automatically",
+    "start_failed": "Failed to start test: {{message}}",
+    "testing": "Testing",
+    "accounts_title": "Accounts",
+    "records_title": "Test history",
+    "records_all": "All accounts",
+    "records_filter": "Filter by account",
+    "records_empty": "No test results yet",
+    "col_account": "Account",
+    "col_last": "Latest",
+    "col_rate": "Pass rate",
+    "col_trend": "Trend (old → new)",
+    "col_actions": "Actions",
+    "col_time": "Time",
+    "col_verdict": "Result",
+    "col_answer": "Answer",
+    "col_reasoning": "Reasoning",
+    "col_elapsed": "Time taken",
+    "col_detail": "Answer ending / failure reason",
+    "verdict_pass": "Normal",
+    "verdict_degraded": "Degraded",
+    "verdict_failed": "No result",
+    "answer": "Answer {{value}}",
+    "reasoning": "Reasoning {{value}}",
+    "reasoning_median": "Median reasoning {{value}}",
+    "reasoning_mark_hint": "Reasoning tokens are exactly {{mark}}, the value the community sees when reasoning is capped",
+    "rate_value": "{{passed}}/{{valid}} correct",
+    "trend_label": "Last {{count}} results, oldest on the left",
+    "never_tested": "Not tested yet",
+    "empty_title": "No enabled Codex accounts",
+    "unavailable_title": "Quality probe service is not running",
+    "unavailable_desc": "The server needs cpa-account serve running, with Caddy forwarding /v0/management/quality-probe/. See DEPLOYMENT.md 7.6.",
+    "load_failed": "Failed to load: {{message}}",
+    "row_badge_title": "Quality probe {{time}}: {{verdict}}, answer {{answer}}, reasoning {{reasoning}}. {{passed}}/{{valid}} correct in the last {{days}} days",
+    "row_badge_failed_title": "Quality probe {{time}}: no result ({{error}})"
   }
 }

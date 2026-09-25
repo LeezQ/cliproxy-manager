@@ -67,6 +67,8 @@ import {
 } from '@/features/authFiles/uiState';
 import { useAuthStore, useConfigStore, useNotificationStore, useThemeStore } from '@/stores';
 import type { AuthFileItem } from '@/types';
+import { useQualityProbe } from '@/features/qualityProbe/hooks/useQualityProbe';
+import { buildQualityIndex, findQualityAccount } from '@/features/qualityProbe/logic';
 import styles from '@/features/authFiles/AuthFilesPage.module.scss';
 
 const DEFAULT_REGULAR_PAGE_SIZE = 9;
@@ -497,6 +499,14 @@ export function AuthFilesPage() {
     [credentialProxies, globalProxyUrl]
   );
 
+  // 降智检测：只在列表布局下读取一次汇总，每行显示最近一次结论。
+  // 服务没部署（接口 404/502）时静默不显示，不影响本页其它功能。
+  const qualityProbe = useQualityProbe({ enabled: layoutMode === 'list' });
+  const qualityIndex = useMemo(
+    () => buildQualityIndex(qualityProbe.summary?.accounts ?? []),
+    [qualityProbe.summary]
+  );
+
   // 本页可查询额度的凭证：与行内展示额度的条件一致（非虚拟、未停用、提供商支持额度）
   const pageQuotaTargets = useMemo<QuotaFileEntry[]>(
     () =>
@@ -814,6 +824,8 @@ export function AuthFilesPage() {
                       file={file}
                       selected={selectedFiles.has(file.name)}
                       proxy={proxyInfoFor(file)}
+                      quality={findQualityAccount(qualityIndex, file)}
+                      qualityDays={qualityProbe.summary?.days}
                       {...sharedItemProps}
                     />
                   ))}

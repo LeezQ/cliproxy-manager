@@ -513,6 +513,17 @@ export function IconSidebarQuota({ size = 20, ...props }: IconProps) {
 
 export const IconSidebarLogs = IconScrollText;
 
+/** 降智检测：锥形烧瓶，表示「定时做实验」。 */
+export function IconSidebarQualityProbe({ size = 20, ...props }: IconProps) {
+  return (
+    <svg {...baseSvgProps} width={size} height={size} {...props}>
+      <path d="M10 2v7.53a2 2 0 0 1-.21.9L4.72 20.55A1 1 0 0 0 5.62 22h12.76a1 1 0 0 0 .9-1.45l-5.07-10.12A2 2 0 0 1 14 9.53V2" />
+      <path d="M8.5 2h7" />
+      <path d="M7 16h10" />
+    </svg>
+  );
+}
+
 export function IconSidebarSystem({ size = 20, ...props }: IconProps) {
   return (
     <svg {...baseSvgProps} width={size} height={size} {...props}>

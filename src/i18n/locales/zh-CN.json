@@ -116,7 +116,8 @@
     "plugin_store": "插件商店",
     "config_management": "配置面板",
     "logs": "日志查看",
-    "system_info": "中心信息"
+    "system_info": "中心信息",
+    "quality_probe": "降智检测"
   },
   "nav_groups": {
     "operate": "运行",
@@ -136,7 +137,8 @@
     "plugin_store": "发现并安装插件",
     "logs": "请求追踪与排查",
     "config_management": "网关基础配置",
-    "system_info": "运行与诊断信息"
+    "system_info": "运行与诊断信息",
+    "quality_probe": "定时出题，看各账号是否被降智"
   },
   "dashboard": {
     "hero_verdict_good": "运行平稳",
@@ -1915,5 +1917,49 @@
     "gateway": "凭证接入",
     "observe": "用量与排障",
     "control": "网关设置"
+  },
+  "quality_probe": {
+    "title": "降智检测",
+    "intro": "糖果题，正确答案 {{answer}} · {{model}} · 推理强度 {{effort}} · 近 {{days}} 天 · 服务器每 3 小时自动检测",
+    "refresh": "刷新",
+    "run_all": "立即检测全部",
+    "run_one": "测一次",
+    "running": "正在检测：已完成 {{done}} / {{total}}",
+    "running_hint": "高推理强度下单个账号可能要几分钟；检测在服务器后台进行，离开页面不影响",
+    "started": "已开始检测，结果会自动显示",
+    "start_failed": "开始检测失败：{{message}}",
+    "testing": "检测中",
+    "accounts_title": "账号",
+    "records_title": "检测记录",
+    "records_all": "全部账号",
+    "records_filter": "按账号筛选",
+    "records_empty": "还没有检测记录",
+    "col_account": "账号",
+    "col_last": "最近一次",
+    "col_rate": "正确率",
+    "col_trend": "走势（旧→新）",
+    "col_actions": "操作",
+    "col_time": "时间",
+    "col_verdict": "结论",
+    "col_answer": "答案",
+    "col_reasoning": "推理",
+    "col_elapsed": "耗时",
+    "col_detail": "回答末尾 / 失败原因",
+    "verdict_pass": "正常",
+    "verdict_degraded": "降智",
+    "verdict_failed": "没测成",
+    "answer": "答案 {{value}}",
+    "reasoning": "推理 {{value}}",
+    "reasoning_median": "推理中位 {{value}}",
+    "reasoning_mark_hint": "推理 token 恰好是 {{mark}}：社区观察到降智时推理会被卡在这个值",
+    "rate_value": "{{passed}}/{{valid}} 次答对",
+    "trend_label": "最近 {{count}} 次检测结果，旧的在左",
+    "never_tested": "还没测过",
+    "empty_title": "没有启用中的 Codex 账号",
+    "unavailable_title": "降智检测服务未启用",
+    "unavailable_desc": "服务器上需要运行 cpa-account serve，并由 Caddy 转发 /v0/management/quality-probe/。见 DEPLOYMENT.md 7.6。",
+    "load_failed": "读取失败：{{message}}",
+    "row_badge_title": "降智检测 {{time}}：{{verdict}}，答案 {{answer}}，推理 {{reasoning}}。近 {{days}} 天 {{passed}}/{{valid}} 次答对",
+    "row_badge_failed_title": "降智检测 {{time}}：没测成（{{error}}）"
   }
 }

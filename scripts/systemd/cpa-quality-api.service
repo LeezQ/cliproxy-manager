@@ -1,0 +1,16 @@
+# 降智检测的网页接口：给管理面板的「降智检测」页和认证文件列表用。
+# 只监听 127.0.0.1:8318，由 Caddy 把 /v0/management/quality-probe/* 转发过来，
+# 与管理接口共用同一份 IP 白名单；鉴权用 cpa-account.env 里的 MGMT_KEY。
+[Unit]
+Description=CPA account quality probe API (for the management panel)
+After=network-online.target cliproxy.service
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/cpa-account serve
+Restart=on-failure
+RestartSec=5
+Environment=NO_COLOR=1
+
+[Install]
+WantedBy=multi-user.target

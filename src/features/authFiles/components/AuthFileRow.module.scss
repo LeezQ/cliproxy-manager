@@ -177,6 +177,24 @@
   overflow: hidden;
 }
 
+/* 降智检测徽标：可点击跳到降智检测页；徽标自带配色，这里只去掉链接样式 */
+.qualityLink {
+  display: inline-flex;
+  flex-shrink: 0;
+  text-decoration: none;
+  border-radius: 4px;
+
+  &:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
 /* 套餐是这一列最要紧的区分信息，用正文色加粗；付费档再用主色强调 */
 .plan {
   font-weight: 600;

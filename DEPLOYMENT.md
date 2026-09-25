@@ -60,6 +60,17 @@ handle @admin_denied {
 }
 ```
 
+```caddyfile
+# 降智检测接口（cpa-account serve），见 7.6。必须用具名匹配器并写在 @admin_denied 之后：
+# 裸路径的 handle 会被 Caddy 按路径长度排到前面，绕过上面的 IP 白名单
+@quality_probe path /v0/management/quality-probe /v0/management/quality-probe/*
+handle @quality_probe {
+    reverse_proxy 127.0.0.1:8318
+}
+```
+
+改完用 `caddy adapt --config /etc/caddy/Caddyfile` 看生成的路由顺序：白名单那条必须排在 quality-probe 之前。
+
 白名单当前放行两个来源：
 
 | 来源 | 说明 |
@@ -458,6 +469,36 @@ systemctl list-timers cpa-quality.timer   # 下次运行时间
 systemctl start cpa-quality.service       # 立即跑一轮
 journalctl -u cpa-quality.service -n 20   # 看最近一轮的输出
 ```
+
+#### 网页接口 `serve`
+
+管理面板的「降智检测」页和认证文件列表的结论徽标都读这个接口（面板侧说明见 `STALLION-X.md` 第 6 节）。
+`cpa-quality-api.service`（`scripts/systemd/`）常驻运行 `cpa-account serve`，只监听 `127.0.0.1:8318`，
+由 Caddy 的 `@quality_probe` 转发（见 2.1）。
+
+| 接口（前缀 `/v0/management/quality-probe`） | 说明 |
+|---|---|
+| `GET /summary?days=7` | 各账号汇总（含 `last` 与 `last_valid`）+ 当前任务 |
+| `GET /records?limit=100[&email=]` | 原始记录，新的在前 |
+| `GET /job` | 当前 / 最近一次网页触发的任务 |
+| `POST /run {"target": "all" \| "<凭证文件名>"}` | 后台开始一轮检测，立即返回 202；已有任务在跑返回 409 |
+
+- **鉴权**：请求头的管理密钥与 `cpa-account.env` 的 `MGMT_KEY` 做常量时间比较。不转发给 CPA 校验，
+  因为 CPA 按失败次数封 IP，本机转发的错误密钥会把 127.0.0.1 封掉，连带 `cpa-account` 自己失效。
+  不匹配返回 **403**（面板收到 401 会自动登出）。
+- 跨域与 CPA 一致放开（`Access-Control-Allow-Origin: *`），方便本地开发服务器直连线上；鉴权靠请求头、不用 cookie。
+- 管理密钥轮换后，除了面板重新登录，还要改 `cpa-account.env` 并 `systemctl restart cpa-quality-api`。
+
+```bash
+systemctl status cpa-quality-api
+journalctl -u cpa-quality-api -n 50     # 只记错误，正常请求不打日志
+```
+
+#### 过载重试
+
+上游返回 `server_is_overloaded`（或 429 / 502 / 503）时，对**同一个账号**等 20 秒、40 秒后重试，最多 3 次。
+CPA 转发时遇到过载会换号，但探针要测的就是这个号，只能原地重试；记录里的 `attempts` 是实际尝试次数。
+3 次都过载才记为「没测成」。
 
 #### 为什么绕过 CPA 的 `/v0/management/api-call`
 

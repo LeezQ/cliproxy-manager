@@ -116,7 +116,8 @@
     "plugin_store": "插件商店",
     "config_management": "設定面板",
     "logs": "記錄檢視",
-    "system_info": "中心資訊"
+    "system_info": "中心資訊",
+    "quality_probe": "降智檢測"
   },
   "nav_groups": {
     "operate": "運行",
@@ -136,7 +137,8 @@
     "plugin_store": "探索並安裝插件",
     "logs": "請求追蹤與排查",
     "config_management": "閘道基礎設定",
-    "system_info": "運行與診斷資訊"
+    "system_info": "運行與診斷資訊",
+    "quality_probe": "定時出題，看各帳號是否被降智"
   },
   "dashboard": {
     "hero_verdict_good": "運行平穩",
@@ -1941,5 +1943,49 @@
     "gateway": "憑證接入",
     "observe": "用量與排障",
     "control": "閘道設定"
+  },
+  "quality_probe": {
+    "title": "降智檢測",
+    "intro": "糖果題，正確答案 {{answer}} · {{model}} · 推理強度 {{effort}} · 近 {{days}} 天 · 伺服器每 3 小時自動檢測",
+    "refresh": "重新整理",
+    "run_all": "立即檢測全部",
+    "run_one": "測一次",
+    "running": "正在檢測：已完成 {{done}} / {{total}}",
+    "running_hint": "高推理強度下單個帳號可能要幾分鐘；檢測在伺服器背景進行，離開頁面不影響",
+    "started": "已開始檢測，結果會自動顯示",
+    "start_failed": "開始檢測失敗：{{message}}",
+    "testing": "檢測中",
+    "accounts_title": "帳號",
+    "records_title": "檢測記錄",
+    "records_all": "全部帳號",
+    "records_filter": "按帳號篩選",
+    "records_empty": "還沒有檢測記錄",
+    "col_account": "帳號",
+    "col_last": "最近一次",
+    "col_rate": "正確率",
+    "col_trend": "走勢（舊→新）",
+    "col_actions": "操作",
+    "col_time": "時間",
+    "col_verdict": "結論",
+    "col_answer": "答案",
+    "col_reasoning": "推理",
+    "col_elapsed": "耗時",
+    "col_detail": "回答末尾 / 失敗原因",
+    "verdict_pass": "正常",
+    "verdict_degraded": "降智",
+    "verdict_failed": "沒測成",
+    "answer": "答案 {{value}}",
+    "reasoning": "推理 {{value}}",
+    "reasoning_median": "推理中位 {{value}}",
+    "reasoning_mark_hint": "推理 token 恰好是 {{mark}}：社群觀察到降智時推理會被卡在這個值",
+    "rate_value": "{{passed}}/{{valid}} 次答對",
+    "trend_label": "最近 {{count}} 次檢測結果，舊的在左",
+    "never_tested": "還沒測過",
+    "empty_title": "沒有啟用中的 Codex 帳號",
+    "unavailable_title": "降智檢測服務未啟用",
+    "unavailable_desc": "伺服器上需要執行 cpa-account serve，並由 Caddy 轉發 /v0/management/quality-probe/。見 DEPLOYMENT.md 7.6。",
+    "load_failed": "讀取失敗：{{message}}",
+    "row_badge_title": "降智檢測 {{time}}：{{verdict}}，答案 {{answer}}，推理 {{reasoning}}。近 {{days}} 天 {{passed}}/{{valid}} 次答對",
+    "row_badge_failed_title": "降智檢測 {{time}}：沒測成（{{error}}）"
   }
 }

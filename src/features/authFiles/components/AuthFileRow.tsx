@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
@@ -34,6 +35,9 @@ import {
 } from '@/features/authFiles/listView';
 import type { AuthFileCardProps } from '@/features/authFiles/components/AuthFileCard';
 import type { AuthFileProxyInfo } from '@/features/authFiles/proxyInfo';
+import type { QualityAccountSummary } from '@/services/api/qualityProbe';
+import { QualityVerdictBadge } from '@/features/qualityProbe/components/QualityMarks';
+import { formatQualityTime, QUALITY_VERDICT_KEY } from '@/features/qualityProbe/logic';
 import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
 import { AuthFileCooldownSection } from '@/features/authFiles/components/AuthFileCooldownSection';
 import cardStyles from '@/features/authFiles/components/AuthFileCard.module.scss';
@@ -55,6 +59,10 @@ const statusBarStyles: Record<string, string> = {
 export type AuthFileRowProps = Omit<AuthFileCardProps, 'compact'> & {
   /** 出口（代理）信息；'loading' 表示凭证文件还在读取。 */
   proxy?: AuthFileProxyInfo | 'loading';
+  /** 降智检测汇总；没测过或服务未部署时为 undefined，不显示徽标。 */
+  quality?: QualityAccountSummary;
+  /** 降智检测的统计窗口（天），用于悬停提示。 */
+  qualityDays?: number;
 };
 
 /**
@@ -83,6 +91,8 @@ export function AuthFileRow(props: AuthFileRowProps) {
     onToggleStatus,
     onToggleSelect,
     proxy,
+    quality,
+    qualityDays,
   } = props;
 
   const isRuntimeOnly = isRuntimeOnlyAuthFile(file);
@@ -195,6 +205,7 @@ export function AuthFileRow(props: AuthFileRowProps) {
                 {t('auth_files.row_priority', { value: priorityValue })}
               </span>
             )}
+            {quality?.last && <AuthFileQualityMark quality={quality} days={qualityDays} />}
             {typeof file.note === 'string' && file.note.trim() && (
               <span className={styles.note} title={file.note.trim()}>
                 {file.note.trim()}
@@ -264,7 +275,9 @@ export function AuthFileRow(props: AuthFileRowProps) {
                 onClick={() => onManualRefresh(file)}
                 title={t('auth_files.manual_refresh_button')}
                 aria-label={t('auth_files.manual_refresh_button')}
-                disabled={disableControls || file.disabled || isStatusUpdating || isManualRefreshing}
+                disabled={
+                  disableControls || file.disabled || isStatusUpdating || isManualRefreshing
+                }
               >
                 {isManualRefreshing ? <LoadingSpinner size={14} /> : <IconRefreshCw size={15} />}
               </Button>
@@ -367,5 +380,34 @@ function AuthFileExitLine({ proxy }: { proxy: AuthFileRowProps['proxy'] }) {
     <span className={styles.exitIp} title={via}>
       {proxy.exit}
     </span>
+  );
+}
+
+/**
+ * 降智检测的最近一次有效结论，放在账号列「套餐 · 权重」之后；点击跳到降智检测页看走势与记录。
+ * 悬停提示里给出答案、推理 token 和统计窗口内的正确次数。
+ */
+function AuthFileQualityMark({ quality, days }: { quality: QualityAccountSummary; days?: number }) {
+  const { t } = useTranslation();
+  // 优先最近一次有效结论：偶发的上游过载只会记成「没测成」，不该盖住账号的真实状态
+  const last = quality.lastValid ?? quality.last;
+  if (!last) return null;
+  const time = formatQualityTime(last.ts);
+  const title =
+    last.verdict === 'failed'
+      ? t('quality_probe.row_badge_failed_title', { time, error: last.error || '—' })
+      : t('quality_probe.row_badge_title', {
+          time,
+          verdict: t(`quality_probe.${QUALITY_VERDICT_KEY[last.verdict]}`),
+          answer: last.answer ?? '—',
+          reasoning: last.reasoningTokens ?? '—',
+          days: days ?? 7,
+          passed: quality.passed,
+          valid: quality.valid,
+        });
+  return (
+    <Link to="/quality-probe" className={styles.qualityLink} title={title}>
+      <QualityVerdictBadge verdict={last.verdict} />
+    </Link>
   );
 }

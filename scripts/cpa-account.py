@@ -32,6 +32,7 @@ cpa-account —— CLIProxyAPI 单实例账号管理工具
     QUALITY_EFFORT=high           推理强度 low / medium / high / xhigh
 """
 
+import hmac
 import json
 import os
 import re
@@ -47,6 +48,7 @@ import urllib.parse
 import urllib.request
 import urllib.error
 from concurrent.futures import ThreadPoolExecutor
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from datetime import datetime, timedelta, timezone
 
 # ---------------------------------------------------------------- 常量
@@ -959,7 +961,35 @@ def parse_probe_stream(raw):
     return "".join(text_parts), completed, error.strip(": ")
 
 
+# 上游过载（server_is_overloaded / 429 / 503）时对同一账号重试。CPA 转发时遇到过载会换号，
+# 探针要测的是「这个号」，只能原地等一会儿再试；不重试的话高峰期大半记录都是「没测成」。
+PROBE_MAX_ATTEMPTS = 3
+PROBE_RETRY_DELAY = 20
+RETRYABLE_ERROR_MARKS = ("overloaded", "HTTP 429", "HTTP 502", "HTTP 503", "rate_limit")
+
+
+def is_retryable_probe_error(error):
+    return any(mark in (error or "") for mark in RETRYABLE_ERROR_MARKS)
+
+
 def run_probe(f, model, effort):
+    """
+    对单个账号做一次测试；上游过载时等待后重试，最多 PROBE_MAX_ATTEMPTS 次。
+    返回最后一次尝试的记录，attempts 字段记录尝试了几次。
+    """
+    for attempt in range(1, PROBE_MAX_ATTEMPTS + 1):
+        record = run_probe_once(f, model, effort)
+        record["attempts"] = attempt
+        if (record["verdict"] != "失败" or attempt == PROBE_MAX_ATTEMPTS
+                or not is_retryable_probe_error(record["error"])):
+            return record
+        log_error(f"{record['email']} 第 {attempt} 次测试遇到上游过载，"
+                  f"{PROBE_RETRY_DELAY * attempt} 秒后重试")
+        time.sleep(PROBE_RETRY_DELAY * attempt)
+    return record
+
+
+def run_probe_once(f, model, effort):
     """
     对单个账号做一次测试，返回一条可直接写日志的记录。
     不抛异常：任何失败都记为 verdict=失败 并带上原因，便于事后区分「降智」和「没测成」。
@@ -1105,6 +1135,36 @@ def print_probe_record(r):
     )
 
 
+def probe_targets():
+    """可测试的账号：启用中的 Codex 凭证。"""
+    return [f for f in list_files()
+            if not f.get("disabled") and (f.get("provider") or f.get("type")) == "codex"]
+
+
+def probe_files(files, model, effort, times=1, on_record=None):
+    """
+    并发测试多个账号，每条结果立即写日志并回调 on_record。
+    同一账号的多次测试串行，避免自己和自己抢并发。命令行与网页接口共用这一份逻辑。
+    """
+    def probe_account(f):
+        results = []
+        for _ in range(times):
+            r = run_probe(f, model, effort)
+            append_quality_log(r)
+            if on_record:
+                try:
+                    on_record(r)
+                except Exception as e:
+                    log_error("处理测试结果回调失败", e)
+            results.append(r)
+        return results
+
+    if not files:
+        return []
+    with ThreadPoolExecutor(max_workers=len(files)) as pool:
+        return [r for rs in pool.map(probe_account, files) for r in rs]
+
+
 def cmd_probe(args):
     """
     probe [账号|all] [--effort E] [--model M] [--times N] [--quiet]
@@ -1133,8 +1193,7 @@ def cmd_probe(args):
             die(f"参数 {a} 缺少取值或取值不合法", e)
 
     if target == "all":
-        files = [f for f in list_files()
-                 if not f.get("disabled") and (f.get("provider") or f.get("type")) == "codex"]
+        files = probe_targets()
     else:
         files = [resolve(target)]
     if not files:
@@ -1146,17 +1205,7 @@ def cmd_probe(args):
         print(f"{C_DIM}正确答案 {CANDY_ANSWER}；高推理强度下正常回答可能要几分钟{C_RESET}")
         print()
 
-    def probe_account(f):
-        results = []
-        for _ in range(times):
-            r = run_probe(f, model, effort)
-            append_quality_log(r)
-            print_probe_record(r)
-            results.append(r)
-        return results
-
-    with ThreadPoolExecutor(max_workers=len(files)) as pool:
-        all_results = [r for rs in pool.map(probe_account, files) for r in rs]
+    all_results = probe_files(files, model, effort, times, on_record=print_probe_record)
 
     degraded = [r for r in all_results if r["verdict"] == "降智"]
     failed = [r for r in all_results if r["verdict"] == "失败"]
@@ -1183,6 +1232,31 @@ def load_quality_log(days):
             except (json.JSONDecodeError, KeyError, ValueError) as e:
                 log_error(f"质量日志第 {n} 行格式异常，已跳过", e)
     return rows
+
+
+# 走势最多展示最近几次
+QUALITY_TREND_SIZE = 12
+
+
+def summarize_account(rs):
+    """
+    把同一账号的若干条记录（按时间从旧到新）汇总成一行。
+    「失败」（没测成）不计入正确率和推理中位数，只出现在走势里。
+    """
+    valid = [r for r in rs if r.get("verdict") != "失败"]
+    ok = [r for r in valid if r.get("verdict") == "正常"]
+    reasoning = [r["reasoning_tokens"] for r in valid if isinstance(r.get("reasoning_tokens"), int)]
+    return {
+        "total": len(rs),
+        "valid": len(valid),
+        "passed": len(ok),
+        "rate": (len(ok) * 100 // len(valid)) if valid else None,
+        "median_reasoning": int(statistics.median(reasoning)) if reasoning else None,
+        "last": rs[-1] if rs else None,
+        # 最近一次拿到结论的记录：列表徽标优先显示它，避免一次上游过载把状态刷成「没测成」
+        "last_valid": valid[-1] if valid else None,
+        "trend": [r.get("verdict") for r in rs[-QUALITY_TREND_SIZE:]],
+    }
 
 
 def cmd_quality(args):
@@ -1224,20 +1298,23 @@ def cmd_quality(args):
     print(f"{C_BOLD}{header}{C_RESET}")
     print("-" * width(header))
     for email, rs in sorted(by_email.items()):
-        valid = [r for r in rs if r["verdict"] != "失败"]
-        ok = [r for r in valid if r["verdict"] == "正常"]
-        rate = f"{len(ok) * 100 // len(valid)}%" if valid else "-"
-        reasoning = [r["reasoning_tokens"] for r in valid if isinstance(r.get("reasoning_tokens"), int)]
-        med = str(int(statistics.median(reasoning))) if reasoning else "-"
-        last = rs[-1]
+        sm = summarize_account(rs)
+        rate = f"{sm['rate']}%" if sm["rate"] is not None else "-"
+        med = str(sm["median_reasoning"]) if sm["median_reasoning"] is not None else "-"
+        last = sm["last"]
         last_cell = f"{last['ts'][5:16].replace('T', ' ')}"
-        # 走势：✓ 正常 ✗ 降智 · 失败，最多看最近 12 次
-        trend = "".join({"正常": "✓", "降智": "✗"}.get(r["verdict"], "·") for r in rs[-12:])
-        rate_color = C_GREEN if valid and len(ok) == len(valid) else (C_RED if valid and not ok else C_YELLOW)
+        # 走势：✓ 正常 ✗ 降智 · 失败
+        trend = "".join({"正常": "✓", "降智": "✗"}.get(v, "·") for v in sm["trend"])
+        if sm["valid"] and sm["passed"] == sm["valid"]:
+            rate_color = C_GREEN
+        elif sm["valid"] and not sm["passed"]:
+            rate_color = C_RED
+        else:
+            rate_color = C_YELLOW
         print(
             f"{pad(email[:34], cols[0][1])} "
             f"{pad(last.get('plan') or '?', cols[1][1])} "
-            f"{pad(len(valid), cols[2][1])} "
+            f"{pad(sm['valid'], cols[2][1])} "
             f"{rate_color}{pad(rate, cols[3][1])}{C_RESET} "
             f"{pad(med, cols[4][1])} "
             f"{pad(last_cell, cols[5][1])} "
@@ -1246,6 +1323,262 @@ def cmd_quality(args):
     print()
     print(f"{C_DIM}✓ 答对  ✗ 答错（降智）  · 没测成（超时、网络、令牌）。"
           f"原始记录：cpa-account quality log{C_RESET}")
+
+
+# ---------------------------------------------------------------- 降智检测的网页接口
+#
+# 给管理面板用：`cpa-account serve` 常驻监听 127.0.0.1:8318，Caddy 把
+# /v0/management/quality-probe/* 转发过来。挂在 /v0/management 下是为了让面板直接复用
+# 现有的请求封装（带管理密钥）和 Caddy 的 IP 白名单。
+#
+# 鉴权：请求头里的管理密钥与 cpa-account.env 的 MGMT_KEY 做常量时间比较。
+#   - 不转发给 CPA 校验：CPA 会按失败次数封 IP，本机转发的错误密钥会把 127.0.0.1 封掉，
+#     连带 cpa-account 自己的管理调用也失效。
+#   - 不匹配返回 403 而非 401：面板收到 401 会自动登出，密钥轮换后两边不一致时
+#     不该把人踢下线，只让这个功能不可用即可。
+#
+# 接口（前缀 /v0/management/quality-probe）：
+#   GET  /summary?days=7      当前各账号的汇总 + 正在进行的检测任务
+#   GET  /records?limit=100   最近的原始记录，新的在前；可加 &email= 过滤
+#   GET  /job                 当前 / 最近一次网页触发的检测任务
+#   POST /run  {"target": "all" | "<凭证文件名>"}   后台开始一轮检测，立即返回
+
+QUALITY_API_PREFIX = "/v0/management/quality-probe"
+QUALITY_API_HOST = "127.0.0.1"
+QUALITY_API_PORT = 8318
+QUALITY_RECORDS_MAX = 500
+
+# 网页触发的检测任务。同一时刻只允许一个，避免重复点击把额度打光。
+_job_lock = threading.Lock()
+_job = None
+
+
+def job_snapshot():
+    """返回任务状态的拷贝，避免处理请求时与后台线程同时读写同一个对象。"""
+    with _job_lock:
+        if _job is None:
+            return None
+        snap = dict(_job)
+        snap["records"] = list(_job["records"])
+        snap["pending"] = list(_job["pending"])
+        return snap
+
+
+def start_probe_job(target):
+    """
+    在后台线程里跑一轮检测。返回 (任务快照, 错误信息)；已有任务在跑时返回错误。
+    target 为 all 或凭证文件名（name），不做模糊匹配，避免网页误测到别的号。
+    """
+    global _job
+    with _job_lock:
+        if _job is not None and _job["status"] == "running":
+            return None, "已有检测正在进行，请等它结束"
+
+    files = probe_targets()
+    if target != "all":
+        files = [f for f in files if f.get("name") == target]
+        if not files:
+            return None, f"找不到启用中的 Codex 账号：{target}"
+    if not files:
+        return None, "没有可测试的启用中 Codex 账号"
+
+    model = CONFIG.get("QUALITY_MODEL") or DEFAULT_QUALITY_MODEL
+    effort = CONFIG.get("QUALITY_EFFORT") or DEFAULT_QUALITY_EFFORT
+    job = {
+        "id": uuid.uuid4().hex[:12],
+        "status": "running",
+        "target": target,
+        "model": model,
+        "effort": effort,
+        "started_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "finished_at": None,
+        "pending": [f.get("email") or f.get("name") for f in files],
+        "records": [],
+        "error": "",
+    }
+    with _job_lock:
+        # 加锁后再确认一次，防止两个请求同时通过上面的检查
+        if _job is not None and _job["status"] == "running":
+            return None, "已有检测正在进行，请等它结束"
+        _job = job
+
+    def on_record(r):
+        with _job_lock:
+            job["records"].append(r)
+            key = r.get("email") or r.get("name")
+            if key in job["pending"]:
+                job["pending"].remove(key)
+
+    def worker():
+        try:
+            probe_files(files, model, effort, 1, on_record=on_record)
+        except Exception as e:
+            log_error("网页触发的检测任务异常结束", e)
+            with _job_lock:
+                job["error"] = f"{type(e).__name__}: {e}"
+        finally:
+            with _job_lock:
+                job["status"] = "done"
+                job["finished_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+
+    threading.Thread(target=worker, name=f"probe-{job['id']}", daemon=True).start()
+    return job_snapshot(), None
+
+
+def quality_summary(days):
+    """当前账号 + 近 days 天记录的汇总；从没测过的账号也列出来，便于在页面上补测。"""
+    rows = load_quality_log(days)
+    by_email = {}
+    for r in rows:
+        by_email.setdefault(r.get("email") or "", []).append(r)
+
+    accounts = []
+    for f in probe_targets():
+        email = f.get("email") or ""
+        item = {
+            "email": email,
+            "name": f.get("name") or "",
+            "plan": plan_of(f) or "",
+            "exit": exit_ip_of(f.get("proxy_url")),
+        }
+        item.update(summarize_account(by_email.get(email, [])))
+        accounts.append(item)
+
+    return {
+        "days": days,
+        "question": "candy",
+        "expected_answer": CANDY_ANSWER,
+        "degraded_reasoning_mark": DEGRADED_REASONING_MARK,
+        "model": CONFIG.get("QUALITY_MODEL") or DEFAULT_QUALITY_MODEL,
+        "effort": CONFIG.get("QUALITY_EFFORT") or DEFAULT_QUALITY_EFFORT,
+        "accounts": accounts,
+        "job": job_snapshot(),
+    }
+
+
+class QualityApiHandler(BaseHTTPRequestHandler):
+    """降智检测接口。只绑定本机，由 Caddy 转发；每个请求都要带正确的管理密钥。"""
+
+    server_version = "cpa-quality"
+
+    def log_message(self, fmt, *args):
+        # 默认会把每个请求打到 stderr；只保留错误（见 send_json），避免 journal 被轮询刷屏
+        return
+
+    def send_json(self, status, payload):
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_cors_headers()
+        self.end_headers()
+        self.wfile.write(body)
+        if status >= 500:
+            log_error(f"{self.command} {self.path} -> {status}: {payload.get('error')}")
+
+    def send_cors_headers(self):
+        """
+        与 CPA 管理接口一致地允许跨域：线上面板与接口同源用不到，本地开发服务器
+        （localhost:5173）直连线上时需要。鉴权靠请求头里的管理密钥、不用 cookie，
+        放开来源不会让没有密钥的页面拿到数据。
+        """
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Management-Key")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Max-Age", "600")
+
+    def do_OPTIONS(self):
+        """跨域预检：不需要密钥（浏览器预检不带 Authorization），只回允许的方法与头。"""
+        self.send_response(204)
+        self.send_cors_headers()
+        self.end_headers()
+
+    def authorized(self):
+        header = self.headers.get("Authorization") or ""
+        key = header[7:].strip() if header.lower().startswith("bearer ") else ""
+        key = key or (self.headers.get("X-Management-Key") or "").strip()
+        expected = CONFIG.get("MGMT_KEY") or ""
+        return bool(key and expected) and hmac.compare_digest(key.encode(), expected.encode())
+
+    def route(self):
+        """拆出去掉前缀后的路径与查询参数；前缀不对返回 None。"""
+        parsed = urllib.parse.urlsplit(self.path)
+        if not parsed.path.startswith(QUALITY_API_PREFIX):
+            return None, {}
+        sub = parsed.path[len(QUALITY_API_PREFIX):] or "/"
+        return sub, urllib.parse.parse_qs(parsed.query)
+
+    def guarded(self, fn):
+        """统一处理鉴权与异常。list_files 等函数失败时会 sys.exit，这里要接住。"""
+        if not self.authorized():
+            self.send_json(403, {"error": "管理密钥不匹配：检查 /etc/cliproxy/cpa-account.env 的 MGMT_KEY"})
+            return
+        try:
+            fn()
+        except SystemExit:
+            self.send_json(502, {"error": "读取账号列表失败，检查 cliproxy 是否在运行"})
+        except Exception as e:
+            log_error(f"处理 {self.command} {self.path} 失败", e)
+            self.send_json(500, {"error": f"{type(e).__name__}: {e}"})
+
+    def do_GET(self):
+        sub, query = self.route()
+
+        def handle():
+            if sub == "/summary":
+                days = int((query.get("days") or ["7"])[0])
+                self.send_json(200, quality_summary(max(1, min(days, 90))))
+            elif sub == "/records":
+                limit = int((query.get("limit") or ["100"])[0])
+                limit = max(1, min(limit, QUALITY_RECORDS_MAX))
+                email = (query.get("email") or [""])[0]
+                rows = load_quality_log(3650)
+                if email:
+                    rows = [r for r in rows if r.get("email") == email]
+                self.send_json(200, {"records": list(reversed(rows[-limit:]))})
+            elif sub == "/job":
+                self.send_json(200, {"job": job_snapshot()})
+            else:
+                self.send_json(404, {"error": "not found"})
+
+        self.guarded(handle)
+
+    def do_POST(self):
+        sub, _ = self.route()
+
+        def handle():
+            if sub != "/run":
+                self.send_json(404, {"error": "not found"})
+                return
+            length = int(self.headers.get("Content-Length") or 0)
+            raw = self.rfile.read(min(length, 4096)) if length else b"{}"
+            try:
+                body = json.loads(raw or b"{}")
+            except json.JSONDecodeError as e:
+                log_error("检测请求体不是合法 JSON", e)
+                self.send_json(400, {"error": "请求体不是合法 JSON"})
+                return
+            target = str((body or {}).get("target") or "all").strip()
+            job, err = start_probe_job(target)
+            if err:
+                self.send_json(409, {"error": err, "job": job_snapshot()})
+            else:
+                self.send_json(202, {"job": job})
+
+        self.guarded(handle)
+
+
+def cmd_serve(args):
+    """serve [端口]：启动降智检测的网页接口，只监听本机，由 systemd 托管。"""
+    port = int(args[0]) if args and args[0].isdigit() else QUALITY_API_PORT
+    server = ThreadingHTTPServer((QUALITY_API_HOST, port), QualityApiHandler)
+    server.daemon_threads = True
+    print(f"降智检测接口已启动：http://{QUALITY_API_HOST}:{port}{QUALITY_API_PREFIX}", flush=True)
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()
 
 
 def owner_of(path):
@@ -1264,6 +1597,7 @@ USAGE = f"""{C_BOLD}cpa-account{C_RESET} —— CLIProxyAPI 单实例账号管�
   quota                         各账号配额窗口占用，并反推每周容量
   quality [--days N]            降智检测汇总：各账号正确率与走势
   quality log [条数]            降智检测的原始记录，按时间排列
+  serve [端口]                  启动降智检测的网页接口（给管理面板用，默认 8318）
 
 {C_BOLD}添加{C_RESET}
   login                         Codex OAuth 登录，{C_GREEN}完成后自动配代理并启用{C_RESET}
@@ -1301,6 +1635,7 @@ COMMANDS = {
     "quota": cmd_quota,
     "probe": cmd_probe,
     "quality": cmd_quality,
+    "serve": cmd_serve,
     "proxy": cmd_proxy,
     "proxy-url": cmd_proxy_url,
     "refresh": cmd_refresh,
