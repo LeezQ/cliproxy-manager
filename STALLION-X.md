@@ -176,6 +176,9 @@ grep -o -i -E "aff=|keyword=|utm_|sponsored|apimart|apikey\.fan|bestproxy" dist/
 实现：`AuthFileRow`、`AuthFileRow.module.scss`、`AuthFileQuotaRow.module.scss`（只放覆盖项，与卡片额度样式合并后使用）、
 `listView.ts`（套餐识别与分组，测试见 `tests/authFilesListView.test.ts`）。
 
+- **去掉了页面标题区**（大标题 + 说明 + 凭证/启用/问题统计卡）：占高度，数量又与 tabs、状态分段重复。
+  保留视觉隐藏的 `<h1>`；「刷新」「上传文件」移到 tabs 行右端，与「删除全部」并排
+
 ### 5.1 配额页
 
 同样默认列表、可切回卡片（排序下拉右侧），选择在本会话内记住（`quotaPage.uiState`，sessionStorage）。

@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { useInterval } from '@/hooks/useInterval';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { usePageTransitionLayer } from '@/components/common/PageTransitionLayer';
-import { PageHeader, PageHeaderStat } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { IconRefreshCw, IconTrash2, IconUpload } from '@/components/ui/icons';
@@ -537,8 +536,6 @@ export function AuthFilesPage() {
 
   /* ---------- 标题区统计：凭证总数 / 启用数 / 问题数 ---------- */
 
-  const activeCount = useMemo(() => files.filter((file) => file.disabled !== true).length, [files]);
-  const problemCount = useMemo(() => files.filter(isProblemAuthFile).length, [files]);
 
   /* ---------- 杂项 ---------- */
 
@@ -639,46 +636,12 @@ export function AuthFilesPage() {
 
   return (
     <div className={styles.page}>
-      {/* 标题区：统一使用 PageHeader，统计卡片展示凭证规模与健康概况 */}
-      <PageHeader
-        title={t('auth_files.title')}
-        description={t('dashboard.cta_auth_files_desc')}
-        stats={
-          <>
-            <PageHeaderStat
-              label={t('dashboard.stat_credentials')}
-              value={files.length}
-              tone="neutral"
-            />
-            <PageHeaderStat
-              label={t('auth_files.problem_filter_enabled')}
-              value={activeCount}
-              tone="success"
-            />
-            <PageHeaderStat
-              label={t('auth_files.problem_filter_problem')}
-              value={problemCount}
-              tone={problemCount > 0 ? 'danger' : 'neutral'}
-            />
-          </>
-        }
-        actions={
-          <>
-            <Button
-              variant="secondary"
-              onClick={() => void handleHeaderRefresh()}
-              disabled={loading || refreshing}
-            >
-              {refreshing ? <LoadingSpinner size={14} /> : <IconRefreshCw size={16} />}
-              {t('common.refresh')}
-            </Button>
-            <Button onClick={handleUploadClick} disabled={disableControls || uploading}>
-              {uploading ? <LoadingSpinner size={14} /> : <IconUpload size={16} />}
-              {t('auth_files.upload_button')}
-            </Button>
-          </>
-        }
-      />
+      {/*
+        标题区已去掉（大标题 + 统计卡占高度，数量又与 tabs、状态分段重复）。
+        保留一个视觉隐藏的 h1，屏幕阅读器与页面大纲仍能识别这是「认证文件」页；
+        原来的「刷新」「上传文件」移到 tabs 行右端。
+      */}
+      <h1 className={styles.srOnly}>{t('auth_files.title')}</h1>
       <input
         ref={fileInputRef}
         type="file"
@@ -726,6 +689,25 @@ export function AuthFilesPage() {
               >
                 {deletingAll ? <LoadingSpinner size={14} /> : <IconTrash2 size={15} />}
                 {deleteAllButtonLabel}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => void handleHeaderRefresh()}
+                disabled={loading || refreshing}
+              >
+                {refreshing ? <LoadingSpinner size={14} /> : <IconRefreshCw size={14} />}
+                {t('common.refresh')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleUploadClick}
+                disabled={disableControls || uploading}
+              >
+                {uploading ? <LoadingSpinner size={14} /> : <IconUpload size={14} />}
+                {t('auth_files.upload_button')}
               </Button>
             </div>
           </div>
