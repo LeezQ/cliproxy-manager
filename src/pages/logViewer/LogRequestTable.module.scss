@@ -1,0 +1,314 @@
+@use '../../styles/mixins' as *;
+
+/* ============================================================
+ * 日志页「按请求」表格
+ *
+ * 放在日志卡片的滚动区（.logPanel）里，与逐行视图共用滚动与「上滑加载更多」。
+ * 每行独立 grid，列宽固定或按比例，保证各行对齐；表头吸顶。
+ * 窄屏用容器查询（.table 声明了 container）：侧边栏占掉宽度时按视口判断会过早折行。
+ * ============================================================ */
+
+.table {
+  container: log-requests / inline-size;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.row {
+  display: grid;
+  /* 时间 | 状态 | 耗时 | 模型 | 账号 | 客户端 | 请求 */
+  grid-template-columns:
+    72px 56px 72px minmax(96px, 0.7fr) minmax(200px, 1.7fr) 118px
+    minmax(150px, 1.2fr);
+  column-gap: 14px;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-color);
+  min-width: 0;
+}
+
+.head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: var(--bg-secondary);
+}
+
+.dataRow {
+  cursor: pointer;
+  transition: background-color $transition-fast;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dataRow:hover {
+    background: var(--bg-quinary, var(--bg-secondary));
+  }
+}
+
+/* 中途有上游失败（warn）/ 出错（error）的请求：左侧色条，不整行染色，避免满屏发黄 */
+.rowWarn {
+  box-shadow: inset 3px 0 0 var(--amber-color, var(--warning-color));
+}
+
+.rowError {
+  box-shadow: inset 3px 0 0 var(--error-color);
+}
+
+.rowOpen {
+  background: var(--bg-secondary);
+}
+
+.mono {
+  font-family: $font-mono;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.truncate {
+  min-width: 0;
+  @include text-ellipsis;
+}
+
+.muted {
+  font-size: 12px;
+  color: var(--text-quaternary);
+}
+
+/* ---------- 状态 ---------- */
+
+.status {
+  display: inline-block;
+  min-width: 36px;
+  padding: 1px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-family: $font-mono;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.statusOk {
+  border-color: var(--success-badge-border);
+  background: var(--success-badge-bg);
+  color: var(--success-badge-text);
+}
+
+.statusWarn {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.statusError {
+  border-color: var(--failure-badge-border);
+  background: var(--failure-badge-bg);
+  color: var(--failure-badge-text);
+}
+
+.statusPending {
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  border-color: var(--border-color);
+}
+
+/* ---------- 账号 ---------- */
+
+.accountCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.servingAccount {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-weight: 500;
+}
+
+/* 失败后被换掉的账号：弱化 + 删除线，后面跟失败原因和箭头。不收缩，窄时让最终账号省略 */
+.failedAccount {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.failedName {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--error-color) 60%, transparent);
+}
+
+.failedReason {
+  font-size: 11.5px;
+  color: var(--error-color);
+}
+
+.arrow {
+  color: var(--text-quaternary);
+}
+
+.plan {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.reuse {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-quaternary);
+}
+
+/* ---------- 请求 ---------- */
+
+.requestCell {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-family: $font-mono;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.method {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ---------- 展开详情 ---------- */
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 16px 14px 102px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.detailHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.attempts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attempt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 12.5px;
+}
+
+.attemptIndex {
+  width: 18px;
+  font-family: $font-mono;
+  font-size: 12px;
+  color: var(--text-quaternary);
+}
+
+.attemptAccount {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.attemptFailed {
+  color: var(--error-color);
+  font-family: $font-mono;
+  font-size: 12px;
+}
+
+.attemptMessage {
+  font-family: inherit;
+  color: var(--text-tertiary);
+}
+
+.attemptOk {
+  color: var(--success-color);
+  font-size: 12px;
+}
+
+.rawLines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-primary);
+  font-family: $font-mono;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.rawLine {
+  overflow-wrap: anywhere;
+  cursor: copy;
+}
+
+/* ---------- 窄容器 ---------- */
+
+@container log-requests (max-width: 900px) {
+  /* 去掉客户端与模型列；它们在展开详情里仍能看到 */
+  .row {
+    grid-template-columns: 72px 56px 64px minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+
+  .row > :nth-child(4),
+  .row > :nth-child(6) {
+    display: none;
+  }
+
+  .detail {
+    padding-left: 16px;
+  }
+}
+
+@container log-requests (max-width: 560px) {
+  .row {
+    grid-template-columns: 64px 50px minmax(0, 1fr);
+    row-gap: 4px;
+  }
+
+  /* 第二行：账号占满；耗时与请求路径隐藏 */
+  .row > :nth-child(3),
+  .row > :nth-child(7) {
+    display: none;
+  }
+}

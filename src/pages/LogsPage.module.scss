@@ -563,6 +563,44 @@
 }
 
 /* 结构化日志行：时间列 + 内容列，行分割线，悬停浅底 */
+/* 视图切换：请求 / 日志行 / 原文，分段按钮，与认证文件页的状态筛选同一种样式语言 */
+.viewModes {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: $radius-md;
+  background: var(--bg-tertiary, var(--bg-secondary));
+}
+
+.viewMode {
+  padding: 3px 10px;
+  border: 0;
+  border-radius: calc(#{$radius-md} - 2px);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.5;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 1px;
+  }
+}
+
+.viewModeActive {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+}
+
 .logRow {
   display: grid;
   grid-template-columns: 184px minmax(0, 1fr);

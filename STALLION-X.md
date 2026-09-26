@@ -228,6 +228,30 @@ Caddy 把 `/v0/management/quality-probe/*` 转发过去。挂在 `/v0/management
   `QualityProbePage.tsx`）、`AuthFileRow` 的 `AuthFileQualityMark`；测试在 `tests/qualityProbe.test.ts`。
 - 断点用容器查询 `quality-list`：≤900px 正确率和走势换到第二行，≤560px 各列纵向堆叠、按钮固定在账号名右侧。
 
+## 7. 日志页的「按请求」表格
+
+CPA 的一个请求会写出好几行日志：`selector.go` 记选中了哪个凭证，`conductor_execution.go` 记上游失败（随后换下一个凭证重试），
+`gin_logger.go` 记最终的状态码、耗时、客户端和路径。它们靠第二个方括号里的 8 位请求 ID 关联。
+逐行看时回答不了「这个请求最后是哪个账号处理的、中途失败了几次」，所以日志卡片头部加了视图切换：
+
+- **请求**（默认）：按请求 ID 合并成一行一个请求，列为 时间 | 状态 | 耗时 | 模型 | 账号 | 客户端 | 请求。
+  账号列显示最终处理的账号与套餐；中途换过一次号显示为「kristin.thompson567 过载 → asianeid889396」，
+  换两次以上收成「换号 N 次 →」标签，悬停看完整经过；会话亲和复用了之前账号的标「复用」；还没结束的请求状态显示「进行中」。
+  点击一行展开：每次尝试（账号、会话亲和、失败的状态码 / 耗时 / 错误码 / 说明）和该请求的全部原始日志，双击原始日志复制；
+  CPA 开启了请求日志时还有「下载请求日志」按钮
+- **日志行**：原来的逐行视图
+- **原文**：原来的「显示原文」开关，便于多行复制
+
+请求视图下，搜索与方法 / 状态 / 路径筛选按**整个请求**判断：任意一行命中搜索词就保留整个请求，
+所以搜账号名能列出它处理过的所有请求（逐行筛选会只剩选号那一行，丢了状态码和耗时）。
+没有请求 ID 的 gin 行（本机管理调用，ID 为 `--------`）各自成一行，其余无 ID 的行（启动信息、定时任务）只在「日志行」里看。
+中途有上游失败的请求左侧有琥珀色条，出错的为红色。
+
+- 实现：`src/pages/hooks/logRequestTable.ts`（合并与错误摘要，纯函数）、`src/pages/logViewer/LogRequestTable.tsx`（表格与展开详情）；
+  视图选择存在 `logsPage.groupByRequest` / `logsPage.showRawLogs`（localStorage）；测试 `tests/logRequestTable.test.ts`
+- **组件目录不能叫 `logs`**：`.gitignore` 第 2 行的 `logs` 会忽略任何名为 logs 的目录，文件在本地能编译、却不会被提交。所以放在 `src/pages/logViewer/`
+- 断点用容器查询 `log-requests`：≤900px 隐藏模型与客户端列（展开详情里仍有），≤560px 再隐藏耗时与路径
+
 ## 同步上游
 
 先做一次性设置，阻止上游标签被带进本仓库：

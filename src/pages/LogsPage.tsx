@@ -11,7 +11,6 @@ import { lockScroll, unlockScroll } from '@/components/ui/scrollLock';
 import {
   IconChevronDown,
   IconChevronUp,
-  IconCode,
   IconDownload,
   IconEye,
   IconEyeOff,
@@ -44,6 +43,8 @@ import { createLogRequestGuard, createLogRequestQueue } from '@/pages/hooks/logR
 import { errorLogViewerReducer } from '@/pages/hooks/errorLogViewer';
 import { useLogFilters } from '@/pages/hooks/useLogFilters';
 import { isNearBottom, useLogScroller } from '@/pages/hooks/useLogScroller';
+import { buildLogRequestRows } from '@/pages/hooks/logRequestTable';
+import { LogRequestTable } from '@/pages/logViewer/LogRequestTable';
 import styles from '@/pages/LogsPage.module.scss';
 
 // 初始只渲染最近 100 行，滚动到顶部再逐步加载更多（避免一次性渲染过多导致卡顿）
@@ -165,6 +166,9 @@ export function LogsPage() {
     true
   );
   const [showRawLogs, setShowRawLogs] = useLocalStorage('logsPage.showRawLogs', false);
+  // 按请求合并成表格（默认）；关掉则逐行显示。原文模式优先于两者
+  const [groupByRequest, setGroupByRequest] = useLocalStorage('logsPage.groupByRequest', true);
+  const requestView = groupByRequest && !showRawLogs;
   const [structuredFiltersExpanded, setStructuredFiltersExpanded] = useLocalStorage(
     'logsPage.structuredFiltersExpanded',
     true
@@ -599,9 +603,54 @@ export function LogsPage() {
   ]);
 
   const parsedVisibleLines = useMemo(
-    () => (showRawLogs ? [] : filteredParsedLines),
-    [filteredParsedLines, showRawLogs]
+    () => (showRawLogs || requestView ? [] : filteredParsedLines),
+    [filteredParsedLines, showRawLogs, requestView]
   );
+
+  /*
+   * 请求视图：先把全部行按请求 ID 合并，再按「整个请求」做搜索与筛选。
+   * 逐行筛选会把同一请求的其它行筛掉（例如搜账号名只剩选号那一行，丢了状态码和耗时），
+   * 所以这里合并用的是未经搜索过滤的行，只要请求里任意一行命中搜索词就保留整个请求。
+   */
+  const requestRows = useMemo(() => {
+    if (!requestView) return [];
+    const query = trimmedSearchQuery.toLowerCase();
+    const hasPath = (path?: string) =>
+      Boolean(path) &&
+      (filters.pathFilterSet.has(path as string) || filters.pathFilterSet.has(`"${path}"`));
+    return buildLogRequestRows(baseLines.map((line) => parseLogLine(line))).filter((row) => {
+      if (hideManagementLogs && row.path?.includes(MANAGEMENT_API_PREFIX)) return false;
+      if (query && !row.lines.some((line) => line.raw.toLowerCase().includes(query))) {
+        return false;
+      }
+      if (
+        filters.methodFilterSet.size > 0 &&
+        (!row.method || !filters.methodFilterSet.has(row.method))
+      ) {
+        return false;
+      }
+      const statusGroup = resolveStatusGroup(row.statusCode);
+      if (
+        filters.statusFilterSet.size > 0 &&
+        (!statusGroup || !filters.statusFilterSet.has(statusGroup))
+      ) {
+        return false;
+      }
+      if (filters.pathFilterSet.size > 0 && !hasPath(row.path)) return false;
+      return true;
+    });
+  }, [
+    requestView,
+    baseLines,
+    trimmedSearchQuery,
+    hideManagementLogs,
+    filters.methodFilterSet,
+    filters.statusFilterSet,
+    filters.pathFilterSet,
+  ]);
+
+  /** 当前视图里可见的条目数：请求视图按请求数，其余按行数。 */
+  const visibleItemCount = requestView ? requestRows.length : filteredLines.length;
 
   const rawVisibleText = useMemo(() => filteredLines.join('\n'), [filteredLines]);
 
@@ -610,7 +659,7 @@ export function LogsPage() {
     setLogState,
     loading,
     isSearching,
-    filteredLineCount: filteredLines.length,
+    filteredLineCount: visibleItemCount,
     hasStructuredFilters: filters.hasStructuredFilters,
     showRawLogs,
   });
@@ -766,22 +815,6 @@ export function LogsPage() {
       />
 
       <ToggleSwitch
-        checked={showRawLogs}
-        onChange={setShowRawLogs}
-        label={
-          <span
-            className={styles.switchLabel}
-            title={t('logs.show_raw_logs_hint', {
-              defaultValue: 'Show original log text for easier multi-line copy',
-            })}
-          >
-            <IconCode size={16} />
-            {t('logs.show_raw_logs', { defaultValue: 'Show raw logs' })}
-          </span>
-        }
-      />
-
-      <ToggleSwitch
         checked={autoRefresh}
         onChange={(value) => setAutoRefresh(value)}
         disabled={autoRefreshDisabled}
@@ -792,6 +825,36 @@ export function LogsPage() {
           </span>
         }
       />
+    </div>
+  );
+
+  /** 视图：按请求合并的表格 / 逐行 / 原文（便于多行复制）。 */
+  const viewMode: 'requests' | 'lines' | 'raw' = showRawLogs
+    ? 'raw'
+    : groupByRequest
+      ? 'requests'
+      : 'lines';
+  const setViewMode = (mode: 'requests' | 'lines' | 'raw') => {
+    setShowRawLogs(mode === 'raw');
+    if (mode !== 'raw') setGroupByRequest(mode === 'requests');
+  };
+  const viewModeControl = (
+    <div className={styles.viewModes} role="radiogroup" aria-label={t('logs.view_mode')}>
+      {(['requests', 'lines', 'raw'] as const).map((mode) => (
+        <button
+          key={mode}
+          type="button"
+          role="radio"
+          aria-checked={viewMode === mode}
+          className={[styles.viewMode, viewMode === mode ? styles.viewModeActive : '']
+            .filter(Boolean)
+            .join(' ')}
+          title={mode === 'raw' ? t('logs.show_raw_logs_hint') : undefined}
+          onClick={() => setViewMode(mode)}
+        >
+          {t(`logs.view_${mode}`)}
+        </button>
+      ))}
     </div>
   );
 
@@ -1058,8 +1121,13 @@ export function LogsPage() {
                 <div className={styles.logCardHead}>
                   <div className={styles.logCardMeta}>
                     <span className={styles.logCardTitle}>{t('logs.log_content')}</span>
-                    <span>{t('logs.loaded_lines', { count: filteredLines.length })}</span>
-                    {removedCount > 0 && (
+                    {viewModeControl}
+                    <span>
+                      {requestView
+                        ? t('logs.loaded_requests', { count: requestRows.length })
+                        : t('logs.loaded_lines', { count: filteredLines.length })}
+                    </span>
+                    {!requestView && removedCount > 0 && (
                       <span className={styles.logCardMetaMuted}>
                         {t('logs.filtered_lines', { count: removedCount })}
                       </span>
@@ -1071,7 +1139,11 @@ export function LogsPage() {
                       logSwitches
                     ) : (
                       <span className={styles.logCardHint}>
-                        {t('logs.double_click_copy_hint', { defaultValue: 'Double-click to copy' })}
+                        {requestView
+                          ? t('logs.req_click_hint')
+                          : t('logs.double_click_copy_hint', {
+                              defaultValue: 'Double-click to copy',
+                            })}
                       </span>
                     )}
                     {logActions}
@@ -1080,7 +1152,7 @@ export function LogsPage() {
 
                 {loading ? (
                   <div className={styles.panelHint}>{t('logs.loading')}</div>
-                ) : logState.buffer.length > 0 && filteredLines.length > 0 ? (
+                ) : logState.buffer.length > 0 && visibleItemCount > 0 ? (
                   <div
                     ref={logViewerRef}
                     className={[styles.logPanel, fullscreenLogs ? styles.logPanelFullscreen : '']
@@ -1103,6 +1175,12 @@ export function LogsPage() {
                       <pre className={styles.rawLog} spellCheck={false}>
                         {rawVisibleText}
                       </pre>
+                    ) : requestView ? (
+                      <LogRequestTable
+                        rows={requestRows}
+                        onOpenRequestLog={requestLogEnabled ? setRequestLogId : undefined}
+                        onCopyLine={(raw) => void copyLogLine(raw)}
+                      />
                     ) : (
                       <div className={styles.logList}>
                         {parsedVisibleLines.map((line, index) => {
