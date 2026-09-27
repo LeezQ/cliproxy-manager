@@ -177,6 +177,32 @@
   overflow: hidden;
 }
 
+/* 并发（当前 / 今日峰值）：放在账号列「套餐 · 权重 · 降智」之后，可点击跳到并发页。
+ * 请求健康度列太窄，放不下成功 / 失败之外的第三段 */
+.concurrencyLink {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+}
+
+.concurrencyActive {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
 /* 降智检测徽标：可点击跳到降智检测页；徽标自带配色，这里只去掉链接样式 */
 .qualityLink {
   display: inline-flex;
@@ -257,6 +283,10 @@
 .counts {
   display: flex;
   gap: 10px;
+  /* 成功 / 失败 / 并发三段挤在一行：不换行，放不下时截掉末尾，而不是把「成功 5892」拆成两行 */
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
   font-family: $font-mono;
   font-size: 11.5px;
   line-height: 1.3;

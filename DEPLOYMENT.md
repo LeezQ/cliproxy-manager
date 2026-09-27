@@ -61,9 +61,9 @@ handle @admin_denied {
 ```
 
 ```caddyfile
-# 降智检测接口（cpa-account serve），见 7.6。必须用具名匹配器并写在 @admin_denied 之后：
+# 降智检测与账号统计接口（cpa-account serve），见 7.6 / 7.7。必须用具名匹配器并写在 @admin_denied 之后：
 # 裸路径的 handle 会被 Caddy 按路径长度排到前面，绕过上面的 IP 白名单
-@quality_probe path /v0/management/quality-probe /v0/management/quality-probe/*
+@quality_probe path /v0/management/quality-probe /v0/management/quality-probe/* /v0/management/account-stats /v0/management/account-stats/*
 handle @quality_probe {
     reverse_proxy 127.0.0.1:8318
 }
@@ -523,6 +523,39 @@ CPA 转发时遇到过载会换号，但探针要测的就是这个号，只能�
 4 个账号（2 Pro、2 Plus，出口分别在 IIJ 和两个 Decodo IP）在 low / medium / high
 三档强度下**全部答成 29**，推理 token 全是 516（有一次是 1034）。说明降智和套餐、出口 IP
 都无关，是 CPA 这条路径整体被限。之后的定时记录用来观察它是否随时间变化、会不会有账号恢复。
+
+### 7.7 账号并发 `concurrency`
+
+CPA 单机模式**不统计每个凭证正在处理的请求数**（源码里只有 Home 集群模式有并发计数），管理接口也拿不到。
+`cpa-account` 从 CPA 的文件日志反推：每个请求的几行日志带同一个 8 位请求 ID，
+
+| 日志 | 含义 |
+|---|---|
+| `selector.go … auth=<凭证文件>` | 选中这个凭证，区间开始 |
+| `conductor_execution.go … upstream execution failed … auth_file=<凭证文件>` | 这个凭证上游失败，区间结束，随后换号 |
+| `gin_logger.go` | 最终响应，该请求仍未结束的区间全部结束 |
+
+把区间按账号叠起来就是任意时刻的并发。
+
+```bash
+cpa-account concurrency            # 最近 24 小时：当前、今日峰值、窗口峰值与时间、忙时平均、选号次数
+cpa-account concurrency --hours 72
+```
+
+面板上是「账号并发」页（侧边栏 · 用量与排障）和认证文件列表每行的「并发 当前/今日峰值」，
+接口是 `GET /v0/management/account-stats/concurrency?hours=24&bucket=5`，由同一个 `cpa-quality-api` 服务提供
+（Caddy 的 `@quality_probe` 已包含这个前缀，见 2.1）。
+
+- `bucket` 只接受 1 / 5 / 10 / 15 / 30 / 60（分钟），每个桶取峰值；面板按窗口选桶宽：6 小时 1 分钟、24 小时 5 分钟、3 天 15 分钟、7 天 30 分钟
+- 「忙时平均」只算手上至少有一个请求的时间，反映「干活时同时接几个」
+- 结果在服务里缓存 20 秒；读 24 小时日志约 0.5 秒
+- **精度**：日志时间只到秒，1 秒内结束的请求按 1 秒算，短请求的并发略偏高
+- **覆盖范围**：只能看到 CPA 文件日志还保留的部分（`logs-max-total-size-mb`，当前 100MB，约 4 天）；
+  更早的时段面板上不画线、留灰底并注明，不当成并发为 0
+- 选中后超过 15 分钟仍没有结束记录的区间视为日志缺失（例如 CPA 重启），不计入「当前」
+
+2026-09-27 的数据：两个 Pro 号 24 小时峰值 10 和 7、忙时平均约 1.6；两个 Plus 号峰值 7 和 6、忙时平均约 1.2，
+与权重 20 : 10 的分流一致。两个 Pro 号共用一个 IIJ 出口，高峰时这一个 IP 上同时有 10 个以上请求。
 
 ## 8. 本机 FlClash 套住宅出口 `flclash-decodo.py`
 

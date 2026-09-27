@@ -36,6 +36,7 @@ import {
 import type { AuthFileCardProps } from '@/features/authFiles/components/AuthFileCard';
 import type { AuthFileProxyInfo } from '@/features/authFiles/proxyInfo';
 import type { QualityAccountSummary } from '@/services/api/qualityProbe';
+import type { ConcurrencyAccount } from '@/services/api/accountStats';
 import { QualityVerdictBadge } from '@/features/qualityProbe/components/QualityMarks';
 import { formatQualityTime, QUALITY_VERDICT_KEY } from '@/features/qualityProbe/logic';
 import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
@@ -63,6 +64,8 @@ export type AuthFileRowProps = Omit<AuthFileCardProps, 'compact'> & {
   quality?: QualityAccountSummary;
   /** 降智检测的统计窗口（天），用于悬停提示。 */
   qualityDays?: number;
+  /** 账号并发（当前 / 今日峰值）；服务未部署时为 undefined，不显示。 */
+  concurrency?: ConcurrencyAccount;
 };
 
 /**
@@ -93,6 +96,7 @@ export function AuthFileRow(props: AuthFileRowProps) {
     proxy,
     quality,
     qualityDays,
+    concurrency,
   } = props;
 
   const isRuntimeOnly = isRuntimeOnlyAuthFile(file);
@@ -206,6 +210,22 @@ export function AuthFileRow(props: AuthFileRowProps) {
               </span>
             )}
             {quality?.last && <AuthFileQualityMark quality={quality} days={qualityDays} />}
+            {concurrency && (
+              // 当前 / 今日峰值；点击跳到并发页看曲线。正在处理请求时用主色
+              <Link
+                to="/concurrency"
+                className={`${styles.concurrencyLink} ${concurrency.current > 0 ? styles.concurrencyActive : ''}`}
+                title={t('auth_files.row_concurrency_title', {
+                  current: concurrency.current,
+                  peak: concurrency.todayPeak,
+                })}
+              >
+                {t('auth_files.row_concurrency', {
+                  current: concurrency.current,
+                  peak: concurrency.todayPeak,
+                })}
+              </Link>
+            )}
             {typeof file.note === 'string' && file.note.trim() && (
               <span className={styles.note} title={file.note.trim()}>
                 {file.note.trim()}

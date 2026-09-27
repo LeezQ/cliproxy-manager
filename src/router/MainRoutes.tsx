@@ -5,14 +5,15 @@ import { AuthFilesOAuthModelAliasEditPage } from '@/pages/AuthFilesOAuthModelAli
 import { OAuthPage } from '@/pages/OAuthPage';
 import { QuotaPage } from '@/features/quota/QuotaPage';
 import { QualityProbePage } from '@/features/qualityProbe/QualityProbePage';
+import { ConcurrencyPage } from '@/features/concurrency/ConcurrencyPage';
 import { ConfigPage } from '@/features/config/ConfigPage';
 import { LogsPage } from '@/pages/LogsPage';
 
 /**
  * Stallion-X 裁剪版路由表。
  *
- * 只保留 OAuth 登录、认证文件、配额管理、降智检测、日志查看、配置面板六个功能。
- * 降智检测的数据来自服务器上的 cpa-account serve（见 DEPLOYMENT.md 7.6），不是 CPA 本身。
+ * 只保留 OAuth 登录、认证文件、配额管理、账号并发、降智检测、日志查看、配置面板七个功能。
+ * 账号并发与降智检测的数据来自服务器上的 cpa-account serve（见 DEPLOYMENT.md 7.6 / 7.7），不是 CPA 本身。
  * 仪表盘、快速开始、AI 提供商、插件管理、插件商店、中心信息仅从路由摘除，
  * 对应源码目录原样保留：OAuthPage 仍依赖插件与提供商模块的工具函数，
  * 且不删目录可以让 `git merge upstream/main` 保持无冲突。
@@ -30,6 +31,7 @@ const mainRoutes = [
   { path: '/oauth', element: <OAuthPage /> },
   { path: '/quota', element: <QuotaPage /> },
   { path: '/quality-probe', element: <QualityProbePage /> },
+  { path: '/concurrency', element: <ConcurrencyPage /> },
   { path: '/config', element: <ConfigPage /> },
   { path: '/logs', element: <LogsPage /> },
   { path: '*', element: <Navigate to={DEFAULT_ROUTE} replace /> },

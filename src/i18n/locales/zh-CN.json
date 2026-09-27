@@ -117,7 +117,8 @@
     "config_management": "配置面板",
     "logs": "日志查看",
     "system_info": "中心信息",
-    "quality_probe": "降智检测"
+    "quality_probe": "降智检测",
+    "concurrency": "账号并发"
   },
   "nav_groups": {
     "operate": "运行",
@@ -138,7 +139,8 @@
     "logs": "请求追踪与排查",
     "config_management": "网关基础配置",
     "system_info": "运行与诊断信息",
-    "quality_probe": "定时出题，看各账号是否被降智"
+    "quality_probe": "定时出题，看各账号是否被降智",
+    "concurrency": "每个账号同时处理几个请求"
   },
   "dashboard": {
     "hero_verdict_good": "运行平稳",
@@ -422,7 +424,9 @@
     "row_exit_no_proxy": "未配置代理",
     "row_exit_direct_hint": "未配置代理：请求从服务器自身 IP 直连上游",
     "row_exit_global": "全局 · {{gateway}}",
-    "row_exit_unknown": "无法读取该凭证的出口信息"
+    "row_exit_unknown": "无法读取该凭证的出口信息",
+    "row_concurrency": "并发 {{current}}/{{peak}}",
+    "row_concurrency_title": "正在处理 {{current}} 个请求，今日峰值 {{peak}}（由 CPA 日志推算）。点击查看曲线"
   },
   "antigravity_subscription": {
     "plan_unknown": "未知",
@@ -1990,5 +1994,33 @@
     "load_failed": "读取失败：{{message}}",
     "row_badge_title": "降智检测 {{time}}：{{verdict}}，答案 {{answer}}，推理 {{reasoning}}。近 {{days}} 天 {{passed}}/{{valid}} 次答对",
     "row_badge_failed_title": "降智检测 {{time}}：没测成（{{error}}）"
+  },
+  "concurrency": {
+    "title": "账号并发",
+    "meta": "当前共 {{total}} 个请求在处理 · 每 30 秒刷新 · 更新于 {{updated}}",
+    "meta_loading": "读取中…",
+    "window": "时间范围",
+    "window_hours": "{{count}} 小时",
+    "window_days": "{{count}} 天",
+    "refresh": "刷新",
+    "chart_title": "最近 {{window}}的并发",
+    "chart_note": "每个点是 {{minutes}} 分钟内的峰值",
+    "chart_label": "最近 {{hours}} 小时各账号并发曲线，用左右方向键查看各时间点，数值见下方表格",
+    "coverage": "{{from}} 之前的时段没有日志（CPA 日志已轮转删除），灰色区域不代表并发为 0",
+    "table_title": "各账号数值",
+    "col_account": "账号",
+    "col_current": "当前",
+    "col_today_peak": "今日峰值",
+    "col_window_peak": "{{window}}峰值",
+    "col_avg_busy": "忙时平均",
+    "col_attempts": "选号次数",
+    "avg_busy_hint": "只算手上有请求的时间：干活时平均同时接几个",
+    "removed": "已删除",
+    "disabled": "已停用",
+    "footnote": "由 CPA 日志推算：每次选号到它结束（上游失败换号或请求完成）算一段。日志时间只到秒，很短的请求会让并发略偏高。",
+    "empty_title": "统计范围内没有请求",
+    "unavailable_title": "并发统计服务未启用",
+    "unavailable_desc": "服务器上需要运行 cpa-account serve，并由 Caddy 转发 /v0/management/account-stats/。见 DEPLOYMENT.md 7.7。",
+    "load_failed": "读取失败：{{message}}"
   }
 }

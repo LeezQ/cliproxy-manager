@@ -7,13 +7,14 @@
 
 ## 1. 功能裁剪
 
-只保留六个入口：
+只保留七个入口：
 
 | 入口 | 路由 | 源码 |
 |---|---|---|
 | 认证文件 | `/auth-files` | `src/features/authFiles` |
 | OAuth 登录 | `/oauth` | `src/pages/OAuthPage.tsx` |
 | 配额管理 | `/quota` | `src/features/quota` |
+| 账号并发 | `/concurrency` | `src/features/concurrency`（数据来自服务器脚本，见第 8 节） |
 | 降智检测 | `/quality-probe` | `src/features/qualityProbe`（数据来自服务器脚本，见第 6 节） |
 | 日志查看 | `/logs` | `src/pages/LogsPage.tsx` |
 | 配置面板 | `/config` | `src/features/config` |
@@ -27,7 +28,7 @@
 涉及文件：
 
 - `src/router/MainRoutes.tsx`：重写路由表，根路径与未知路径重定向到 `/auth-files`。
-- `src/components/layout/MainLayout.tsx`：外壳已按 Stallion-X 主站重写（见第 2 节），导航分组 `navGroups` 只列出这六个入口。
+- `src/components/layout/MainLayout.tsx`：外壳已按 Stallion-X 主站重写（见第 2 节），导航分组 `navGroups` 只列出这七个入口。
 
 **恢复某个功能**：在 `MainRoutes.tsx` 加回路由，并在 `MainLayout.tsx` 的 `navGroups` 中加回对应导航项（页面搜索会自动包含）。
 
@@ -251,6 +252,26 @@ CPA 的一个请求会写出好几行日志：`selector.go` 记选中了哪个�
   视图选择存在 `logsPage.groupByRequest` / `logsPage.showRawLogs`（localStorage）；测试 `tests/logRequestTable.test.ts`
 - **组件目录不能叫 `logs`**：`.gitignore` 第 2 行的 `logs` 会忽略任何名为 logs 的目录，文件在本地能编译、却不会被提交。所以放在 `src/pages/logViewer/`
 - 断点用容器查询 `log-requests`：≤900px 隐藏模型与客户端列（展开详情里仍有），≤560px 再隐藏耗时与路径
+
+## 8. 账号并发
+
+每个账号同时在处理几个请求。CPA 单机模式不统计这个数，由服务器上的 `cpa-account serve` 从 CPA 日志反推
+（原理、精度与覆盖范围见 `DEPLOYMENT.md` 7.7），接口 `/v0/management/account-stats/concurrency`。
+
+- **账号并发页**：工具卡片（当前总并发、更新时间、时间窗口 6 小时 / 24 小时 / 3 天 / 7 天、刷新，每 30 秒自动刷新）
+  → 分行小图 → 各账号数值表（当前、今日峰值、窗口峰值及时间、忙时平均、选号次数）
+- **为什么是分行小图而不是一张多线图**：几条阶梯线在 0–10 的小范围里反复交叉，叠在一起看不出谁在什么时段忙。
+  分行后每个账号一行、共用同一个 y 刻度（行与行可直接比高低）、时间轴对齐只画一次，账号名直接写在行首；
+  竖线贯穿所有行，提示框列出这一刻各账号的值，键盘左右键也能移动（Shift 一次 12 格）
+- 阶梯面积而不是平滑曲线：并发是整数、每个点是桶内峰值，斜线会暗示不存在的中间值
+- 配色取自 dataviz 参考调色板（`src/features/concurrency/_series.scss`，浅色 / 暗色各一套，按 `[data-theme='dark']` 切换），
+  前 4 槽已用 `validate_palette.js` 校验；浅色下两种颜色对背景不足 3:1，靠行首账号名与数值表补偿。
+  颜色按凭证文件名排序分配，跟随账号而不是数值排名
+- 日志没覆盖到的时段不画线、留灰底，并在图下注明起始时间
+- **认证文件列表**：账号列「套餐 · 权重 · 降智」之后显示「并发 当前/今日峰值」，正在处理请求时用主色，点击跳到并发页。
+  请求健康度列太窄，放不下成功 / 失败之外的第三段，所以放在账号列。只在列表布局下每 30 秒取一次 6 小时窗口
+- 实现：`services/api/accountStats.ts`、`features/concurrency/`（`logic.ts`、`hooks/useConcurrency.ts`、
+  `components/ConcurrencyChart.tsx`、`ConcurrencyPage.tsx`）；测试 `tests/concurrency.test.ts`
 
 ## 同步上游
 

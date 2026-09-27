@@ -1,0 +1,141 @@
+@use '../../../styles/mixins' as *;
+@use '../series' as series;
+
+/* ============================================================
+ * 并发分行小图。分类色见 ../_series.scss（与页面数值表共用）。
+ * 文字一律用文字色，不用系列色；系列色只出现在线和色块上。
+ * ============================================================ */
+
+.line {
+  @include series.series-stroke;
+}
+
+.area {
+  @include series.series-fill-svg;
+}
+
+.swatch {
+  @include series.series-fill;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* ---------- 绘图区 ---------- */
+
+.plot {
+  @include series.series-palette;
+  position: relative;
+  min-width: 0;
+  border-radius: $radius-md;
+  touch-action: pan-y;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+.svg {
+  display: block;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--border-color);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+/* 每行的账号名：文字色，不用系列色 */
+.rowLabel,
+.rowLabelTop {
+  fill: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.rowLabel {
+  dominant-baseline: middle;
+}
+
+.baseline {
+  stroke: var(--border-hover, var(--border-color));
+  stroke-width: 1;
+}
+
+.yLabel,
+.xLabel {
+  fill: var(--text-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.yLabel {
+  dominant-baseline: middle;
+}
+
+.xLabel {
+  text-anchor: middle;
+}
+
+.noData {
+  fill: var(--bg-secondary);
+  opacity: 0.8;
+}
+
+.line {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.crosshair {
+  stroke: var(--text-tertiary);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+/* ---------- 提示框 ---------- */
+
+.tooltip {
+  position: absolute;
+  z-index: 2;
+  min-width: 150px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-primary);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 8%);
+  pointer-events: none;
+  font-size: 12px;
+}
+
+.tooltipTime {
+  margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.7;
+}
+
+.tooltipName {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-secondary);
+  @include text-ellipsis;
+}
+
+.tooltipValue {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}

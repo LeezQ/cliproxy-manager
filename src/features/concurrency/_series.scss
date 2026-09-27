@@ -1,0 +1,60 @@
+/* ============================================================
+ * 并发页的分类色（图表的线、图例色块、数值表色块共用一份）
+ *
+ * 取自 dataviz 参考调色板，浅色 / 暗色各一套：暗色是同一组色相为暗背景重新取的阶，
+ * 不是自动反色。已用 validate_palette.js 校验前 4 槽：相邻 CVD ΔE ≥ 9.1、正常视觉 ≥ 19.8。
+ * 浅色下 aqua / yellow 对背景 < 3:1，靠图例文字与数值表补偿（规范的 relief rule）。
+ * 槽位 0 给超出 8 个的账号，用中性灰。
+ * ============================================================ */
+
+@mixin series-palette {
+  --series-0: var(--text-quaternary);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
+
+  :global([data-theme='dark']) & {
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+  }
+}
+
+/* data-slot="N" → 背景色（色块） */
+@mixin series-fill {
+  @for $i from 0 through 8 {
+    &[data-slot='#{$i}'] {
+      background: var(--series-#{$i});
+    }
+  }
+}
+
+/* data-slot="N" → 描边色（折线） */
+@mixin series-stroke {
+  @for $i from 0 through 8 {
+    &[data-slot='#{$i}'] {
+      stroke: var(--series-#{$i});
+    }
+  }
+}
+
+/* data-slot="N" → SVG 面积填充（淡色，线条仍是主角） */
+@mixin series-fill-svg {
+  fill-opacity: 0.16;
+
+  @for $i from 0 through 8 {
+    &[data-slot='#{$i}'] {
+      fill: var(--series-#{$i});
+    }
+  }
+}

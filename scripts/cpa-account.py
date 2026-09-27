@@ -1325,6 +1325,243 @@ def cmd_quality(args):
           f"原始记录：cpa-account quality log{C_RESET}")
 
 
+# ---------------------------------------------------------------- 账号并发（从 CPA 日志反推）
+#
+# CPA 单机模式不统计每个凭证正在处理的请求数（源码里只有 Home 集群模式有并发计数），
+# 管理接口也拿不到。但 main.log 里每个请求都带 8 位请求 ID，可以还原每次选号的起止：
+#   selector.go            选中凭证（auth=<凭证文件>）            → 区间开始
+#   conductor_execution.go 该凭证上游失败（auth_file=<凭证文件>）  → 该区间结束，随后换号
+#   gin_logger.go          最终响应                               → 仍未结束的区间全部结束
+# 把区间按账号叠起来就是任意时刻的并发。
+#
+# 精度与覆盖范围：
+#   - 日志时间只到秒，1 秒内结束的请求按 1 秒算，短请求的并发会略偏高；
+#   - 只能看到 CPA 文件日志保留的范围（logs-max-total-size-mb 决定，main-*.log 为已轮转的旧文件）；
+#   - 选中后超过 CONC_INFLIGHT_MAX_AGE 仍没有结束记录的，视为日志缺失（如进程重启），不再计入。
+
+CPA_LOG_DIR = "/opt/cliproxy/logs"
+CONC_LINE_RE = re.compile(
+    r"^\[(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)\] \[([0-9a-f]{8})\] \[\w+\s*\] \[([a-z_]+\.go):\d+\] (.*)$")
+CONC_AUTH_RE = re.compile(r"\bauth=(\S+?\.json)")
+CONC_AUTH_FILE_RE = re.compile(r"\bauth_file=(\S+?\.json)")
+CONC_INFLIGHT_MAX_AGE = timedelta(minutes=15)
+CONC_CACHE_SECONDS = 20
+_conc_cache = {}
+_conc_cache_lock = threading.Lock()
+
+
+def describe_auth_file(name):
+    """凭证文件名 → (账号, 套餐)：<provider>-<8位hex>-<账号>-<套餐>.json，与面板的解析一致。"""
+    m = re.match(r"^[a-z0-9]+-[0-9a-f]{8}-(.+?)(?:-(pro|plus|team|business|free))?\.json$", name, re.I)
+    if not m:
+        return name, ""
+    return m.group(1), (m.group(2) or "").lower()
+
+
+def cpa_log_files(since):
+    """需要读的日志文件：修改时间晚于 since 的已轮转文件（按时间顺序）+ 当前 main.log。"""
+    files = sorted(glob.glob(f"{CPA_LOG_DIR}/main-*.log"))
+    keep = []
+    for fn in files:
+        try:
+            if datetime.fromtimestamp(os.path.getmtime(fn)) >= since:
+                keep.append(fn)
+        except OSError as e:
+            log_error(f"读取日志文件信息失败: {fn}", e)
+    main = f"{CPA_LOG_DIR}/main.log"
+    if os.path.exists(main):
+        keep.append(main)
+    return keep
+
+
+def collect_attempts(since):
+    """
+    读日志还原每次选号的区间。返回 (已结束区间列表, 仍在进行的区间列表, 日志最早时间)。
+    区间为 (凭证文件名, 开始, 结束)；进行中的为 (凭证文件名, 开始)。
+    """
+    cutoff = (since - CONC_INFLIGHT_MAX_AGE).strftime("%Y-%m-%d %H:%M:%S")
+    open_by_rid, done, first_ts = {}, [], None
+    for fn in cpa_log_files(since - CONC_INFLIGHT_MAX_AGE):
+        try:
+            fh = open(fn, encoding="utf-8", errors="replace")
+        except OSError as e:
+            log_error(f"打开日志失败: {fn}", e)
+            continue
+        with fh:
+            for line in fh:
+                # 先按时间前缀快速跳过窗口之外的行，只对需要的行跑正则
+                if line[1:20] < cutoff:
+                    continue
+                m = CONC_LINE_RE.match(line)
+                if not m:
+                    continue
+                ts = datetime.strptime(m.group(1), "%Y-%m-%d %H:%M:%S")
+                if first_ts is None:
+                    first_ts = ts
+                rid, src, msg = m.group(2), m.group(3), m.group(4)
+                if src == "selector.go":
+                    a = CONC_AUTH_RE.search(msg)
+                    if a:
+                        open_by_rid.setdefault(rid, []).append((a.group(1), ts))
+                elif "upstream execution failed" in msg:
+                    a = CONC_AUTH_FILE_RE.search(msg)
+                    lst = open_by_rid.get(rid) or []
+                    for i in range(len(lst) - 1, -1, -1):
+                        if a and lst[i][0] == a.group(1):
+                            done.append((lst[i][0], lst[i][1], ts))
+                            lst.pop(i)
+                            break
+                elif src == "gin_logger.go" and rid in open_by_rid:
+                    for name, start in open_by_rid.pop(rid):
+                        done.append((name, start, ts))
+    now = datetime.now()
+    running = [(name, start) for lst in open_by_rid.values() for name, start in lst
+               if now - start <= CONC_INFLIGHT_MAX_AGE]
+    return done, running, first_ts
+
+
+def concurrency_stats(hours=24, bucket_minutes=5):
+    """
+    各账号的并发统计：当前进行中、窗口峰值（及时间）、今日峰值、忙时平均、每个时间桶的峰值。
+    「忙时平均」只算手上有请求的时间，反映「干活时同时接几个」。结果缓存 CONC_CACHE_SECONDS 秒。
+    """
+    key = (hours, bucket_minutes)
+    with _conc_cache_lock:
+        hit = _conc_cache.get(key)
+        if hit and time.time() - hit[0] < CONC_CACHE_SECONDS:
+            return hit[1]
+
+    now = datetime.now().replace(microsecond=0)
+    window_start = now - timedelta(hours=hours)
+    midnight = now.replace(hour=0, minute=0, second=0)
+    since = min(window_start, midnight)
+    done, running, first_ts = collect_attempts(since)
+
+    bucket = timedelta(minutes=bucket_minutes)
+    # 桶按整 bucket_minutes 对齐，便于图表的刻度落在整点
+    first_bucket = window_start - timedelta(
+        minutes=window_start.minute % bucket_minutes, seconds=window_start.second)
+    n_buckets = int((now - first_bucket) / bucket) + 1
+    bucket_starts = [first_bucket + bucket * i for i in range(n_buckets)]
+
+    events = {}
+    attempts = {}
+    failed = {}
+    for name, start, end in done:
+        # 结束时刻 +1 秒再减：同一秒开始又结束的请求也算占用了这一秒
+        events.setdefault(name, []).extend([(start, 1), (end + timedelta(seconds=1), -1)])
+        if start >= window_start:
+            attempts[name] = attempts.get(name, 0) + 1
+    for name, start in running:
+        events.setdefault(name, []).append((start, 1))
+        if start >= window_start:
+            attempts[name] = attempts.get(name, 0) + 1
+    # 当前账号（含停用的），保证没有流量的号也出现在列表里
+    current = {}
+    try:
+        for f in list_files():
+            current[f.get("name") or ""] = f
+    except SystemExit:
+        log_error("读取账号列表失败，并发统计只含日志里出现过的账号")
+
+    running_count = {}
+    for name, _ in running:
+        running_count[name] = running_count.get(name, 0) + 1
+
+    accounts = []
+    for name in sorted(set(events) | set(current)):
+        if not name:
+            continue
+        cur = 0
+        peak, peak_at, today_peak = 0, None, 0
+        busy_seconds = weighted = 0.0
+        buckets = [0] * n_buckets
+        prev = window_start
+        for t, d in sorted(events.get(name, [])):
+            if t > window_start:
+                # 上一段 [prev, t) 的并发是 cur：累计忙时，并把 cur 记进覆盖到的每个桶
+                seg_start = max(prev, window_start)
+                if cur > 0 and t > seg_start:
+                    secs = (t - seg_start).total_seconds()
+                    busy_seconds += secs
+                    weighted += cur * secs
+                    b0 = max(0, int((seg_start - first_bucket) / bucket))
+                    b1 = min(n_buckets - 1, int((t - timedelta(seconds=1) - first_bucket) / bucket))
+                    for b in range(b0, b1 + 1):
+                        buckets[b] = max(buckets[b], cur)
+                prev = t
+            cur += d
+            if t >= window_start and cur > peak:
+                peak, peak_at = cur, t
+            if t >= midnight and cur > today_peak:
+                today_peak = cur
+        # 窗口末尾仍在进行的请求
+        if cur > 0 and now > prev:
+            secs = (now - max(prev, window_start)).total_seconds()
+            busy_seconds += secs
+            weighted += cur * secs
+            b0 = max(0, int((max(prev, window_start) - first_bucket) / bucket))
+            for b in range(b0, n_buckets):
+                buckets[b] = max(buckets[b], cur)
+
+        f = current.get(name) or {}
+        account, plan = describe_auth_file(name)
+        accounts.append({
+            "name": name,
+            "email": f.get("email") or account,
+            "plan": plan_of(f) if f else plan,
+            "disabled": bool(f.get("disabled")) if f else None,
+            "exists": bool(f),
+            "current": running_count.get(name, 0),
+            "peak": peak,
+            "peak_at": peak_at.isoformat() if peak_at else None,
+            "today_peak": today_peak,
+            "avg_busy": round(weighted / busy_seconds, 2) if busy_seconds else None,
+            "attempts": attempts.get(name, 0),
+            "buckets": buckets,
+        })
+
+    result = {
+        "generated_at": now.astimezone().isoformat(timespec="seconds"),
+        "hours": hours,
+        "bucket_minutes": bucket_minutes,
+        "bucket_starts": [b.astimezone().isoformat(timespec="seconds") for b in bucket_starts],
+        "log_from": first_ts.astimezone().isoformat(timespec="seconds") if first_ts else None,
+        "accounts": accounts,
+    }
+    with _conc_cache_lock:
+        _conc_cache[key] = (time.time(), result)
+    return result
+
+
+def cmd_concurrency(args):
+    """concurrency [--hours N]：按账号列出当前并发、峰值与忙时平均。"""
+    hours = 24
+    if len(args) >= 2 and args[0] == "--hours":
+        try:
+            hours = max(1, min(int(args[1]), 168))
+        except ValueError as e:
+            die("--hours 需要整数", e)
+    data = concurrency_stats(hours, 60)
+    cols = [("账号", 36), ("套餐", 6), ("当前", 6), ("今日峰值", 10), (f"{hours}h 峰值", 22), ("忙时平均", 10), ("选号次数", 8)]
+    header = " ".join(pad(t, w) for t, w in cols)
+    print(f"最近 {hours} 小时（日志最早 {(data['log_from'] or '-')[:19].replace('T', ' ')}）")
+    print(f"{C_BOLD}{header}{C_RESET}")
+    print("-" * width(header))
+    for a in data["accounts"]:
+        if not a["exists"] and not a["attempts"]:
+            continue
+        peak = f"{a['peak']}（{a['peak_at'][5:16].replace('T', ' ')}）" if a["peak_at"] else "-"
+        print(
+            f"{pad(a['email'][:34], cols[0][1])} {pad(a['plan'] or '?', cols[1][1])} "
+            f"{pad(a['current'], cols[2][1])} {pad(a['today_peak'], cols[3][1])} "
+            f"{pad(peak, cols[4][1])} {pad(a['avg_busy'] if a['avg_busy'] is not None else '-', cols[5][1])} "
+            f"{a['attempts']}"
+        )
+    print()
+    print(f"{C_DIM}由 CPA 日志反推：日志时间只到秒，短请求的并发略偏高。{C_RESET}")
+
+
 # ---------------------------------------------------------------- 降智检测的网页接口
 #
 # 给管理面板用：`cpa-account serve` 常驻监听 127.0.0.1:8318，Caddy 把
@@ -1344,6 +1581,8 @@ def cmd_quality(args):
 #   POST /run  {"target": "all" | "<凭证文件名>"}   后台开始一轮检测，立即返回
 
 QUALITY_API_PREFIX = "/v0/management/quality-probe"
+# 账号统计（目前是并发）：同一个服务，另一个前缀，Caddy 同样转发过来
+STATS_API_PREFIX = "/v0/management/account-stats"
 QUALITY_API_HOST = "127.0.0.1"
 QUALITY_API_PORT = 8318
 QUALITY_RECORDS_MAX = 500
@@ -1502,12 +1741,18 @@ class QualityApiHandler(BaseHTTPRequestHandler):
         return bool(key and expected) and hmac.compare_digest(key.encode(), expected.encode())
 
     def route(self):
-        """拆出去掉前缀后的路径与查询参数；前缀不对返回 None。"""
+        """
+        拆出去掉前缀后的路径与查询参数；前缀不对返回 None。
+        账号统计接口的子路径加 /stats 前缀区分，例如 /v0/management/account-stats/concurrency → /stats/concurrency。
+        """
         parsed = urllib.parse.urlsplit(self.path)
+        query = urllib.parse.parse_qs(parsed.query)
+        if parsed.path.startswith(STATS_API_PREFIX):
+            return "/stats" + (parsed.path[len(STATS_API_PREFIX):] or "/"), query
         if not parsed.path.startswith(QUALITY_API_PREFIX):
             return None, {}
         sub = parsed.path[len(QUALITY_API_PREFIX):] or "/"
-        return sub, urllib.parse.parse_qs(parsed.query)
+        return sub, query
 
     def guarded(self, fn):
         """统一处理鉴权与异常。list_files 等函数失败时会 sys.exit，这里要接住。"""
@@ -1539,6 +1784,12 @@ class QualityApiHandler(BaseHTTPRequestHandler):
                 self.send_json(200, {"records": list(reversed(rows[-limit:]))})
             elif sub == "/job":
                 self.send_json(200, {"job": job_snapshot()})
+            elif sub == "/stats/concurrency":
+                hours = max(1, min(int((query.get("hours") or ["24"])[0]), 168))
+                bucket = int((query.get("bucket") or ["5"])[0])
+                # 桶宽只接受常用值，避免请求构造出几十万个桶
+                bucket = bucket if bucket in (1, 5, 10, 15, 30, 60) else 5
+                self.send_json(200, concurrency_stats(hours, bucket))
             else:
                 self.send_json(404, {"error": "not found"})
 
@@ -1597,7 +1848,8 @@ USAGE = f"""{C_BOLD}cpa-account{C_RESET} —— CLIProxyAPI 单实例账号管�
   quota                         各账号配额窗口占用，并反推每周容量
   quality [--days N]            降智检测汇总：各账号正确率与走势
   quality log [条数]            降智检测的原始记录，按时间排列
-  serve [端口]                  启动降智检测的网页接口（给管理面板用，默认 8318）
+  serve [端口]                  启动降智检测与账号统计的网页接口（给管理面板用，默认 8318）
+  concurrency [--hours N]       各账号当前并发、峰值与忙时平均（由 CPA 日志反推）
 
 {C_BOLD}添加{C_RESET}
   login                         Codex OAuth 登录，{C_GREEN}完成后自动配代理并启用{C_RESET}
@@ -1636,6 +1888,7 @@ COMMANDS = {
     "probe": cmd_probe,
     "quality": cmd_quality,
     "serve": cmd_serve,
+    "concurrency": cmd_concurrency,
     "proxy": cmd_proxy,
     "proxy-url": cmd_proxy_url,
     "refresh": cmd_refresh,

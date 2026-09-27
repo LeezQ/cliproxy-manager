@@ -513,6 +513,15 @@ export function IconSidebarQuota({ size = 20, ...props }: IconProps) {
 
 export const IconSidebarLogs = IconScrollText;
 
+/** 账号并发：脉搏折线，表示「实时负载」。 */
+export function IconSidebarConcurrency({ size = 20, ...props }: IconProps) {
+  return (
+    <svg {...baseSvgProps} width={size} height={size} {...props}>
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </svg>
+  );
+}
+
 /** 降智检测：锥形烧瓶，表示「定时做实验」。 */
 export function IconSidebarQualityProbe({ size = 20, ...props }: IconProps) {
   return (

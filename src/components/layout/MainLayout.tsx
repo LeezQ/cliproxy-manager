@@ -21,6 +21,7 @@ import {
   IconSidebarConfig,
   IconSidebarLogs,
   IconSidebarOauth,
+  IconSidebarConcurrency,
   IconSidebarQualityProbe,
   IconSidebarQuota,
 } from '@/components/ui/icons';
@@ -408,6 +409,13 @@ export function MainLayout() {
           metaKey: 'nav_meta.quota_management',
           keywords: 'quota usage limit 配额 额度 用量',
           icon: <IconSidebarQuota size={17} />,
+        },
+        {
+          path: '/concurrency',
+          labelKey: 'nav.concurrency',
+          metaKey: 'nav_meta.concurrency',
+          keywords: 'concurrency load inflight peak 并发 负载 峰值',
+          icon: <IconSidebarConcurrency size={17} />,
         },
         {
           path: '/quality-probe',

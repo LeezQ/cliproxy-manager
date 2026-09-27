@@ -74,7 +74,7 @@ Maintain shared repository guidance in `AGENTS.md`. When updating it, synchroniz
 
 This repository is a Stallion-X maintained fork. Read `STALLION-X.md` before changing routes, navigation, styles, or dependencies. In short:
 
-- Only five routes are exposed (`/auth-files`, `/oauth`, `/quota`, `/logs`, `/config`). Removed features are unrouted, not deleted; keep their source directories so upstream merges stay clean.
+- Exposed routes: `/auth-files`, `/oauth`, `/quota`, `/concurrency`, `/quality-probe`, `/logs`, `/config`. `/concurrency` and `/quality-probe` read data from the server-side `cpa-account serve` (not CPA) under `/v0/management/account-stats` and `/v0/management/quality-probe`; see `STALLION-X.md` sections 6 and 8. Removed features are unrouted, not deleted; keep their source directories so upstream merges stay clean.
 - The UI follows the Stallion-X main site (shadcn-style cool-grey workbench). Design tokens live in `src/styles/stallion-x/_tokens.scss`, the app shell in `src/styles/stallion-x/_shell.scss` + `src/components/layout/MainLayout.tsx`; upstream `layout.scss` and `PageTransition` are no longer used. Use token CSS variables, bordered (shadowless) cards, and `PageHeader` (`src/components/common/PageHeader.tsx`) for page titles.
 - Motion is globally reduced: `prefersReducedMotion()` in `src/hooks/motion.ts` always returns true. Do not add entrance, stagger, translate/scale hover, or other decorative animations; only spinners, skeleton shimmer, and short 120ms fades are allowed.
 - When adding dependencies, pass `BUN_CONFIG_REGISTRY=https://registry.npmjs.org/` so `bun.lock` does not pick up mirror URLs.

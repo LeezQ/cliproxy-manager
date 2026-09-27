@@ -117,7 +117,8 @@
     "config_management": "Config Panel",
     "logs": "Logs Viewer",
     "system_info": "Management Center Info",
-    "quality_probe": "Quality Probe"
+    "quality_probe": "Quality Probe",
+    "concurrency": "Concurrency"
   },
   "nav_groups": {
     "operate": "Operate",
@@ -138,7 +139,8 @@
     "logs": "Request tracing",
     "config_management": "Gateway configuration",
     "system_info": "Runtime & diagnostics",
-    "quality_probe": "Scheduled test question per account"
+    "quality_probe": "Scheduled test question per account",
+    "concurrency": "How many requests each account handles at once"
   },
   "dashboard": {
     "hero_verdict_good": "All systems steady",
@@ -424,7 +426,9 @@
     "row_exit_no_proxy": "No proxy",
     "row_exit_direct_hint": "No proxy configured: requests leave from the server's own IP",
     "row_exit_global": "Global · {{gateway}}",
-    "row_exit_unknown": "Couldn't read this credential's egress"
+    "row_exit_unknown": "Couldn't read this credential's egress",
+    "row_concurrency": "conc {{current}}/{{peak}}",
+    "row_concurrency_title": "{{current}} requests in progress, today's peak {{peak}} (derived from CPA logs). Click to see the chart"
   },
   "antigravity_subscription": {
     "plan_unknown": "Unknown",
@@ -1992,5 +1996,33 @@
     "load_failed": "Failed to load: {{message}}",
     "row_badge_title": "Quality probe {{time}}: {{verdict}}, answer {{answer}}, reasoning {{reasoning}}. {{passed}}/{{valid}} correct in the last {{days}} days",
     "row_badge_failed_title": "Quality probe {{time}}: no result ({{error}})"
+  },
+  "concurrency": {
+    "title": "Account concurrency",
+    "meta": "{{total}} requests in progress · refreshes every 30s · updated {{updated}}",
+    "meta_loading": "Loading…",
+    "window": "Time range",
+    "window_hours": "{{count}}h",
+    "window_days": "{{count}}d",
+    "refresh": "Refresh",
+    "chart_title": "Concurrency over the last {{window}}",
+    "chart_note": "Each point is the peak within {{minutes}} minutes",
+    "chart_label": "Concurrency per account over the last {{hours}} hours. Use the arrow keys to inspect points; values are in the table below",
+    "coverage": "No logs before {{from}} (CPA rotated them out); the shaded area does not mean zero concurrency",
+    "table_title": "Per-account values",
+    "col_account": "Account",
+    "col_current": "Now",
+    "col_today_peak": "Today's peak",
+    "col_window_peak": "{{window}} peak",
+    "col_avg_busy": "Busy average",
+    "col_attempts": "Selections",
+    "avg_busy_hint": "Counts only time with at least one request: how many it handles at once while busy",
+    "removed": "Removed",
+    "disabled": "Disabled",
+    "footnote": "Derived from CPA logs: each selection counts from when the account is picked until it ends (upstream failure and failover, or completion). Log times have one-second precision, so very short requests inflate concurrency slightly.",
+    "empty_title": "No requests in this range",
+    "unavailable_title": "Concurrency service is not running",
+    "unavailable_desc": "The server needs cpa-account serve running, with Caddy forwarding /v0/management/account-stats/. See DEPLOYMENT.md 7.7.",
+    "load_failed": "Failed to load: {{message}}"
   }
 }

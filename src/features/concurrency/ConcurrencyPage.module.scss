@@ -1,0 +1,291 @@
+@use '../../styles/mixins' as *;
+@use './series' as series;
+
+/* ============================================================
+ * 账号并发页
+ *
+ * 与降智检测页同一套语言：白底细边框卡片、行间细分隔线、紧凑行高、无阴影。
+ * 结构：工具卡片（说明 + 时间窗口 + 刷新）→ 曲线卡片 → 数值表。
+ * 数值表每行独立 grid，列宽固定或按比例；窄屏用容器查询（.rows 声明了 container）。
+ * ============================================================ */
+
+.page {
+  @include series.series-palette;
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- 工具卡片 ---------- */
+
+.toolCard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: $radius-lg;
+}
+
+.toolInfo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+.toolTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.toolMeta {
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+}
+
+.toolActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 时间窗口：分段按钮，与日志页的视图切换同一种样式 */
+.windows {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: $radius-md;
+  background: var(--bg-tertiary, var(--bg-secondary));
+}
+
+.window {
+  padding: 3px 10px;
+  border: 0;
+  border-radius: calc(#{$radius-md} - 2px);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.5;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 1px;
+  }
+}
+
+.windowActive {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+}
+
+.spinning {
+  animation: concurrency-spin 0.8s linear infinite;
+}
+
+@keyframes concurrency-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinning {
+    animation: none;
+  }
+}
+
+.errorBanner {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--failure-badge-text);
+  background: var(--failure-badge-bg);
+  border: 1px solid var(--failure-badge-border);
+  border-radius: $radius-md;
+  padding: 10px 14px;
+  overflow-wrap: anywhere;
+}
+
+.panel {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+}
+
+/* ---------- 曲线卡片 ---------- */
+
+.chartCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px 16px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: $radius-lg;
+}
+
+.chartHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.chartNote,
+.coverage,
+.footnote {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* ---------- 数值表 ---------- */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sectionTitle {
+  margin: 0;
+  padding: 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.rows {
+  container: concurrency-list / inline-size;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.row {
+  display: grid;
+  /* 账号 | 当前 | 今日峰值 | 窗口峰值 | 忙时平均 | 选号次数 */
+  grid-template-columns: minmax(220px, 2fr) 64px 80px minmax(120px, 1fr) 80px 90px;
+  column-gap: 16px;
+  align-items: center;
+  padding: 9px 16px;
+  min-width: 0;
+
+  & + & {
+    border-top: 1px solid var(--border-color);
+  }
+}
+
+.headRow {
+  padding-top: 7px;
+  padding-bottom: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: var(--bg-secondary);
+}
+
+.cellAccount {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.swatch {
+  @include series.series-fill;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.accountText,
+.cellPeak {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.email {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  @include text-ellipsis;
+}
+
+.subline {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.num {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 正在处理请求：主色加粗，一眼看出谁在忙 */
+.numActive {
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+.numMuted {
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+@container concurrency-list (max-width: 640px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) 44px 56px 64px;
+  }
+
+  /* 窄时只留账号、当前、今日峰值、窗口峰值 */
+  .row > :nth-child(5),
+  .row > :nth-child(6) {
+    display: none;
+  }
+
+  .cellPeak .subline {
+    display: none;
+  }
+}

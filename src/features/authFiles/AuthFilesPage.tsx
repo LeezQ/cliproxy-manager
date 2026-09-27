@@ -69,6 +69,8 @@ import { useAuthStore, useConfigStore, useNotificationStore, useThemeStore } fro
 import type { AuthFileItem } from '@/types';
 import { useQualityProbe } from '@/features/qualityProbe/hooks/useQualityProbe';
 import { buildQualityIndex, findQualityAccount } from '@/features/qualityProbe/logic';
+import { useConcurrency } from '@/features/concurrency/hooks/useConcurrency';
+import { buildConcurrencyIndex, findConcurrency } from '@/features/concurrency/logic';
 import styles from '@/features/authFiles/AuthFilesPage.module.scss';
 
 const DEFAULT_REGULAR_PAGE_SIZE = 9;
@@ -507,6 +509,17 @@ export function AuthFilesPage() {
     [qualityProbe.summary]
   );
 
+  // 账号并发：列表布局下每 30 秒刷新一次，只取 6 小时窗口（行内只显示当前与今日峰值）
+  const concurrencyState = useConcurrency({
+    enabled: layoutMode === 'list',
+    hours: 6,
+    bucketMinutes: 60,
+  });
+  const concurrencyIndex = useMemo(
+    () => buildConcurrencyIndex(concurrencyState.stats?.accounts ?? []),
+    [concurrencyState.stats]
+  );
+
   // 本页可查询额度的凭证：与行内展示额度的条件一致（非虚拟、未停用、提供商支持额度）
   const pageQuotaTargets = useMemo<QuotaFileEntry[]>(
     () =>
@@ -545,7 +558,6 @@ export function AuthFilesPage() {
     selectedHasStatusUpdating;
 
   /* ---------- 标题区统计：凭证总数 / 启用数 / 问题数 ---------- */
-
 
   /* ---------- 杂项 ---------- */
 
@@ -826,6 +838,7 @@ export function AuthFilesPage() {
                       proxy={proxyInfoFor(file)}
                       quality={findQualityAccount(qualityIndex, file)}
                       qualityDays={qualityProbe.summary?.days}
+                      concurrency={findConcurrency(concurrencyIndex, file)}
                       {...sharedItemProps}
                     />
                   ))}

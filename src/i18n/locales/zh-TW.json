@@ -117,7 +117,8 @@
     "config_management": "設定面板",
     "logs": "記錄檢視",
     "system_info": "中心資訊",
-    "quality_probe": "降智檢測"
+    "quality_probe": "降智檢測",
+    "concurrency": "帳號併發"
   },
   "nav_groups": {
     "operate": "運行",
@@ -138,7 +139,8 @@
     "logs": "請求追蹤與排查",
     "config_management": "閘道基礎設定",
     "system_info": "運行與診斷資訊",
-    "quality_probe": "定時出題，看各帳號是否被降智"
+    "quality_probe": "定時出題，看各帳號是否被降智",
+    "concurrency": "每個帳號同時處理幾個請求"
   },
   "dashboard": {
     "hero_verdict_good": "運行平穩",
@@ -422,7 +424,9 @@
     "row_exit_no_proxy": "未設定代理",
     "row_exit_direct_hint": "未設定代理：請求從伺服器自身 IP 直連上游",
     "row_exit_global": "全域 · {{gateway}}",
-    "row_exit_unknown": "無法讀取此憑證的出口資訊"
+    "row_exit_unknown": "無法讀取此憑證的出口資訊",
+    "row_concurrency": "併發 {{current}}/{{peak}}",
+    "row_concurrency_title": "正在處理 {{current}} 個請求，今日峰值 {{peak}}（由 CPA 日誌推算）。點擊查看曲線"
   },
   "antigravity_subscription": {
     "plan_unknown": "未知",
@@ -2016,5 +2020,33 @@
     "load_failed": "讀取失敗：{{message}}",
     "row_badge_title": "降智檢測 {{time}}：{{verdict}}，答案 {{answer}}，推理 {{reasoning}}。近 {{days}} 天 {{passed}}/{{valid}} 次答對",
     "row_badge_failed_title": "降智檢測 {{time}}：沒測成（{{error}}）"
+  },
+  "concurrency": {
+    "title": "帳號併發",
+    "meta": "目前共 {{total}} 個請求在處理 · 每 30 秒重新整理 · 更新於 {{updated}}",
+    "meta_loading": "讀取中…",
+    "window": "時間範圍",
+    "window_hours": "{{count}} 小時",
+    "window_days": "{{count}} 天",
+    "refresh": "重新整理",
+    "chart_title": "最近 {{window}}的併發",
+    "chart_note": "每個點是 {{minutes}} 分鐘內的峰值",
+    "chart_label": "最近 {{hours}} 小時各帳號併發曲線，用左右方向鍵查看各時間點，數值見下方表格",
+    "coverage": "{{from}} 之前的時段沒有日誌（CPA 日誌已輪轉刪除），灰色區域不代表併發為 0",
+    "table_title": "各帳號數值",
+    "col_account": "帳號",
+    "col_current": "目前",
+    "col_today_peak": "今日峰值",
+    "col_window_peak": "{{window}}峰值",
+    "col_avg_busy": "忙時平均",
+    "col_attempts": "選號次數",
+    "avg_busy_hint": "只算手上有請求的時間：工作時平均同時接幾個",
+    "removed": "已刪除",
+    "disabled": "已停用",
+    "footnote": "由 CPA 日誌推算：每次選號到它結束（上游失敗換號或請求完成）算一段。日誌時間只到秒，很短的請求會讓併發略偏高。",
+    "empty_title": "統計範圍內沒有請求",
+    "unavailable_title": "併發統計服務未啟用",
+    "unavailable_desc": "伺服器上需要執行 cpa-account serve，並由 Caddy 轉發 /v0/management/account-stats/。見 DEPLOYMENT.md 7.7。",
+    "load_failed": "讀取失敗：{{message}}"
   }
 }
