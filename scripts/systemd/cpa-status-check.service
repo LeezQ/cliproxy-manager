@@ -1,0 +1,13 @@
+# 服务器异常检查：服务、账号、配额、降智检测结果、面板、证书等，有变化才推送到 ntfy。
+# 由 cpa-status-check.timer 每 5 分钟触发，也可手动：
+#   systemctl start cpa-status-check.service
+[Unit]
+Description=Check CLIProxyAPI server for alerts and push to ntfy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/cpa-status-push check
+TimeoutStartSec=120
+Environment=NO_COLOR=1

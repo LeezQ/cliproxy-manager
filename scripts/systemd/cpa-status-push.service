@@ -1,0 +1,12 @@
+# 服务器状态推送：统计过去 1 小时的运行情况并推送到 ntfy。
+# 由 cpa-status-push.timer 每小时触发，也可手动：
+#   systemctl start cpa-status-push.service
+[Unit]
+Description=Push CLIProxyAPI server status to ntfy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/cpa-status-push report
+TimeoutStartSec=120

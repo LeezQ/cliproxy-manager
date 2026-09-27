@@ -557,6 +557,68 @@ cpa-account concurrency --hours 72
 2026-09-27 的数据：两个 Pro 号 24 小时峰值 10 和 7、忙时平均约 1.6；两个 Plus 号峰值 7 和 6、忙时平均约 1.2，
 与权重 20 : 10 的分流一致。两个 Pro 号共用一个 IIJ 出口，高峰时这一个 IP 上同时有 10 个以上请求。
 
+### 7.8 服务器状态推送 `cpa-status-push`
+
+`scripts/cpa-status-push.py` 装在服务器 `/usr/local/bin/cpa-status-push`，推送到 [ntfy](https://ntfy.sh)。
+两个子命令各有一对 systemd 单元（`scripts/systemd/` 下）：
+
+| 子命令 | 单元 | 频率 | 作用 |
+|---|---|---|---|
+| `report` | `cpa-status-push.{service,timer}` | 每小时（整点后 7 分） | 过去 1 小时的状态汇总 |
+| `check` | `cpa-status-check.{service,timer}` | 每 5 分钟 | 异常检查，有变化才推 |
+
+#### 每小时汇总 `report`
+
+负载、可用内存、磁盘、运行天数；四个服务是否 active；请求数与状态码分布；上游失败按错误码计数
+（包括已被重试挡住、客户端没感知到的）；管理接口里白名单以外的来源 IP。白名单直接读 Caddyfile 的
+`not remote_ip` 行。正常时优先级 low（手机不响），有异常项时标题变 ⚠️、优先级 default。
+
+#### 异常检查 `check`
+
+| 类别 | 触发条件 | 类型 |
+|---|---|---|
+| 降智检测 | 每轮检测（定时或网页触发）全部结束后推一条汇总，标出结论与上一次不同的账号；有账号变成降智时优先级 high | 事件 |
+| 配额 | 某账号某窗口（5 小时 / 周）已用 ≥ 80%、≥ 95%，两档各推一次 | 条件 |
+| 账号 | 不可用、冷却中、出错且 30 分钟无成功（与 `cpa-account doctor` 同一口径，**连续 15 分钟**才推）；缺代理；令牌离过期不到 12 小时（CPA 提前 24 小时刷新，到这时还没刷说明刷新坏了）；被停用 | 条件 / 事件 |
+| CPA 重启 | `cliproxy` 的 InvocationID 变了；journald 里有非零退出或 `Failed with result` 算崩溃，否则算正常重启 | 事件 |
+| 面板回退 | `management.html` 里没有 `/quality-probe`（只有本 fork 的面板会调这个接口），即 5.2 的静默回退 | 条件 |
+| 管理 IP 被封 | CPA 对 `/v0/management` 返回 403（Caddy 白名单的 403 不进 CPA 日志，所以这里只会是封禁，见 5.6）；或一个 IP 在两次检查间 401 ≥ 3 次 | 事件 |
+| 定时任务 | `cpa-quality` / `cpa-status-push` / `cpa-status-check` 的 service 处于 failed | 条件 |
+| TLS 证书 | 连本机 443 按正常客户端校验失败，或 14 天内过期 | 条件 |
+| 系统 | 服务不在运行、磁盘 ≥ 85%、可用内存 < 200MB、最近 15 分钟客户端 5xx ≥ 5 次且占比 ≥ 20%（连续 2 次检查） | 条件 |
+
+- **条件**是持续性的问题：第一次出现推一次（优先级 high），消失时推一条「已恢复」，期间不重复推。
+- **事件**是一次性的，发生就推。同一轮检查里的条件和事件合成一条消息。
+- 状态存在 `/var/lib/cliproxy/status-alerts.json`（已告警的条件、日志读到的位置、上一轮检测结论等）。
+  推送失败时不更新已告警列表，下一轮会重试；但事件不会补推。
+- 首次运行只记位置，不会把历史日志和历史检测结果当成新的推出去。
+- 账号类检查以模块方式加载 `/usr/local/bin/cpa-account`，复用它的管理接口调用和状态判定，
+  管理密钥沿用 `cpa-account.env`。改 `cpa-account` 里 `api` / `state_of` / `plan_of` /
+  `read_proxy_from_disk` 的签名时要同步这里。
+- 阈值和防抖次数（`DEBOUNCE`）是脚本顶部的常量。
+
+#### 配置与订阅
+
+配置在 `/etc/cliproxy/cpa-status.env`（权限 600）：
+
+```bash
+NTFY_URL=https://ntfy.sh/<随机 topic>
+NTFY_TOKEN=<可选，自建或付费 ntfy 的访问令牌>
+```
+
+公共 ntfy.sh 上 topic 名就是唯一的凭据，谁知道名字谁就能订阅。所以 topic 用随机串，不写进仓库；
+消息里账号只显示邮箱前 4 位加套餐，不放完整邮箱和密钥。要订阅，在手机的 ntfy App 里添加服务器上
+env 文件里的 topic。怀疑泄露时换一个随机 topic 写回 env 文件即可，下一轮自动生效，不用重启。
+
+```bash
+cpa-status-push report --dry-run              # 只打印，不推送
+cpa-status-push check --dry-run               # 只打印，不推送，也不写状态文件
+systemctl start cpa-status-push.service       # 立即推一条汇总
+systemctl list-timers 'cpa-status*'           # 下次运行时间
+journalctl -u cpa-status-check -n 20          # 出错时这里有 [error] 行
+rm /var/lib/cliproxy/status-alerts.json       # 清空告警状态（下一轮按首次运行处理）
+```
+
 ## 8. 本机 FlClash 套住宅出口 `flclash-decodo.py`
 
 装在 `~/bin/flclash-decodo.py`，源码同步在 [`scripts/flclash-decodo.py`](scripts/flclash-decodo.py)。

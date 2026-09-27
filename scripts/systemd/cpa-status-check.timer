@@ -1,0 +1,11 @@
+# 每 5 分钟检查一次异常；持续性的问题只在出现和恢复时各推一次。
+[Unit]
+Description=Check CLIProxyAPI server for alerts every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
