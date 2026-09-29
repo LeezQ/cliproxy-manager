@@ -15,13 +15,15 @@ FlClash 会定时重新拉取订阅并整个覆盖 profiles/<id>.yaml，手改�
 用法
 ----
   flclash-decodo.py            # 应用配置并重启 FlClash
-  flclash-decodo.py --check    # 只检查当前状态，不改动
+  flclash-decodo.py --check    # 只检查当前状态（含境外 UDP 是否泄漏的实测），不改动
   flclash-decodo.py --revert   # 还原成订阅原样（从备份恢复）
 """
 
 import io
 import json
 import os
+import socket
+import struct
 import sys
 import glob
 import time
@@ -36,6 +38,15 @@ PROFILE_ID = "305906101000343552"          # AgentNEO 订阅
 PROFILE = os.path.join(PROFILE_DIR, f"{PROFILE_ID}.yaml")
 
 NODE_NAME = "Decodo-住宅JP"
+
+# 境外 UDP 一律拦截，放在规则最前面。
+# 为什么：Decodo 节点不支持 UDP（udp: false）。Clash 匹配 UDP 时会跳过不支持 UDP 的节点，
+# 一条都匹配不上就走 DIRECT——于是浏览器的 HTTP/3（QUIC）和 WebRTC 全部用本地宽带 IP 直出。
+# 2026-09-29 实测：TCP 出口是日本住宅 IP，UDP 出口却是浙江移动 IP，面板因此被 IP 白名单拦下，
+# ChatGPT 网页（Cloudflare 支持 HTTP/3）也有一部分请求从国内 IP 发出。
+# 拦掉之后浏览器会自动退回 TCP，走住宅出口；国内 UDP（音视频通话等）不受影响。
+UDP_GUARD_RULE = "- AND,((NETWORK,UDP),(NOT,((GEOIP,CN)))),REJECT"
+STUN_SERVERS = [("stun.l.google.com", 19302), ("stun.cloudflare.com", 3478)]
 GROUP_NAME = "住宅IP"
 RELAY_GROUP = "中转"
 
@@ -237,6 +248,68 @@ def apply_profile():
     return True
 
 
+def ensure_udp_guard():
+    """
+    确保 UDP_GUARD_RULE 是 rules 段的第一条。幂等：已存在则不动。
+    单独成步而不放进 apply_profile：已经套用过住宅出口的订阅文件也要补上这条。
+    """
+    if not os.path.exists(PROFILE):
+        log_error(f"订阅文件不存在: {PROFILE}")
+        return False
+    lines = io.open(PROFILE, encoding="utf-8").read().split("\n")
+    if UDP_GUARD_RULE in lines:
+        log("境外 UDP 拦截：已存在")
+        return True
+    try:
+        rs = lines.index("rules:")
+    except ValueError as e:
+        log_error("找不到 rules 段", e)
+        return False
+    lines.insert(rs + 1, UDP_GUARD_RULE)
+    io.open(PROFILE, "w", encoding="utf-8").write("\n".join(lines))
+    log("境外 UDP 拦截：已加到规则第一条（浏览器 QUIC 会退回 TCP 走住宅出口）")
+    return True
+
+
+def stun_public_ip(host, port):
+    """向 STUN 服务器发 UDP 绑定请求，返回映射地址，即本机 UDP 流量的公网出口。拦截生效时会超时。"""
+    tid = os.urandom(12)
+    req = struct.pack("!HHI", 0x0001, 0, 0x2112A442) + tid
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(3)
+    try:
+        s.sendto(req, (host, port))
+        data, _ = s.recvfrom(2048)
+    finally:
+        s.close()
+    i = 20
+    while i + 4 <= len(data):
+        t, ln = struct.unpack("!HH", data[i:i + 4])
+        v = data[i + 4:i + 4 + ln]
+        if t == 0x0020:  # XOR-MAPPED-ADDRESS
+            ip = bytes(b ^ m for b, m in zip(v[4:8], struct.pack("!I", 0x2112A442)))
+            return socket.inet_ntoa(ip)
+        i += 4 + ln + (-ln % 4)
+    return None
+
+
+def check_udp_leak():
+    """实测境外 UDP：拿不到映射地址（被拦截）才算安全；拿到任何地址都说明 UDP 在直连出网。"""
+    for host, port in STUN_SERVERS:
+        try:
+            ip = stun_public_ip(host, port)
+        except (socket.timeout, OSError):
+            continue
+        except Exception as e:
+            log_error(f"STUN 检测异常: {host}", e)
+            continue
+        if ip:
+            log(f"境外 UDP: 泄漏！经 {host} 看到的出口是 {ip}  ← 浏览器 HTTP/3 会绕过住宅出口")
+            return False
+    log("境外 UDP: 已拦截（STUN 无响应），浏览器只能走 TCP 住宅出口")
+    return True
+
+
 def revert_profile():
     origin = PROFILE + ".origin"
     if not os.path.exists(origin):
@@ -291,6 +364,9 @@ def check():
     text = io.open(PROFILE, encoding="utf-8").read() if os.path.exists(PROFILE) else ""
     applied = NODE_NAME in text
     log(f"订阅文件: {'已套用住宅出口' if applied else '未套用（订阅原样）'}")
+    guard = UDP_GUARD_RULE in text.split("\n")
+    log(f"境外 UDP 拦截规则: {'有' if guard else '没有  ← 需要重跑本脚本'}")
+    udp_ok = check_udp_leak()
 
     sel = group_selection()
     if applied:
@@ -310,7 +386,7 @@ def check():
                 f"{'（每 %d 分钟）' % (row[1] // 60000) if row[0] else ''}")
     except Exception as e:
         log_error("读取数据库失败", e)
-    return applied and sel == NODE_NAME
+    return applied and sel == NODE_NAME and guard and udp_ok
 
 
 if __name__ == "__main__":
@@ -324,7 +400,7 @@ if __name__ == "__main__":
         log_error("FlClash 未能退出，配置可能不会生效")
 
     ok = (revert_profile() if arg == "--revert"
-          else (disable_auto_update() and apply_profile()
+          else (disable_auto_update() and apply_profile() and ensure_udp_guard()
                 and set_group_selection(NODE_NAME)))
     if not ok:
         log_error("操作失败，未重启 FlClash")

@@ -627,9 +627,28 @@ rm /var/lib/cliproxy/status-alerts.json       # 清空告警状态（下一轮�
 
 ```bash
 flclash-decodo.py            # 套上并重启 FlClash
-flclash-decodo.py --check    # 只看状态
+flclash-decodo.py --check    # 只看状态，含境外 UDP 是否泄漏的实测
 flclash-decodo.py --revert   # 还原成订阅原样
 ```
+
+### 8.0 境外 UDP 必须拦截（2026-09-29 踩过）
+
+Decodo 节点不支持 UDP（`udp: false`）。Clash 匹配 UDP 流量时会**跳过不支持 UDP 的节点**，
+一条规则都匹配不上就走 **DIRECT**。结果是 TCP 走日本住宅 IP，UDP 却用本地宽带 IP 直出：
+
+- 浏览器优先用 HTTP/3（QUIC，UDP）。Caddy 和 Cloudflare 都支持，所以浏览器打开面板时服务器看到的是本地宽带 IP，
+  被管理面 IP 白名单拦下（`forbidden: <本地宽带IP> not in management allowlist`）；终端 curl 走 TCP 却正常，很容易误判成「IP 又变了」
+- ChatGPT 网页同样在 Cloudflare 后面，一部分请求会从国内 IP 发出；网页里的 WebRTC 也会通过 UDP 暴露真实 IP
+
+脚本现在在规则**第一条**插入：
+
+```yaml
+- AND,((NETWORK,UDP),(NOT,((GEOIP,CN)))),REJECT
+```
+
+境外 UDP 一律拒绝，浏览器会自动退回 TCP 走住宅出口；国内 UDP（音视频通话等）不受影响。
+`--check` 会向 STUN 服务器发 UDP 请求实测：拿不到映射地址才算已拦截，拿到任何地址都会报「泄漏」。
+手动更新订阅后记得重跑脚本，这条规则会随订阅被冲掉。
 
 ### 8.1 为什么不能用 FlClash 自带的「覆写」
 
