@@ -283,10 +283,28 @@ git config remote.upstream.tagOpt --no-tags
 
 ```bash
 git fetch upstream
-git merge upstream/main
 bun install --frozen-lockfile
 bun run verify
 ```
+
+截至 **2026-10-01**，上游 `main` 已迁移到 `/v8/management`；本 fork 与配套的
+`../CLIProxyAPI` 仍使用 `/v0/management`。因此不能直接执行 `git merge upstream/main`：
+配置编辑、认证文件策略、冷却重置和日志目录重构等提交会同时带入 v8 API 契约，必须等后端
+完成 v8 迁移后再整批评估。
+
+本次已从上游选择性合入：
+
+- `ee27516`：Autocomplete 下拉改用 portal，避免被父级容器裁剪；保留本 fork 的样式模块。
+- `b8ed42a`：模型发现、连通性测试和 API 调用透传 `proxy_url`；当前后端 v0 管理 API 已支持。
+
+暂缓合入：
+
+- `88d1867` 及其后依赖 v8 配置布局的提交：会改变 API 前缀和配置读写契约。
+- 冷却重置、认证文件策略 / 刷新、API Key 名称等功能：当前后端路由或字段契约尚未匹配。
+- 日志目录重构、提供商高级配置和配额增强：与本 fork 的页面裁剪 / 定制布局有冲突，且部分依赖 v8。
+
+后续同步时先检查 `git merge-base HEAD upstream/main` 和后端管理路由，再按提交逐个
+`git cherry-pick`；不要把“能解决 Git 冲突”当成“前后端契约兼容”。
 
 **绝对不要 `git push origin --tags` 或 `git push --follow-tags`。**
 批量推标签会把线上面板静默换回上游版本，原因见

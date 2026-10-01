@@ -2,15 +2,13 @@ import { afterEach, describe, expect, spyOn, test } from 'bun:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
-import { apiCallApi, type ApiCallRequest } from '../src/services/api/apiCall';
-import { normalizeProviderGroups } from '../src/services/api/transformers';
-import type { ProviderKeyConfig } from '../src/types/provider';
+import { apiCallApi, type ApiCallRequest } from '@/services/api/apiCall';
 import {
   useConnectivityTest,
   type UseConnectivityTestArgs,
   type ConnectivityErrorMessages,
-} from '../src/features/providers/sheets/forms/useConnectivityTest';
-import { useModelDiscovery } from '../src/features/providers/sheets/forms/useModelDiscovery';
+} from '@/features/providers/sheets/forms/useConnectivityTest';
+import { useModelDiscovery } from '@/features/providers/sheets/forms/useModelDiscovery';
 
 function captureHook<T>(hook: () => T): T {
   let result: T;
@@ -83,11 +81,8 @@ describe('provider probe proxy forwarding', () => {
     '%s discovery forwards the effective inherited proxy',
     async (brand) => {
       requestSpy = spyOn(apiCallApi, 'request').mockResolvedValue(success);
-      const [config] = normalizeProviderGroups([
-        { 'base-url': args.baseUrl, 'proxy-url': 'direct', keys: [{ 'api-key': 'fixture-key' }] },
-      ]) as ProviderKeyConfig[];
       const hook = captureHook(() =>
-        useModelDiscovery({ ...args, brand, proxyUrl: config.proxyUrl })
+        useModelDiscovery({ ...args, brand, proxyUrl: ' direct ' })
       );
       await hook.fetch();
       expect(requestSpy.mock.calls[0][0].proxy_url).toBe('direct');

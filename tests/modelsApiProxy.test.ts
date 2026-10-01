@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
-import { apiClient } from '../src/services/api/client';
-import { modelsApi } from '../src/services/api/models';
+import { apiClient } from '@/services/api/client';
+import { modelsApi } from '@/services/api/models';
 
 const originalPost = apiClient.post;
 afterEach(() => {
@@ -27,7 +27,7 @@ describe('model discovery explicit proxy', () => {
         );
         expect(models.map((model) => model.name)).toEqual(['test-model']);
         expect(post).toHaveBeenCalledTimes(1);
-        expect(post.mock.calls[0][0]).toBe('/requests/api-call');
+        expect(post.mock.calls[0][0]).toBe('/api-call');
         expect(post.mock.calls[0][1]).toMatchObject({
           authIndex: 'auth',
           proxy_url: proxy?.trim() || undefined,
