@@ -36,6 +36,14 @@ Preserve hash routing and single-file deployment. Changes to assets, imports, co
 
 Never push tags in bulk. `release.yml` triggers on `push: tags: ['v*']`, so `git push origin --tags` or `git push --follow-tags` fires a build for every newly created upstream tag. Those builds contain none of this fork's work, yet publish as the newest release, which silently reverts the production panel to an upstream build within the backend's 3-hour sync window. Publish with `git push origin vX.Y.Z` only. This fork's version line starts at `v1.23.0`, above every inherited upstream tag. The release, verification and rollback runbook is `DEPLOYMENT.md`; keep it in sync when the deployment path changes.
 
+The production SSH alias is `cliproxy-server`. Because the local FlClash TUN route can return an HTTP response instead of completing SSH on port 22, use the `en0` interface for SSH connections when the normal command is closed during handshake:
+
+```bash
+ssh -o 'ProxyCommand=nc -b en0 -G 10 %h %p' cliproxy-server 'command'
+```
+
+This only affects that SSH invocation and leaves the system proxy unchanged. The current server alias resolves to `130.94.66.88`; do not put credentials or private keys in repository guidance.
+
 ## API Contracts & State
 
 - Treat backend contracts as the source of truth. Inspect `../CLIProxyAPI` before changing endpoint names, payloads, provider keys, OAuth callback parameters, auth-file semantics, or plugin/config contracts. If that checkout is unavailable, report the missing evidence rather than guessing; do not modify the backend unless requested.

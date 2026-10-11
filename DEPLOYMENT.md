@@ -37,7 +37,8 @@ remote-management:
   # disable-auto-update-panel 保持缺省（false），自动更新正是发布链路的最后一环
 ```
 
-当前线上版本：**v1.31.0**。
+当前线上后端版本：**CLIProxyAPI v8.0.23**（保留 `/v0/management` 兼容接口，同时提供 `/v8/management`）。
+当前线上面板版本：**v1.31.0**。
 
 ### 2.1 Caddy 侧的管理面保护
 
@@ -52,7 +53,7 @@ handle /v0/management/capabilities {
 
 # 管理面 IP 白名单；业务接口 /v1/* 不在其中，不受影响
 @admin_denied {
-    path /management.html /v0/management /v0/management/*
+    path /management.html /v0/management /v0/management/* /v8/management /v8/management/*
     not remote_ip <管理出口IP>
 }
 handle @admin_denied {
